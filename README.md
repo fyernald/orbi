@@ -11,7 +11,7 @@
 ![Course](https://img.shields.io/badge/course-CSE301-informational)
 ![Methodology](https://img.shields.io/badge/methodology-Scrum-orange)
 
-> **Team 404** | CSE301 Software Engineering and Development
+> **Byte4** | CSE301 Software Engineering and Development
 
 A study app where students upload their notes, AI turns them into practice questions, and the app decides **what to study next** based on what the student gets wrong.
 
