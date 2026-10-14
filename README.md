@@ -46,8 +46,8 @@ The full list is on our [project board](https://github.com/users/fyernald/projec
 |---|---|
 | Nali Hazhar | Product Owner |
 | Sarwan Mudhafar | ScrumMaster |
+| Birhat Karahan | Lead Developer |
 | Rabia Karhan | Developer |
-| Birhat Karahan | Developer |
 | Hemn Murad | Developer |
 
 ## How we work
