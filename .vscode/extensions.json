@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"esbenp.prettier-vscode",
+		"editorconfig.editorconfig",
+		"eamodio.gitlens",
+		"github.vscode-pull-request-github",
+		"yzhang.markdown-all-in-one"
+	]
+}
