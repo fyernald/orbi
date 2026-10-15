@@ -1,0 +1,136 @@
+name: Repo checks
+
+# Runs on every pull request. These checks do not depend on the tech stack.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  # Allowed commit types: feat, fix, docs, style, refactor, test, chore
+  COMMIT_PATTERN: '^(feat|fix|docs|style|refactor|test|chore)(\([a-z0-9._-]+\))?!?: [^ ].*$'
+  BRANCH_PATTERN: '^(feature|fix|docs|style|refactor|test|chore)/[a-z0-9][a-z0-9._-]*$'
+  MAX_SUBJECT_LENGTH: "72"
+  MAX_FILE_BYTES: "5242880"
+
+jobs:
+  commit-messages:
+    name: Commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check every commit message in this pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+          while IFS= read -r subject; do
+            [ -z "$subject" ] && continue
+            case "$subject" in
+              "Merge "*|"Revert "*) continue ;;
+            esac
+            if ! [[ "$subject" =~ $COMMIT_PATTERN ]]; then
+              echo "::error::Bad commit message: \"$subject\""
+              failed=1
+            elif [ "${#subject}" -gt "$MAX_SUBJECT_LENGTH" ]; then
+              echo "::error::Commit message is too long (max $MAX_SUBJECT_LENGTH characters): \"$subject\""
+              failed=1
+            fi
+          done < <(git log --no-merges --format=%s "$BASE_SHA..$HEAD_SHA")
+
+          if [ "$failed" -ne 0 ]; then
+            echo ""
+            echo "Use the format 'type: short description'."
+            echo "Types: feat, fix, docs, style, refactor, test, chore"
+            echo "Example: feat: add login form"
+            echo "See CONTRIBUTING.md for how to fix old commit messages."
+            exit 1
+          fi
+          echo "All commit messages look good."
+
+  pull-request-rules:
+    name: PR title, branch, and issue link
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check pull request rules
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BRANCH: ${{ github.head_ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          failed=0
+
+          # 1. The PR title becomes the commit message after "Squash and merge".
+          if ! [[ "$PR_TITLE" =~ $COMMIT_PATTERN ]]; then
+            echo "::error::PR title must look like 'feat: add login form' (types: feat, fix, docs, style, refactor, test, chore). Current title: \"$PR_TITLE\""
+            failed=1
+          fi
+
+          # 2. Branch names: feature/12-login-form, fix/20-wrong-password, docs/readme ...
+          if [[ "$AUTHOR" != "dependabot[bot]" ]] && ! [[ "$BRANCH" =~ $BRANCH_PATTERN ]]; then
+            echo "::error::Branch name must look like 'feature/12-login-form' (start with feature, fix, docs, style, refactor, test or chore, then a slash, then lowercase words with dashes). Current branch: \"$BRANCH\""
+            failed=1
+          fi
+
+          # 3. New features and bug fixes must be linked to an issue (for example: Closes #12).
+          if [[ "$PR_TITLE" =~ ^(feat|fix) ]]; then
+            if ! printf '%s' "$PR_BODY" | grep -Eiq '(close[sd]?|fix(es|ed)?|resolve[sd]?|refs?) +#[0-9]+'; then
+              echo "::error::feat and fix pull requests must link an issue in the description, for example 'Closes #12'."
+              failed=1
+            fi
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Pull request rules passed."
+
+  file-checks:
+    name: File checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check files changed in this pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+
+          # 1. Real secret files must never be committed (.env.example is allowed).
+          secrets=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v -E '\.env\.example$' || true)
+          if [ -n "$secrets" ]; then
+            echo "::error::Secret files are committed: $secrets (remove them with 'git rm --cached <file>' and rotate any exposed keys)"
+            failed=1
+          fi
+
+          # 2. Leftover merge conflict markers.
+          if git diff --check "$BASE_SHA...$HEAD_SHA" | grep -q 'leftover conflict marker'; then
+            echo "::error::Merge conflict markers (<<<<<<<, =======, >>>>>>>) were left in the code."
+            failed=1
+          fi
+
+          # 3. Very large files.
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            size=$(stat -c %s "$f")
+            if [ "$size" -gt "$MAX_FILE_BYTES" ]; then
+              echo "::error::File is larger than 5 MB: $f"
+              failed=1
+            fi
+          done < <(git diff --name-only --diff-filter=AM "$BASE_SHA...$HEAD_SHA")
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "File checks passed."

@@ -1,0 +1,42 @@
+#!/bin/sh
+# Runs before every commit. Blocks secret files, conflict markers, and very large files.
+
+staged=$(git diff --cached --name-only --diff-filter=AM)
+
+# 1. Secret files (.env.example is allowed).
+secrets=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env($|\.)' | grep -v -E '\.env\.example$')
+if [ -n "$secrets" ]; then
+	echo ""
+	echo "Commit blocked: these files hold secrets and must not be committed:"
+	echo "$secrets"
+	echo "Remove them from this commit with:  git restore --staged <file>"
+	echo ""
+	exit 1
+fi
+
+# 2. Leftover merge conflict markers.
+if git diff --cached --check 2>&1 | grep -q 'leftover conflict marker'; then
+	echo ""
+	echo "Commit blocked: merge conflict markers (<<<<<<<, =======, >>>>>>>) are still in your code."
+	echo "Run  git diff --cached --check  to see where."
+	echo ""
+	exit 1
+fi
+
+# 3. Very large files (over 5 MB).
+big=$(printf '%s\n' "$staged" | while IFS= read -r f; do
+	[ -z "$f" ] && continue
+	size=$(git cat-file -s ":$f" 2>/dev/null || echo 0)
+	if [ "$size" -gt 5242880 ]; then
+		echo "$f"
+	fi
+done)
+if [ -n "$big" ]; then
+	echo ""
+	echo "Commit blocked: these files are larger than 5 MB:"
+	echo "$big"
+	echo ""
+	exit 1
+fi
+
+exit 0
