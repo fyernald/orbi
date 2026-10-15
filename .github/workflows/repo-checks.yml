@@ -10,10 +10,11 @@ permissions:
 
 env:
   # Allowed commit types: feat, fix, docs, style, refactor, test, chore
+
   COMMIT_PATTERN: '^(feat|fix|docs|style|refactor|test|chore)(\([a-z0-9._-]+\))?!?: [^ ].*$'
   BRANCH_PATTERN: '^(feature|fix|docs|style|refactor|test|chore)/[a-z0-9][a-z0-9._-]*$'
-  MAX_SUBJECT_LENGTH: "72"
-  MAX_FILE_BYTES: "5242880"
+  MAX_SUBJECT_LENGTH: '72'
+  MAX_FILE_BYTES: '5242880'
 
 jobs:
   commit-messages:
