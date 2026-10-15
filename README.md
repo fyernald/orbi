@@ -1,4 +1,4 @@
-# Project Z: Personal AI Study Coach
+# Orbi: Personal AI Study Coach
 
 ![License](https://img.shields.io/github/license/fyernald/project-z?color=blue)
 ![Last commit](https://img.shields.io/github/last-commit/fyernald/project-z)
@@ -24,6 +24,7 @@ The AI only **creates content** (questions and explanations). The decision of **
 ## Main features
 
 **Core (must have)**
+
 - Sign up and log in
 - Courses, topics, and study notes
 - AI-generated questions from notes, with approve or reject
@@ -33,6 +34,7 @@ The AI only **creates content** (questions and explanations). The decision of **
 - "Today's study list" feed
 
 **Planned (if time allows)**
+
 - Progress dashboard and charts
 - AI explanations for wrong answers
 - Study plan by exam date
@@ -42,31 +44,31 @@ The full list is on our [project board](https://github.com/users/fyernald/projec
 
 ## Team
 
-| Name | Role |
-|---|---|
-| Nali Hazhar | Product Owner |
-| Sarwan Mudhafar | ScrumMaster |
-| Birhat Karahan | Lead Developer |
-| Rabia Karhan | Developer |
-| Hemn Murad | Developer |
+| Name            | Role           |
+| --------------- | -------------- |
+| Nali Hazhar     | Product Owner  |
+| Sarwan Mudhafar | ScrumMaster    |
+| Birhat Karahan  | Lead Developer |
+| Rabia Karhan    | Developer      |
+| Hemn Murad      | Developer      |
 
 ## How we work
 
 - **Methodology:** Scrum, 10 weeks, five 2-week sprints
-- **Board:** [Project Z Backlog](https://github.com/users/fyernald/projects/2) (Table, Board, and Roadmap views)
+- **Board:** [Orbi Backlog](https://github.com/users/fyernald/projects/2) (Table, Board, and Roadmap views)
 - **Meetings:** every Thursday, 5:30 PM, Discord
 - **Stand-ups:** each member answers three questions: what I did, what blocks me, what I will do next
 - **Backlog:** every backlog item is a GitHub Issue. Features are written as user stories (`US-xx`), technical work as tasks (`T-xx`)
 
 ## Roadmap
 
-| Sprint | Dates | Goal |
-|---|---|---|
-| 1 | Oct 13 - Oct 26 | Foundation: setup, database, wireframes, login, courses, notes |
-| 2 | Oct 27 - Nov 09 | AI questions and study sessions |
-| 3 | Nov 10 - Nov 23 | Mastery score and spaced repetition |
-| 4 | Nov 24 - Dec 07 | Today's study list, dashboard, testing |
-| 5 | Dec 08 - Dec 21 | Demo, report, and extra features |
+| Sprint | Dates           | Goal                                                           |
+| ------ | --------------- | -------------------------------------------------------------- |
+| 1      | Oct 13 - Oct 26 | Foundation: setup, database, wireframes, login, courses, notes |
+| 2      | Oct 27 - Nov 09 | AI questions and study sessions                                |
+| 3      | Nov 10 - Nov 23 | Mastery score and spaced repetition                            |
+| 4      | Nov 24 - Dec 07 | Today's study list, dashboard, testing                         |
+| 5      | Dec 08 - Dec 21 | Demo, report, and extra features                               |
 
 ## Workflow
 
@@ -89,19 +91,19 @@ A task is done when:
 
 ## Tech stack
 
-*To be decided in Sprint 1 (task T-01).*
+_To be decided in Sprint 1 (task T-01)._
 
-| Part | Choice |
-|---|---|
-| Frontend | TBD |
-| Backend | TBD |
-| Database | TBD |
-| AI service | TBD |
-| Hosting | TBD |
+| Part       | Choice |
+| ---------- | ------ |
+| Frontend   | TBD    |
+| Backend    | TBD    |
+| Database   | TBD    |
+| AI service | TBD    |
+| Hosting    | TBD    |
 
 ## Getting started
 
-*Setup and run instructions will be added once the tech stack is chosen.*
+_Setup and run instructions will be added once the tech stack is chosen._
 
 ```bash
 git clone https://github.com/fyernald/project-z.git
