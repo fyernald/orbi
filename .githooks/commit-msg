@@ -1,0 +1,33 @@
+#!/bin/sh
+# Runs when you commit. Checks that the message looks like "type: short description".
+
+msg_file="$1"
+subject=$(head -n 1 "$msg_file")
+
+# Let Git's own messages through (merges, reverts, fixups).
+case "$subject" in
+	"Merge "*|"Revert "*|"fixup! "*|"squash! "*) exit 0 ;;
+esac
+
+pattern='^(feat|fix|docs|style|refactor|test|chore)(\([a-z0-9._-]+\))?!?: [^ ].*$'
+
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+	echo ""
+	echo "Commit message rejected: \"$subject\""
+	echo ""
+	echo "Use the format:  type: short description"
+	echo "Types:           feat, fix, docs, style, refactor, test, chore"
+	echo "Example:         feat: add login form"
+	echo ""
+	exit 1
+fi
+
+length=$(printf '%s' "$subject" | wc -c | tr -d ' ')
+if [ "$length" -gt 72 ]; then
+	echo ""
+	echo "Commit message rejected: the first line is $length characters, the maximum is 72."
+	echo ""
+	exit 1
+fi
+
+exit 0
