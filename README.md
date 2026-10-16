@@ -50,7 +50,6 @@ The full list is on our [project board](https://github.com/users/fyernald/projec
 | Sarwan Mudhafar | ScrumMaster    |
 | Birhat Karahan  | Lead Developer |
 | Rabia Karhan    | Developer      |
-| Hemn Murad      | Developer      |
 
 ## How we work
 
