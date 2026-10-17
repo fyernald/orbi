@@ -1,7 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+build/
+dist/
+
+# Secrets (only .env.example is committed)
 .env
 .env.*
 !.env.example
 
+# Test output
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/*
-!.vscode/settings.json
 !.vscode/extensions.json

@@ -25,6 +25,7 @@ The AI only **creates content** (questions and explanations). The decision of **
 ## Main features
 
 **Core (must have)**
+
 - Sign up and log in
 - Courses, topics, and study notes
 - AI-generated questions from notes, with approve or reject
@@ -34,6 +35,7 @@ The AI only **creates content** (questions and explanations). The decision of **
 - "Today's study list" feed
 
 **Planned (if time allows)**
+
 - Progress dashboard and charts
 - AI explanations for wrong answers
 - Study plan by exam date
@@ -43,12 +45,12 @@ The full list is on our [project board](https://github.com/users/fyernald/projec
 
 ## Team
 
-| Name | Scrum role | Title |
-|---|---|---|
-| Nali Hazhar | Product Owner | Product Owner |
-| Sarwan Mudhafar | ScrumMaster | Scrum Master and Frontend Developer |
-| Birhat Karahan | Developer | Lead Developer & Software Architect |
-| Rabia Karhan | Developer | UI/UX Designer (Figma) |
+| Name            | Scrum role    | Title                               |
+| --------------- | ------------- | ----------------------------------- |
+| Nali Hazhar     | Product Owner | Product Owner                       |
+| Sarwan Mudhafar | ScrumMaster   | Scrum Master and Frontend Developer |
+| Birhat Karahan  | Developer     | Lead Developer & Software Architect |
+| Rabia Karhan    | Developer     | UI/UX Designer (Figma)              |
 
 ## How we work
 
@@ -60,15 +62,16 @@ The full list is on our [project board](https://github.com/users/fyernald/projec
 
 ## Roadmap
 
-| Sprint | Dates | Goal |
-|---|---|---|
-| 1 | Oct 13 - Oct 26 | Foundation: monorepo, database, wireframes, login, courses, notes |
-| 2 | Oct 27 - Nov 09 | AI questions and study sessions |
-| 3 | Nov 10 - Nov 23 | Mastery score and spaced repetition |
-| 4 | Nov 24 - Dec 07 | Today's study list, dashboard, testing |
-| 5 | Dec 08 - Dec 21 | Demo, report, and extra features |
+| Sprint | Dates           | Goal                                                              |
+| ------ | --------------- | ----------------------------------------------------------------- |
+| 1      | Oct 13 - Oct 26 | Foundation: monorepo, database, wireframes, login, courses, notes |
+| 2      | Oct 27 - Nov 09 | AI questions and study sessions                                   |
+| 3      | Nov 10 - Nov 23 | Mastery score and spaced repetition                               |
+| 4      | Nov 24 - Dec 07 | Today's study list, dashboard, testing                            |
+| 5      | Dec 08 - Dec 21 | Demo, report, and extra features                                  |
 
 ## Repository structure
+
 ```
 orbi/
 ├── apps/
@@ -124,29 +127,29 @@ Each `apps/` and `packages/` folder has its own `package.json` and `src/` direct
 
 The reasons for these choices are in [docs/decisions/0001-tech-stack.md](docs/decisions/0001-tech-stack.md).
 
-| Part | Choice |
-|---|---|
-| **Monorepo** | pnpm workspaces |
-| **Language** | TypeScript |
-| **Frontend** | Next.js (React, App Router) |
-| **Backend** | Fastify (Node.js) |
-| **Database** | PostgreSQL (Docker) |
-| **ORM** | Drizzle ORM |
-| **Authentication** | Better Auth (email + password, sessions) |
-| **Email** | Nodemailer + Mailpit (locally) |
-| **AI service** | Google Gemini API (free tier), server-side only |
-| **AI generation** | Async via `generation_jobs` table and `orbi-worker` container |
-| **UI framework** | Tailwind CSS + shadcn/ui |
-| **Validation** | Zod |
-| **Data fetching** | TanStack Query |
-| **Testing** | Vitest (unit), Playwright (e2e, Sprint 4) |
-| **Monitoring** | Sentry (Sprint 2) |
-| **Package manager** | pnpm |
-| **UI design** | Figma |
-| **Hosting** | Self-hosted on team VPS (Debian) |
-| **Deployment** | Docker + docker-compose, GitHub Actions CI/CD, Caddy reverse proxy |
-| **Container registry** | GitHub Container Registry |
-| **Backups** | Daily pg_dump + off-server copy |
+| Part                   | Choice                                                             |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Monorepo**           | pnpm workspaces                                                    |
+| **Language**           | TypeScript                                                         |
+| **Frontend**           | Next.js (React, App Router)                                        |
+| **Backend**            | Fastify (Node.js)                                                  |
+| **Database**           | PostgreSQL (Docker)                                                |
+| **ORM**                | Drizzle ORM                                                        |
+| **Authentication**     | Better Auth (email + password, sessions)                           |
+| **Email**              | Nodemailer + Mailpit (locally)                                     |
+| **AI service**         | Google Gemini API (free tier), server-side only                    |
+| **AI generation**      | Async via `generation_jobs` table and `orbi-worker` container      |
+| **UI framework**       | Tailwind CSS + shadcn/ui                                           |
+| **Validation**         | Zod                                                                |
+| **Data fetching**      | TanStack Query                                                     |
+| **Testing**            | Vitest (unit), Playwright (e2e, Sprint 4)                          |
+| **Monitoring**         | Sentry (Sprint 2)                                                  |
+| **Package manager**    | pnpm                                                               |
+| **UI design**          | Figma                                                              |
+| **Hosting**            | Self-hosted on team VPS (Debian)                                   |
+| **Deployment**         | Docker + docker-compose, GitHub Actions CI/CD, Caddy reverse proxy |
+| **Container registry** | GitHub Container Registry                                          |
+| **Backups**            | Daily pg_dump + off-server copy                                    |
 
 ## Workflow
 
@@ -175,13 +178,15 @@ A task is done when:
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
+- corepack enable
 - Docker and Docker Compose
 - pnpm (`npm install -g pnpm`)
 
 ### Local development
 
 1. Clone the repository:
+
 ```bash
    git clone https://github.com/fyernald/orbi.git
    cd orbi
@@ -189,44 +194,51 @@ A task is done when:
 ```
 
 2. Install dependencies:
+
 ```bash
    pnpm install
 ```
 
 3. Copy environment variables:
+
 ```bash
    cp .env.example .env.local
 ```
-   Edit `.env.local` and fill in your own keys.
+
+Edit `.env.local` and fill in your own keys.
 
 4. Start the database and mail server:
+
 ```bash
    docker compose up -d
 ```
 
 5. Run migrations:
+
 ```bash
-   pnpm run --filter server db:migrate
+   pnpm run --filter server db:migrate (after T-02)
 ```
 
 6. Start development servers:
+
 ```bash
    # Terminal 1: Frontend
    pnpm run --filter client dev
-   
+
    # Terminal 2: Backend
    pnpm run --filter server dev
 ```
 
-   - Frontend: `http://localhost:3000`
-   - Backend API: `http://localhost:3001`
-   - Mailpit (emails): `http://localhost:1025`
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:3001`
+- Mailpit (emails): `http://localhost:8025`
 
 7. Run tests:
+
 ```bash
    # Unit tests
    pnpm run test
-   
+
    # Watch mode
    pnpm run test:watch
 ```
