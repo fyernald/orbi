@@ -1,0 +1,29 @@
+# Local development services. The app itself (client and server) runs with pnpm, not in Docker.
+# Values come from your .env file (copy .env.example to .env). The defaults below match .env.example.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orbi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orbi_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-orbi}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - orbi_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orbi} -d ${POSTGRES_DB:-orbi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Catches every email the app sends in development.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP: the app sends mail here
+      - "127.0.0.1:8025:8025" # Web inbox: open http://localhost:8025
+
+volumes:
+  orbi_pg_data:
