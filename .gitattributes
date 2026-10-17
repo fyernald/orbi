@@ -1,1 +1,6 @@
 * text=auto eol=lf
+
+.githooks/* text eol=lf
+
+pnpm-lock.yaml linguist-generated
+docs/** linguist-documentation
