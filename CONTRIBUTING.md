@@ -11,7 +11,6 @@ git config core.hooksPath .githooks
 ```
 
 This turns on our local checks. They run when you commit and stop mistakes before they reach GitHub.
-On macOS or Linux, also run `chmod +x .githooks/*`.
 
 ## Commit messages
 
