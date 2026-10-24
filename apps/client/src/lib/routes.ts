@@ -1,9 +1,7 @@
-// every page path in one place, so links, redirects, and the proxy never drift apart
+// every page path in one place, so links and redirects never drift apart
 export const routes = {
-	home: '/',
+	landing: '/',
 	login: '/login',
 	signup: '/signup',
+	app: '/app',
 } as const;
-
-// pages anyone can open; every other page needs an account
-export const publicRoutes: readonly string[] = [routes.login, routes.signup];

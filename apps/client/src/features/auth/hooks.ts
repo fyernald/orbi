@@ -4,14 +4,14 @@ import type { SignInInput, SignUpInput } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authClient } from '@/lib/auth-client';
 import { unwrap } from './errors';
+import { sessionQueryKey } from './session-query';
 
 // The session in the query cache is the single source of truth for "who is logged in".
-// The page guards react to it, so these hooks never navigate.
-const sessionKey = ['auth', 'session'] as const;
-
+// The server layouts fill it before the first render; the page guards react to it,
+// so these hooks never navigate.
 export function useSession() {
 	return useQuery({
-		queryKey: sessionKey,
+		queryKey: sessionQueryKey,
 		queryFn: async () => unwrap(await authClient.getSession()),
 	});
 }
@@ -19,7 +19,7 @@ export function useSession() {
 // waits for the new session, so the guards see it before the form stops pending
 function useRefreshSession() {
 	const queryClient = useQueryClient();
-	return () => queryClient.refetchQueries({ queryKey: sessionKey });
+	return () => queryClient.refetchQueries({ queryKey: sessionQueryKey });
 }
 
 export function useSignIn() {
@@ -48,9 +48,9 @@ export function useSignOut() {
 		onSuccess: () => {
 			// drop the old user's data, so the next user on this browser never sees it
 			queryClient.removeQueries({
-				predicate: (query) => query.queryKey[0] !== sessionKey[0],
+				predicate: (query) => query.queryKey[0] !== sessionQueryKey[0],
 			});
-			queryClient.setQueryData(sessionKey, null);
+			queryClient.setQueryData(sessionQueryKey, null);
 		},
 	});
 }

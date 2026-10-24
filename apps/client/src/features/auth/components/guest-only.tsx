@@ -6,10 +6,10 @@ import { useRedirect } from '@/hooks/use-redirect';
 import { routes } from '@/lib/routes';
 import { useSession } from '../hooks';
 
-// for the login and sign-up pages: a logged-in user goes straight to the app
+// sends the user into the app once they log in or sign up on these pages
 export function GuestOnly({ children }: { children: ReactNode }) {
 	const { data: session } = useSession();
-	useRedirect(Boolean(session), routes.home);
+	useRedirect(Boolean(session), routes.app);
 
 	if (session) return <PageLoader />;
 	return children;

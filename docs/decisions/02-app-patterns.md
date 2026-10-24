@@ -128,7 +128,9 @@ apps/client/src/
 | Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
 | Small UI state (a menu is open)             | `useState` in the component                            |
 
-- The session in the query cache decides who is logged in. Page guards (`RequireSession`, `GuestOnly`) react to it, so hooks and forms never navigate by themselves.
+- Who may see a page is decided **on the server** before anything is sent: the `/app` and login layouts call `getServerSession()` (`features/auth/server.ts`) and redirect. The browser never shows a page it should not, not even for a moment.
+- The layouts hand that session to the query cache (`SessionBoundary`), so the client never asks again on load. After that, the session in the cache decides who is logged in. Page guards (`RequireSession`, `GuestOnly`) react to it when the user logs in or out, so hooks and forms never navigate by themselves.
+- Logged-in pages live under `/app`. `/` is kept for the landing page.
 - After logout, every cached query is removed, so the next user on the same browser never sees old data.
 - No global store (Zustand, Redux). If state ever needs to be shared that none of the three above can hold, we decide it first.
 
