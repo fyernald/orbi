@@ -26,6 +26,9 @@ updates:
       # Stay on the same Node.js version as .nvmrc.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # ESLint does not support TypeScript 7 yet.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Keeps the images in docker-compose.yml up to date.
   - package-ecosystem: "docker-compose"
