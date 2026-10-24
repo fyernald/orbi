@@ -2,6 +2,8 @@
 
 How we work in this repository. Short version: small branches, clear commit messages, one pull request per task.
 
+Only Team Byte4 members contribute to Orbi. By contributing, you agree that your work is covered by the [LICENSE](LICENSE) (all rights reserved by the team).
+
 ## One-time setup
 
 `pnpm install` turns on our local checks in `.githooks` for you. They run when you commit and stop mistakes before they reach GitHub. If they ever seem to be off, run this in the project folder:

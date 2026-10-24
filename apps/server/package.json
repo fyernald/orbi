@@ -2,6 +2,7 @@
 	"name": "server",
 	"version": "0.0.0",
 	"private": true,
+	"license": "UNLICENSED",
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
