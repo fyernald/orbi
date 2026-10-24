@@ -1,20 +1,24 @@
 {
-  "name": "orbi",
-  "private": true,
-  "packageManager": "pnpm@10.28.0",
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "dev": "pnpm --parallel --filter server --filter client dev",
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "devDependencies": {
-    "@types/node": "^26.6.5",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
-  }
+	"name": "orbi",
+	"private": true,
+	"packageManager": "pnpm@10.28.0",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"prepare": "git config core.hooksPath .githooks || exit 0",
+		"dev": "pnpm --parallel --filter server --filter client dev",
+		"build": "pnpm -r build",
+		"typecheck": "pnpm -r typecheck",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"devDependencies": {
+		"@types/node": "^22.20.5",
+		"prettier": "^3.9.10",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.5"
+	}
 }

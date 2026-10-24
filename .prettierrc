@@ -7,5 +7,11 @@
 	"printWidth": 80,
 	"bracketSpacing": true,
 	"arrowParens": "always",
-	"endOfLine": "lf"
+	"endOfLine": "lf",
+	"overrides": [
+		{
+			"files": ["*.yml", "*.yaml", "*.md"],
+			"options": { "singleQuote": false }
+		}
+	]
 }

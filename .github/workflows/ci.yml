@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   checks:
@@ -31,11 +31,14 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
 
       - name: Typecheck
         run: pnpm typecheck
