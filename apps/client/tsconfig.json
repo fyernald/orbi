@@ -5,6 +5,7 @@
 		"jsx": "preserve",
 		"allowJs": false,
 		"incremental": true,
+		"paths": { "@/*": ["./src/*"] },
 		"plugins": [{ "name": "next" }]
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

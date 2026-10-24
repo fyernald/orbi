@@ -33,3 +33,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Written by next dev for AI coding tools
+apps/client/AGENTS.md

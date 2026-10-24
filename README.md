@@ -201,7 +201,7 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `DATABASE_URL`: PostgreSQL connection for the server (for example `postgresql://orbi:orbi_dev_password@localhost:5432/orbi`)
 - `SERVER_PORT`, `HOST`: where the Fastify server listens (default `3001`, `127.0.0.1`)
 - `API_URL`: where the Next.js client forwards `/api/*` requests in development
-- `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`: session security and app URL
+- `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`: session security and app URL. Both are required; make the secret with `openssl rand -base64 32`
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server (Mailpit locally)
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
 

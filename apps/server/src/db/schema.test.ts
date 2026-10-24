@@ -1,20 +1,12 @@
-import { fileURLToPath } from 'node:url';
-import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/pglite';
-import { migrate } from 'drizzle-orm/pglite/migrator';
 import { beforeAll, describe, expect, it } from 'vitest';
-import * as schema from './schema';
+import { course, note, profile, topic, user } from './schema';
+import { createTestDb } from './testing';
 
-const { user, profile, course, topic, note } = schema;
-
-// an in-memory Postgres, so the tests run the real migrations without a database server
-const db = drizzle({ client: new PGlite(), schema });
+let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {
-	await migrate(db, {
-		migrationsFolder: fileURLToPath(new URL('../../drizzle', import.meta.url)),
-	});
+	db = await createTestDb();
 });
 
 let count = 0;

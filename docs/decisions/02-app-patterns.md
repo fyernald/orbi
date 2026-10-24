@@ -25,6 +25,7 @@ apps/server/src/modules/courses/
 - A request goes `route → service → repository → database`, never skipping a layer.
 - Every repository function takes the `userId` and filters by it. This is how users only see their own data (0001 rule 6).
 - Even a simple feature has all three files, so every feature looks the same.
+- The one exception is `modules/auth`: Better Auth is its service and repository, so it only has `routes.ts`.
 
 ### 2. Wiring: factory functions, connected in one place
 
@@ -103,17 +104,33 @@ There is no event bus yet. When an action gets three or more unrelated reactions
 
 ```
 apps/client/src/
-  app/                  Next.js pages, kept thin
+  app/                  Next.js pages, kept thin: they only put components together
   features/courses/
-    components/
+    components/         one component per file, each with one job
     hooks.ts            useCourses(), useCreateCourse() with TanStack Query
-  lib/api.ts            the one typed API client
   components/ui/        shadcn/ui components
+  components/form/      form pieces every feature reuses (TextField, FormError, SubmitButton)
+  hooks/                hooks that are not tied to one feature
+  lib/api.ts            the one typed API client (lib/auth-client.ts for Better Auth)
+  lib/routes.ts         every page path
 ```
 
-- Components never call `fetch`. They use the feature's hooks, and the hooks use `lib/api.ts`.
+- Components never call `fetch`. They use the feature's hooks, and the hooks use `lib/api.ts` or `lib/auth-client.ts`.
+- No god components. Split a component when it does more than one job (loads data, holds a form, and draws a layout). Presentational components only get props, so the Figma designs can restyle them without touching logic.
 - Code used by one feature stays in that feature's folder. It moves to a shared folder only when a second feature needs it.
 - **This structure is fixed.** Every feature follows it, from the first one. Changing it later means touching every feature.
+
+### 9. Client state: each kind of state has one home
+
+| State                                       | Where it lives                                         |
+| ------------------------------------------- | ------------------------------------------------------ |
+| Data from the server, including the session | TanStack Query                                         |
+| Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
+| Small UI state (a menu is open)             | `useState` in the component                            |
+
+- The session in the query cache decides who is logged in. Page guards (`RequireSession`, `GuestOnly`) react to it, so hooks and forms never navigate by themselves.
+- After logout, every cached query is removed, so the next user on the same browser never sees old data.
+- No global store (Zustand, Redux). If state ever needs to be shared that none of the three above can hold, we decide it first.
 
 ## Not used
 
@@ -124,6 +141,7 @@ apps/client/src/
 - ❌ Generic `BaseRepository<T>` classes
 - ❌ CQRS, event sourcing, full DDD, microservices (too much for four people and ten weeks)
 - ❌ Choosing the AI model automatically
+- ❌ A global client store (Zustand, Redux) for now, see rule 9
 
 ## Consequences
 
