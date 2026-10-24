@@ -27,27 +27,27 @@ You do this once. After that, deploys happen by themselves.
 
 In Namecheap, under **Domain List > orbi.study > Manage > Advanced DNS**, add two **A records** that point `@` and `www` to the VPS IP.
 
-### 2. Deploy user
+### 2. A user for Orbi
 
 On the VPS as `root`:
 
 ```bash
-adduser --disabled-password --gecos "" deploy
-usermod -aG docker deploy
-mkdir -p /home/deploy/orbi /home/deploy/.ssh
-chown -R deploy:deploy /home/deploy/orbi /home/deploy/.ssh
+adduser --disabled-password --gecos "" orbi
+usermod -aG docker orbi
+mkdir -p /home/orbi/orbi /home/orbi/.ssh
+chown -R orbi:orbi /home/orbi/orbi /home/orbi/.ssh
 ```
 
 Note: a user in the `docker` group has full control of the server, so keep its SSH key safe.
 
 ### 3. Production `.env`
 
-Copy [deploy/.env.example](../deploy/.env.example) to `/home/deploy/orbi/.env` and fill it in. Use long random values for `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` (the commands are in the file).
+Copy [deploy/.env.example](../deploy/.env.example) to `/home/orbi/orbi/.env` and fill it in. Use long random values for `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` (the commands are in the file).
 
 ```bash
-nano /home/deploy/orbi/.env
-chown deploy:deploy /home/deploy/orbi/.env
-chmod 600 /home/deploy/orbi/.env
+nano /home/orbi/orbi/.env
+chown orbi:orbi /home/orbi/orbi/.env
+chmod 600 /home/orbi/orbi/.env
 ```
 
 ### 4. nginx and HTTPS
@@ -70,11 +70,11 @@ On your own computer (not the VPS):
 ssh-keygen -t ed25519 -f orbi_deploy -N "" -C "github-actions-deploy"
 ```
 
-This makes two files. Put the content of the **public** key (`orbi_deploy.pub`) into `/home/deploy/.ssh/authorized_keys` on the VPS, then:
+This makes two files. Put the content of the **public** key (`orbi_deploy.pub`) into `/home/orbi/.ssh/authorized_keys` on the VPS, then:
 
 ```bash
-chown deploy:deploy /home/deploy/.ssh/authorized_keys
-chmod 600 /home/deploy/.ssh/authorized_keys
+chown orbi:orbi /home/orbi/.ssh/authorized_keys
+chmod 600 /home/orbi/.ssh/authorized_keys
 ```
 
 Get the VPS fingerprint, so GitHub can be sure it talks to the real server:
@@ -90,7 +90,7 @@ In the repository go to **Settings > Environments > New environment** and name i
 | Secret            | Value                                                      |
 | ----------------- | ---------------------------------------------------------- |
 | `VPS_HOST`        | The VPS IP address                                         |
-| `VPS_USER`        | `deploy`                                                   |
+| `VPS_USER`        | `orbi`                                                     |
 | `VPS_SSH_KEY`     | The full content of the **private** key file `orbi_deploy` |
 | `VPS_KNOWN_HOSTS` | The output of the `ssh-keyscan` command                    |
 | `VPS_PORT`        | Only if SSH does not use port 22                           |
@@ -112,7 +112,7 @@ To test it, open **Actions > CI > Run workflow**, choose `main`, and run it. Whe
 **See the logs:**
 
 ```bash
-ssh deploy@<vps-ip>
+ssh orbi@<vps-ip>
 cd orbi
 docker compose ps
 docker compose logs -f server
