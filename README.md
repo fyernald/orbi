@@ -73,11 +73,13 @@ orbi/
 ├── packages/
 │   ├── core/            # Pure TypeScript business logic (mastery score, SM-2 scheduler, QuestionGenerator interface)
 │   └── shared/          # Types, constants, and small helpers used by client and server
+├── deploy/              # Production Docker Compose and Caddy config for the VPS
 ├── docs/
-│   └── decisions/       # Architecture decision records
+│   ├── decisions/       # Architecture decision records
+│   └── deployment.md    # How automatic deployment works and how to set it up
 ├── .github/
 │   ├── workflows/
-│   │   ├── ci.yml           # Typecheck, test, and build
+│   │   ├── ci.yml           # Typecheck, test, build, and deploy
 │   │   └── repo-checks.yml  # Commit messages, PR title, branch name, file checks
 │   └── dependabot.yml
 ├── .githooks/           # Local commit checks (see CONTRIBUTING.md)
@@ -200,7 +202,7 @@ All variables are listed with comments in [.env.example](.env.example). The main
 
 ## Deployment
 
-Deployment runs with Docker Compose on the team VPS. Birhat currently handles deployment; a deployment guide will be added to `docs/`.
+Every merge into `main` is deployed to the team VPS automatically: GitHub Actions builds Docker images, uploads them to GitHub Container Registry, and restarts the containers on the VPS. The one-time setup and everyday tasks are in [docs/deployment.md](docs/deployment.md).
 
 ## Important
 
