@@ -73,7 +73,7 @@ orbi/
 ├── packages/
 │   ├── core/            # Pure TypeScript business logic (mastery score, SM-2 scheduler, QuestionGenerator interface)
 │   └── shared/          # Types, constants, and small helpers used by client and server
-├── deploy/              # Production Docker Compose and Caddy config for the VPS
+├── deploy/              # Production Docker Compose and nginx config for the VPS
 ├── docs/
 │   ├── decisions/       # Architecture decision records
 │   └── deployment.md    # How automatic deployment works and how to set it up
@@ -98,7 +98,7 @@ TypeScript everywhere, in a pnpm monorepo:
 - **Backend:** Fastify, PostgreSQL with Drizzle ORM, Better Auth, Zod
 - **AI:** Google Gemini API, server-side only, behind the `QuestionGenerator` interface
 - **Testing:** Vitest (unit), Playwright (e2e, Sprint 4)
-- **Hosting:** Docker Compose on the team VPS, behind Caddy
+- **Hosting:** Docker Compose on the team VPS, behind nginx
 
 The full stack and the reasons for each choice are in [docs/decisions/01-tech-stack.md](docs/decisions/01-tech-stack.md).
 

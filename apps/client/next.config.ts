@@ -12,7 +12,7 @@ const rootEnv = existsSync(rootEnvFile)
 	: {};
 
 // In development the browser talks to Next.js only, and /api/* is forwarded to the Fastify server.
-// In production the reverse proxy (Caddy) sends /api/* to the server directly.
+// In production nginx on the VPS sends /api/* to the server directly.
 const apiUrl =
 	process.env.API_URL ?? rootEnv.API_URL ?? 'http://localhost:3001';
 

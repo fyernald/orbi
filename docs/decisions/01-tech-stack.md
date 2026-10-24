@@ -94,7 +94,7 @@ We need a tech stack that:
 | --------------------------- | ---------------------------------------- |
 | **Hosting**                 | Self-hosted on team VPS (Debian)         |
 | **Container orchestration** | Docker + Docker Compose                  |
-| **Reverse proxy**           | Caddy (automatic HTTPS)                  |
+| **Reverse proxy**           | nginx + certbot (already on the VPS)     |
 | **Container registry**      | GitHub Container Registry                |
 | **CI/CD pipeline**          | GitHub Actions (push, PR checks, deploy) |
 | **Backups**                 | Daily pg_dump + off-server copy          |

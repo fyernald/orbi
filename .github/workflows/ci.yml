@@ -119,7 +119,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key ~/.ssh/config
 
       - name: Copy deploy files
-        run: scp deploy/compose.yml deploy/Caddyfile vps:orbi/
+        run: scp deploy/compose.yml vps:orbi/
 
       - name: Start the new version
         env:

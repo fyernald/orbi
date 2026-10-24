@@ -1,30 +1,16 @@
 # Production services on the VPS. GitHub Actions copies this file to the server on every deploy.
 # Secrets come from the .env file next to it on the VPS (see deploy/.env.example).
+# nginx on the VPS sends orbi.study traffic to the client and server ports below (see deploy/nginx.conf).
 
 name: orbi
 
 services:
-  caddy:
-    image: caddy:2.11.6-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - client
-      - server
-
   client:
     image: ghcr.io/fyernald/orbi-client:${IMAGE_TAG:-latest}
     restart: unless-stopped
     init: true
+    ports:
+      - "127.0.0.1:3100:3000"
     healthcheck:
       test: wget -q --spider http://127.0.0.1:3000/ || exit 1
       interval: 10s
@@ -40,6 +26,8 @@ services:
       HOST: 0.0.0.0
       SERVER_PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:3101:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +56,4 @@ services:
       retries: 5
 
 volumes:
-  caddy_data:
-  caddy_config:
   pg_data:
