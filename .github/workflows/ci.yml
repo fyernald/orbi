@@ -2,18 +2,21 @@ name: CI
 
 # Checks that the code itself works. The "Repo checks" workflow only checks names and files.
 # This workflow must pass before a pull request can be merged (set as a required check in the ruleset).
+# On main it also builds the Docker images and deploys them to the VPS (see docs/deployment.md).
 on:
   pull_request:
   push:
     branches: [main]
+  # Lets you redeploy main by hand from the Actions tab.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# A new push to the same branch cancels the older run.
+# A new push to the same branch cancels the older run, except on main so a deploy is never stopped halfway.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
@@ -48,3 +51,83 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  images:
+    name: Build ${{ matrix.app }} image
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        app: [client, server]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/orbi-${{ matrix.app }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/orbi-${{ matrix.app }}:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  deploy:
+    name: Deploy to VPS
+    needs: images
+    # Turned on with the DEPLOY_ENABLED repository variable once the VPS is set up.
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+      ACTOR: ${{ github.actor }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host vps\n  HostName %s\n  User %s\n  Port %s\n  IdentityFile ~/.ssh/deploy_key\n' "$HOST" "$USER" "$PORT" > ~/.ssh/config
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/config
+
+      - name: Copy deploy files
+        run: scp deploy/compose.yml deploy/Caddyfile vps:orbi/
+
+      - name: Start the new version
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN" | ssh vps "docker login ghcr.io -u $ACTOR --password-stdin"
+          ssh vps "cd orbi && export IMAGE_TAG=$IMAGE_TAG && docker compose pull && docker compose up -d --wait --wait-timeout 120 --remove-orphans"
+
+      - name: Clean up
+        if: always()
+        run: ssh vps "docker logout ghcr.io; docker image prune -af" || true

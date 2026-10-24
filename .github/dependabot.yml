@@ -30,9 +30,9 @@ updates:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 
-  # Keeps the images in docker-compose.yml up to date.
+  # Keeps the images in the compose files up to date.
   - package-ecosystem: "docker-compose"
-    directory: "/"
+    directories: ["/", "/deploy"]
     schedule:
       interval: "weekly"
     commit-message:
@@ -41,4 +41,17 @@ updates:
     ignore:
       # Big Postgres upgrades need a manual database move.
       - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+
+  # Keeps the base images in the Dockerfiles up to date.
+  - package-ecosystem: "docker"
+    directories: ["/apps/client", "/apps/server"]
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    ignore:
+      # Stay on the same Node.js version as .nvmrc.
+      - dependency-name: "node"
         update-types: ["version-update:semver-major"]
