@@ -95,7 +95,7 @@ Never edit a migration that is already on `main`. Make a new one instead.
 **Login tables:** do not edit `schema/auth.ts` by hand. After changing the Better Auth config in `apps/server/src/auth.ts` (for example adding a plugin), regenerate it from the repository root (it reads your `.env` there), run `pnpm format`, and then create a migration:
 
 ```bash
-pnpm dlx auth@1.7.12 generate --config apps/server/src/auth.ts --output apps/server/src/db/schema/auth.ts --yes
+pnpm dlx auth@1.7.12 generate --config apps/server/auth.config.ts --output apps/server/src/db/schema/auth.ts --yes
 ```
 
 Better Auth's own tables use `timestamp` without a time zone. That is fine: Drizzle always reads and writes them as UTC.
