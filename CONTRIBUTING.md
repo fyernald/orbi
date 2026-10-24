@@ -52,24 +52,17 @@ Create a branch from `main` for every task. Name it `type/issue-number-short-nam
 
 ## What is checked automatically
 
-| Where                       | When                  | What                                                                                                                            |
-| --------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Your computer (`.githooks`) | When you commit       | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB                                        |
-| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests, and build                                                                                         |
-| GitHub (Repo checks)        | On every pull request | The same file checks, every commit message, the PR title, the branch name, and the issue link on `feat` and `fix` pull requests |
-| GitHub (secret scanning)    | When you push         | Blocks pushes that contain API keys or tokens (turned on in repository settings)                                                |
+| Where                       | When                  | What                                                                                     |
+| --------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| Your computer (`.githooks`) | When you commit       | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB |
+| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests, and build                                                  |
+| GitHub (Repo checks)        | On every pull request | The same file checks, the PR title, and the issue link on `feat` and `fix` pull requests |
+| GitHub (secret scanning)    | When you push         | Blocks pushes that contain API keys or tokens (turned on in repository settings)         |
+
+Commit messages and branch names on GitHub are not checked: "Squash and merge" turns the pull request into one commit named after its title, and the branch is deleted.
 
 ## My check failed. What now?
 
 - **PR title is wrong:** click **Edit** next to the title on GitHub. The check runs again by itself.
-- **Last commit message is wrong and not pushed yet:** `git commit --amend -m "fix: show error on wrong password"`
-- **Bad commit messages are already pushed:** combine the last commits into one and push again.
-
-  ```bash
-  git reset --soft HEAD~3        # 3 = how many commits to combine
-  git commit -m "feat: add login form"
-  git push --force-with-lease
-  ```
-
+- **Commit message rejected on your computer:** write it again in the format `type: short description`.
 - **A secret file or API key was committed:** remove it with `git rm --cached <file>`, and tell the team lead so the key can be replaced. A key that was pushed once must be treated as leaked.
-- **Branch name is wrong:** rename it with `git branch -m <new-name>`, push the new name, and open a new pull request.
