@@ -1,7 +1,7 @@
 # Orbi: Personal AI Study Coach
 
 [![CI](https://github.com/fyernald/orbi/actions/workflows/ci.yml/badge.svg)](https://github.com/fyernald/orbi/actions/workflows/ci.yml)
-![License](https://img.shields.io/github/license/fyernald/orbi?color=blue)
+![License](https://img.shields.io/badge/license-all%20rights%20reserved-red)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 ![Course](https://img.shields.io/badge/course-CSE301-informational)
 
@@ -216,4 +216,6 @@ Every merge into `main` is deployed to the team VPS automatically: GitHub Action
 
 ## License
 
-Distributed under the Apache-2.0 License. See [LICENSE](LICENSE).
+Copyright (c) 2026 Team Byte4. All rights reserved.
+
+The code is public so it can be read and reviewed, but it is **not open source**. You may not copy, host, or reuse it, or use the Orbi name or logo, without our written permission. See [LICENSE](LICENSE).
