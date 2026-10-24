@@ -76,6 +76,7 @@ orbi/
 ├── deploy/              # Production Docker Compose and nginx config for the VPS
 ├── docs/
 │   ├── decisions/       # Architecture decision records
+│   ├── database.md      # Tables, relations, and how to change the schema
 │   └── deployment.md    # How automatic deployment works and how to set it up
 ├── .github/
 │   ├── workflows/
@@ -165,6 +166,8 @@ A task is done when:
    ```bash
    pnpm dev
    ```
+
+   The server creates and updates the database tables by itself when it starts.
 
    - Frontend: `http://localhost:3000`
    - Backend API: `http://localhost:3001/api` (health check: `/api/health`)

@@ -23,6 +23,7 @@ WORKDIR /app
 COPY --from=build /out/package.json ./
 COPY --from=build /out/node_modules node_modules
 COPY --from=build /repo/apps/server/dist dist
+COPY --from=build /repo/apps/server/drizzle drizzle
 USER node
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
