@@ -1,10 +1,7 @@
-import { APP_NAME } from '@orbi/shared';
+import { redirect } from 'next/navigation';
+import { routes } from '@/lib/routes';
 
-export default function HomePage() {
-	return (
-		<main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-			<h1>{APP_NAME}</h1>
-			<p>Personal AI Study Coach</p>
-		</main>
-	);
+// the landing page will live here; until then, go to the app
+export default function LandingPage() {
+	redirect(routes.app);
 }

@@ -2,3 +2,5 @@
 // Keep this package free of logic that belongs in @orbi/core.
 
 export const APP_NAME = 'Orbi';
+
+export * from './auth';
