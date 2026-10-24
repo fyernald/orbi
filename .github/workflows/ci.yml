@@ -1,6 +1,6 @@
 name: CI
 
-# Checks that the code itself works. The "Repo checks" workflow only checks names and files.
+# Checks that the code itself works. The "Repo checks" workflow only checks the PR title and files.
 # This workflow must pass before a pull request can be merged (set as a required check in the ruleset).
 # On main it also builds the Docker images and deploys them to the VPS (see docs/deployment.md).
 on:

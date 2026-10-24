@@ -80,7 +80,7 @@ orbi/
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml           # Typecheck, test, build, and deploy
-│   │   └── repo-checks.yml  # Commit messages, PR title, branch name, file checks
+│   │   └── repo-checks.yml  # PR title, issue link, file checks
 │   └── dependabot.yml
 ├── .githooks/           # Local commit checks (see CONTRIBUTING.md)
 ├── docker-compose.yml   # Local PostgreSQL and Mailpit
