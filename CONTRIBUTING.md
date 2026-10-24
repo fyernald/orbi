@@ -4,27 +4,29 @@ How we work in this repository. Short version: small branches, clear commit mess
 
 ## One-time setup
 
-After you clone the repository, run this once in the project folder:
+`pnpm install` turns on our local checks in `.githooks` for you. They run when you commit and stop mistakes before they reach GitHub. If they ever seem to be off, run this in the project folder:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-This turns on our local checks. They run when you commit and stop mistakes before they reach GitHub.
+## Code style
+
+Prettier formats the code (settings in `.prettierrc`). Run `pnpm format` before you push, or install the recommended VS Code extensions to format on save. CI fails if a file is not formatted; `pnpm format:check` runs the same check locally.
 
 ## Commit messages
 
 Format: `type: short description`
 
-| Type | Use it for | Example |
-|---|---|---|
-| `feat` | A new feature for the user | `feat: add login form` |
-| `fix` | A bug fix | `fix: show error on wrong password` |
-| `docs` | Documentation only | `docs: update setup steps in README` |
-| `style` | Formatting only, no change in behavior | `style: fix indentation in login page` |
+| Type       | Use it for                                 | Example                                         |
+| ---------- | ------------------------------------------ | ----------------------------------------------- |
+| `feat`     | A new feature for the user                 | `feat: add login form`                          |
+| `fix`      | A bug fix                                  | `fix: show error on wrong password`             |
+| `docs`     | Documentation only                         | `docs: update setup steps in README`            |
+| `style`    | Formatting only, no change in behavior     | `style: fix indentation in login page`          |
 | `refactor` | Rewrite code without changing what it does | `refactor: move question logic to its own file` |
-| `test` | Add or change tests | `test: add tests for the scheduler` |
-| `chore` | Maintenance (setup, config, templates) | `chore: add .gitignore` |
+| `test`     | Add or change tests                        | `test: add tests for the scheduler`             |
+| `chore`    | Maintenance (setup, config, templates)     | `chore: add .gitignore`                         |
 
 Rules:
 
@@ -50,11 +52,12 @@ Create a branch from `main` for every task. Name it `type/issue-number-short-nam
 
 ## What is checked automatically
 
-| Where | When | What |
-|---|---|---|
-| Your computer (`.githooks`) | When you commit | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB |
-| GitHub (Repo checks) | On every pull request | The same file checks, every commit message, the PR title, the branch name, and the issue link on `feat` and `fix` pull requests |
-| GitHub (secret scanning) | When you push | Blocks pushes that contain API keys or tokens (turned on in repository settings) |
+| Where                       | When                  | What                                                                                                                            |
+| --------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Your computer (`.githooks`) | When you commit       | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB                                        |
+| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests, and build                                                                                         |
+| GitHub (Repo checks)        | On every pull request | The same file checks, every commit message, the PR title, the branch name, and the issue link on `feat` and `fix` pull requests |
+| GitHub (secret scanning)    | When you push         | Blocks pushes that contain API keys or tokens (turned on in repository settings)                                                |
 
 ## My check failed. What now?
 

@@ -2,16 +2,16 @@
 // The mastery score (Sprint 3) and the SM-2 scheduler (Sprint 3) will live here.
 
 export interface GeneratedQuestion {
-  question: string;
-  correctAnswer: string;
-  /** Wrong answers, for multiple-choice questions. */
-  distractors?: string[];
+	question: string;
+	correctAnswer: string;
+	/** Wrong answers, for multiple-choice questions. */
+	distractors?: string[];
 }
 
 export interface GenerateQuestionsInput {
-  topicName: string;
-  notes: string;
-  count: number;
+	topicName: string;
+	notes: string;
+	count: number;
 }
 
 /**
@@ -19,5 +19,5 @@ export interface GenerateQuestionsInput {
  * The first version of this interface is refined in Sprint 2 (US-04).
  */
 export interface QuestionGenerator {
-  generate(input: GenerateQuestionsInput): Promise<GeneratedQuestion[]>;
+	generate(input: GenerateQuestionsInput): Promise<GeneratedQuestion[]>;
 }

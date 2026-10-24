@@ -3,7 +3,7 @@ name: Bug report
 about: Something is not working as expected
 title: "[Bug] "
 labels: bug
-assignees: ''
+assignees: ""
 ---
 
 ## What happened?
@@ -12,9 +12,9 @@ A short description of the problem.
 
 ## Steps to reproduce
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected behavior
 

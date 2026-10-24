@@ -132,7 +132,7 @@ pnpm workspaces let us:
 
 - Share types between frontend and backend (no code generation, no API schema tools)
 - Share business logic in `packages/core` (mastery score, SM-2 scheduler)
-- Deploy all three apps with one CI/CD pipeline
+- Deploy the client, the server, and the worker with one CI/CD pipeline
 
 ### Fast start
 
@@ -176,7 +176,7 @@ PostgreSQL, Drizzle, Better Auth, Nodemailer, Vitest, Playwright, and Fastify ar
 4. **API keys stay on the server.**
    - AI calls go through `/api/*` routes in Fastify backend.
    - Keys are never sent to the browser and never committed.
-   - Real keys in `.env.local` (server only); `.env.example` is committed.
+   - Real keys live in the git-ignored `.env` at the repository root, read by the server only; `.env.example` is committed.
 
 5. **Async AI work runs in a separate container.**
    - `orbi-worker` polls `generation_jobs` table and calls Gemini.

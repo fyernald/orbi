@@ -22,3 +22,23 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Stay on the same Node.js version as .nvmrc.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # ESLint does not support TypeScript 7 yet.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # Keeps the images in docker-compose.yml up to date.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    ignore:
+      # Big Postgres upgrades need a manual database move.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]

@@ -6,8 +6,8 @@ Closes #
 
 ## How to test
 
-1. 
-2. 
+1.
+2.
 
 ## Checklist
 

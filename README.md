@@ -106,7 +106,7 @@ The full stack and the reasons for each choice are in [docs/decisions/01-tech-st
 2. Create a branch from `main` named `type/issue-number-short-name`, for example `feature/6-sign-up-form`. Allowed types: `feature`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 3. Commit small and often, using the format `type: short description` (for example `feat: add sign-up form`).
 4. Open a pull request. Write the title in the same format. For `feat` and `fix` pull requests, link the issue with `Closes #6`.
-5. Wait for the automatic checks to pass (typecheck, tests, build, and repo checks).
+5. Wait for the automatic checks to pass (formatting, typecheck, tests, build, and repo checks).
 6. Ask at least one other team member to review.
 7. After approval, use **Squash and merge** and move the card to **Done**.
 
@@ -127,27 +127,26 @@ A task is done when:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (the version is in `.nvmrc`, so `nvm use` or `fnm use` picks it up)
 - pnpm through Corepack: run `corepack enable` once (it uses the pnpm version pinned in `package.json`)
 - Docker and Docker Compose
 
 ### Local development
 
-1. Clone the repository and turn on the local commit checks:
+1. Clone the repository:
 
    ```bash
    git clone https://github.com/fyernald/orbi.git
    cd orbi
-   git config core.hooksPath .githooks
    ```
 
-2. Install dependencies:
+2. Install dependencies. This also turns on the local commit checks in `.githooks`:
 
    ```bash
    pnpm install
    ```
 
-3. Copy the environment variables and fill in your own keys:
+3. Copy the environment variables and fill in your own keys. Both the server and the client read this one file in the repository root:
 
    ```bash
    cp .env.example .env
@@ -177,6 +176,14 @@ A task is done when:
 
    Use `pnpm test:watch` to re-run tests on every change.
 
+7. Format the code before you push (CI checks it):
+
+   ```bash
+   pnpm format
+   ```
+
+   With the recommended VS Code extensions, files are formatted on save.
+
 Database migrations will be added with T-02.
 
 ## Environment variables
@@ -199,7 +206,7 @@ Deployment runs with Docker Compose on the team VPS. Birhat currently handles de
 
 - Never commit passwords, API keys, or `.env`
 - Run `docker compose up -d` before starting development
-- Run tests before pushing: `pnpm test`
+- Run tests and the formatter before pushing: `pnpm test` and `pnpm format`
 - Squash merge only (no merge commits)
 
 ## License
