@@ -1,0 +1,59 @@
+# Production services on the VPS. GitHub Actions copies this file to the server on every deploy.
+# Secrets come from the .env file next to it on the VPS (see deploy/.env.example).
+# nginx on the VPS sends orbi.study traffic to the client and server ports below (see deploy/nginx.conf).
+
+name: orbi
+
+services:
+  client:
+    image: ghcr.io/fyernald/orbi-client:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:3100:3000"
+    healthcheck:
+      test: wget -q --spider http://127.0.0.1:3000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: ghcr.io/fyernald/orbi-server:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      SERVER_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:3101:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: wget -qO- http://127.0.0.1:3001/api/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # No ports are opened, so the database can only be reached by the other containers.
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:
