@@ -1,6 +1,6 @@
 # 0001: Tech stack
 
-- **Status:** Accepted
+- **Status:** Accepted. The AI rules are updated by [0002: App patterns](02-app-patterns.md) (several providers, the user picks the model).
 - **Date:** 2026-10-16
 - **Deciders:** Team Byte4
 - **Related:** Task T-01 (Project setup)
