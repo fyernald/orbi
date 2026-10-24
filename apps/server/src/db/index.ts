@@ -1,12 +1,11 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import * as schema from './schema';
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-	throw new Error('DATABASE_URL is not set. Copy .env.example to .env.');
+// any Postgres driver fits, so tests can pass an in-memory PGlite database
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
+
+// the pool connects on the first query, not here
+export function createDb(url: string) {
+	return drizzle({ connection: url, schema });
 }
-
-// the pool connects on the first query, not on import
-export const db = drizzle({ connection: url, schema });
-
-export type Db = typeof db;
