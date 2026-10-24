@@ -9,6 +9,8 @@
 
 Orbi is a study app where students add their notes, AI turns them into practice questions, and the app decides **what to study next** based on what the student gets wrong.
 
+**Live app:** https://orbi.study
+
 ## About the project
 
 Students often do not know what to revise or when. Orbi removes that decision. The student adds notes for a course topic, the AI generates questions from them, and our own recommendation algorithm (a mastery score per topic and spaced repetition) builds a personalized study feed that focuses on weak topics and brings questions back at the right time.
@@ -204,6 +206,8 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
 
 ## Deployment
+
+The live app is at https://orbi.study (API health check: https://orbi.study/api/health).
 
 Every merge into `main` is deployed to the team VPS automatically: GitHub Actions builds Docker images, uploads them to GitHub Container Registry, and restarts the containers on the VPS. The one-time setup and everyday tasks are in [docs/deployment.md](docs/deployment.md).
 
