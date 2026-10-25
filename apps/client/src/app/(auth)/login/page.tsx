@@ -2,11 +2,19 @@ import type { Metadata } from 'next';
 import { AuthCard } from '@/features/auth/components/auth-card';
 import { AuthSwitch } from '@/features/auth/components/auth-switch';
 import { SignInForm } from '@/features/auth/components/sign-in-form';
+import { brokenConfirmLinkMessage } from '@/features/auth/errors';
 import { routes } from '@/lib/routes';
 
 export const metadata: Metadata = { title: 'Log in · Orbi' };
 
-export default function LoginPage() {
+type LoginPageProps = {
+	// set when a confirmation link did not work
+	searchParams: Promise<{ error?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+	const { error } = await searchParams;
+
 	return (
 		<AuthCard
 			title="Log in"
@@ -19,7 +27,7 @@ export default function LoginPage() {
 				/>
 			}
 		>
-			<SignInForm />
+			<SignInForm notice={error ? brokenConfirmLinkMessage : undefined} />
 		</AuthCard>
 	);
 }

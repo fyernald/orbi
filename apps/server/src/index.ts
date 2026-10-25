@@ -4,11 +4,13 @@ import { buildApp } from './app';
 import { createAuth } from './auth';
 import { loadConfig } from './config';
 import { createDb } from './db';
+import { createSmtpMailer } from './mail/mailer';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
 const db = createDb(config.databaseUrl);
-const auth = createAuth({ db, ...config.auth });
+const mailer = createSmtpMailer(config.smtp);
+const auth = createAuth({ db, mailer, ...config.auth });
 
 // bring the database up to date before taking requests, so every deploy migrates by itself
 await migrate(db, {
