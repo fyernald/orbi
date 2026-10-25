@@ -4,18 +4,18 @@ import {
 	QueryClient,
 } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import type { Session } from '../server';
-import { sessionQueryKey } from '../session-query';
+import { sessionQueryKey, type Session } from '../session-query';
 
 type SessionBoundaryProps = {
 	session: Session;
 	children: ReactNode;
 };
 
-// hands the session the server already checked to the client cache, so the page never asks again
+// Puts the session the server checked into the client cache, so the page renders at once.
+// It is marked as old, so the browser checks again in the background and gets a fresh cookie.
 export function SessionBoundary({ session, children }: SessionBoundaryProps) {
 	const queryClient = new QueryClient();
-	queryClient.setQueryData(sessionQueryKey, session);
+	queryClient.setQueryData(sessionQueryKey, session, { updatedAt: 0 });
 
 	return (
 		<HydrationBoundary state={dehydrate(queryClient)}>

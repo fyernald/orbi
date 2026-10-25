@@ -128,8 +128,9 @@ apps/client/src/
 | Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
 | Small UI state (a menu is open)             | `useState` in the component                            |
 
-- Who may see a page is decided **on the server** before anything is sent: the `/app` and login layouts call `getServerSession()` (`features/auth/server.ts`) and redirect. The browser never shows a page it should not, not even for a moment.
-- The layouts hand that session to the query cache (`SessionBoundary`), so the client never asks again on load. After that, the session in the cache decides who is logged in. Page guards (`RequireSession`, `GuestOnly`) react to it when the user logs in or out, so hooks and forms never navigate by themselves.
+- Who may see a page is decided **on the server** before anything is sent: the `/app` and login layouts call `getServerSession()` (`features/auth/server.ts`) and redirect. The browser never shows a page it should not, not even for a moment. Before that, `src/proxy.ts` sends anyone without a session cookie away from `/app`. It only looks at the cookie, so it never replaces the real check.
+- A layout check does not run again when the user moves between pages under it. So a server page that renders the user's data calls `getServerSession()` itself (it is cached per request, so this costs nothing), and the API checks the session on every request.
+- The layouts hand that session to the query cache (`SessionBoundary`), so the page renders without waiting. The browser checks again in the background, because only the browser can store a refreshed session cookie. Only the user's id, name, and email go to the page, never the session token. After that, the session in the cache decides who is logged in. Page guards (`RequireSession`, `GuestOnly`) react to it when the user logs in or out, so hooks and forms never navigate by themselves.
 - Logged-in pages live under `/app`. `/` is kept for the landing page.
 - After logout, every cached query is removed, so the next user on the same browser never sees old data.
 - No global store (Zustand, Redux). If state ever needs to be shared that none of the three above can hold, we decide it first.

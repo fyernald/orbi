@@ -13,6 +13,7 @@ import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { authErrorMessage } from '../errors';
 import { useSignUp } from '../hooks';
+import { CheckInbox } from './check-inbox';
 
 export function SignUpForm() {
 	const signUp = useSignUp();
@@ -20,6 +21,8 @@ export function SignUpForm() {
 		resolver: zodResolver(signUpInput),
 		defaultValues: { name: '', email: '', password: '' },
 	});
+
+	if (signUp.isSuccess) return <CheckInbox email={signUp.variables.email} />;
 
 	return (
 		<form

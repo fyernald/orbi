@@ -25,6 +25,19 @@ const nextConfig: NextConfig = {
 	async rewrites() {
 		return [{ source: '/api/:path*', destination: `${apiUrl}/api/:path*` }];
 	},
+	// no page may be shown inside another site's frame, so the login form cannot be clickjacked
+	async headers() {
+		return [
+			{
+				source: '/:path*',
+				headers: [
+					{ key: 'X-Frame-Options', value: 'DENY' },
+					{ key: 'X-Content-Type-Options', value: 'nosniff' },
+					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+				],
+			},
+		];
+	},
 };
 
 export default nextConfig;
