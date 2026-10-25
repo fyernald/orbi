@@ -62,6 +62,8 @@ certbot --nginx -d orbi.study -d www.orbi.study
 
 `nginx -t` checks the config before the reload, so a typo cannot take the other sites down. certbot gets a free HTTPS certificate and renews it by itself.
 
+Deploys do not copy `nginx.conf`. When it changes in the repo, copy the changed lines into `/etc/nginx/sites-available/orbi.study` by hand (keep the HTTPS lines certbot added) and run `nginx -t && systemctl reload nginx`.
+
 ### 5. SSH key for GitHub Actions
 
 On your own computer (not the VPS):
