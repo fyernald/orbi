@@ -25,6 +25,8 @@ const messages: Record<string, string> = {
 	INVALID_EMAIL_OR_PASSWORD: 'Wrong email or password.',
 	EMAIL_NOT_VERIFIED: 'Confirm your email first. We just sent you a new link.',
 	INVALID_TOKEN: 'This link has expired or was already used.',
+	// only on local runs; production answers the same for a taken email
+	USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'This email already has an account.',
 };
 
 // shown on the login page when the server sends the user back from a broken confirmation link

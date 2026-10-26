@@ -8,13 +8,17 @@ export const TEST_ORIGIN = 'http://localhost:3000';
 
 // the whole app on an in-memory database, for tests with app.inject();
 // pass a memory mailer to read the emails it sends
-export async function createTestApp(mailer: Mailer = createMemoryMailer()) {
+export async function createTestApp(
+	mailer: Mailer = createMemoryMailer(),
+	{ requireEmailVerification = true } = {}
+) {
 	const db = await createTestDb();
 	const auth = createAuth({
 		db,
 		secret: 'test-secret-that-is-at-least-32-characters',
 		baseURL: TEST_ORIGIN,
 		mailer,
+		requireEmailVerification,
 	});
 	return buildApp({ auth });
 }
