@@ -47,8 +47,10 @@ export function useSignIn() {
 	});
 }
 
-// a new account gets a confirmation email and no session until it is confirmed
+// a new account gets a confirmation email and no session until it is confirmed;
+// on a local run the server skips that and logs the user in right away
 export function useSignUp() {
+	const refreshSession = useRefreshSession();
 	return useMutation({
 		mutationFn: async (input: SignUpInput) =>
 			unwrap(
@@ -57,6 +59,9 @@ export function useSignUp() {
 					callbackURL: afterEmailConfirmed,
 				})
 			),
+		onSuccess: async (data) => {
+			if (data?.token) await refreshSession();
+		},
 	});
 }
 

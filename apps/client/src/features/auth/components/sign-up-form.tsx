@@ -22,7 +22,9 @@ export function SignUpForm() {
 		defaultValues: { name: '', email: '', password: '' },
 	});
 
-	if (signUp.isSuccess) return <CheckInbox email={signUp.variables.email} />;
+	if (signUp.isSuccess && !signUp.data?.token) {
+		return <CheckInbox email={signUp.variables.email} />;
+	}
 
 	return (
 		<form

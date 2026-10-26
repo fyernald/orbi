@@ -173,7 +173,7 @@ A task is done when:
 
    - Frontend: `http://localhost:3000`
    - Backend API: `http://localhost:3001/api` (health check: `/api/health`)
-   - Mailpit (emails): `http://localhost:8025`
+   - Mailpit (emails): `http://localhost:8025` (only used when `APP_ENV` is not `local`)
 
 6. Run the tests:
 
@@ -202,7 +202,8 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `SERVER_PORT`, `HOST`: where the Fastify server listens (default `3001`, `127.0.0.1`)
 - `API_URL`: where the Next.js client forwards `/api/*` requests in development
 - `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`: session security and app URL. Both are required; make the secret with `openssl rand -base64 32`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server (Mailpit locally). Required, because sign-up, email confirmation, and password reset send mail. `SMTP_USER` and `SMTP_PASSWORD` are only needed in production
+- `APP_ENV`: `local` or `production` (default). With `local`, sign-up logs you in without email confirmation and emails are printed in the server console instead of sent, so no mail server is needed. Never set `local` on the server
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server. Required in production, because sign-up, email confirmation, and password reset send mail. Not used with `APP_ENV=local`. `SMTP_USER` and `SMTP_PASSWORD` are only needed in production
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
 
 ## Deployment

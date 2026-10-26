@@ -24,6 +24,8 @@ export type AuthOptions = {
 	secret: string;
 	baseURL: string;
 	mailer: Mailer;
+	// off only for local runs, so you can sign up without opening an email
+	requireEmailVerification: boolean;
 };
 
 // the links in auth emails stop working after one hour
@@ -52,7 +54,13 @@ const validateInput = createAuthMiddleware(async (ctx) => {
 });
 
 // After changing this config, regenerate the login tables (see docs/database.md).
-export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
+export function createAuth({
+	db,
+	secret,
+	baseURL,
+	mailer,
+	requireEmailVerification,
+}: AuthOptions) {
 	return betterAuth({
 		secret,
 		baseURL,
@@ -62,7 +70,7 @@ export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
 			minPasswordLength: PASSWORD_MIN_LENGTH,
 			maxPasswordLength: PASSWORD_MAX_LENGTH,
 			// no session before the email is confirmed; sign-up also answers the same for a taken email
-			requireEmailVerification: true,
+			requireEmailVerification,
 			onExistingUserSignUp: ({ user }) =>
 				mailer.send(existingAccountEmail(user, baseURL)),
 			resetPasswordTokenExpiresIn: LINK_LIFETIME_SECONDS,
@@ -72,9 +80,9 @@ export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
 			revokeSessionsOnPasswordReset: true,
 		},
 		emailVerification: {
-			sendOnSignUp: true,
+			sendOnSignUp: requireEmailVerification,
 			// logging in before confirming sends a fresh link
-			sendOnSignIn: true,
+			sendOnSignIn: requireEmailVerification,
 			autoSignInAfterVerification: true,
 			expiresIn: LINK_LIFETIME_SECONDS,
 			sendVerificationEmail: ({ user, url }) =>
