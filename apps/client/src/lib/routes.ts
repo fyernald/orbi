@@ -7,4 +7,12 @@ export const routes = {
 	forgotPassword: '/forgot-password',
 	resetPassword: '/reset-password',
 	app: '/app',
+	courses: '/app/courses',
+	progress: '/app/progress',
+	review: '/app/review',
+	studySession: '/app/session',
+	mockExams: '/app/mock-exams',
+	studyRooms: '/app/study-rooms',
+	studyPlan: '/app/study-plan',
+	settings: '/app/settings',
 } as const;

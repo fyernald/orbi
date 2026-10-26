@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { AppShell } from '@/features/app-shell/components/app-shell';
 import { RequireSession } from '@/features/auth/components/require-session';
 import { SessionBoundary } from '@/features/auth/components/session-boundary';
 import { getServerSession } from '@/features/auth/server';
@@ -12,7 +13,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
 	return (
 		<SessionBoundary session={session}>
-			<RequireSession>{children}</RequireSession>
+			<RequireSession>
+				<AppShell>{children}</AppShell>
+			</RequireSession>
 		</SessionBoundary>
 	);
 }
