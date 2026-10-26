@@ -4,3 +4,4 @@
 export const APP_NAME = 'Orbi';
 
 export * from './auth';
+export * from './tutor';

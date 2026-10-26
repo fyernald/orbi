@@ -1,4 +1,4 @@
-import type { Suggestion } from '../mock-data';
+import type { Suggestion } from '../suggestions';
 import { SuggestionChip } from './suggestion-chip';
 
 export function SuggestionChips({
@@ -6,6 +6,8 @@ export function SuggestionChips({
 }: {
 	suggestions: Suggestion[];
 }) {
+	if (suggestions.length === 0) return null;
+
 	return (
 		<ul
 			aria-label="Suggested next steps"

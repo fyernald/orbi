@@ -1,5 +1,7 @@
 'use client';
 
+import { useBrowserValue } from '@/hooks/use-browser-value';
+
 const format = new Intl.DateTimeFormat('en-GB', {
 	weekday: 'long',
 	day: 'numeric',
@@ -7,10 +9,6 @@ const format = new Intl.DateTimeFormat('en-GB', {
 });
 
 export function TodayLabel({ className }: { className?: string }) {
-	// uses the browser's date, the server can be in another time zone
-	return (
-		<span className={className} suppressHydrationWarning>
-			{format.format(new Date())}
-		</span>
-	);
+	const today = useBrowserValue(() => format.format(new Date()));
+	return <span className={className}>{today}</span>;
 }

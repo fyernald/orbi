@@ -12,7 +12,6 @@ export const routes = {
 	review: '/app/review',
 	studySession: '/app/session',
 	mockExams: '/app/mock-exams',
-	studyRooms: '/app/study-rooms',
 	studyPlan: '/app/study-plan',
 	settings: '/app/settings',
 } as const;
