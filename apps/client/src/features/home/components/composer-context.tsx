@@ -1,27 +1,36 @@
-import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+'use client';
+
+import type { TutorRequestInput } from '@orbi/shared';
+import { useController, type Control } from 'react-hook-form';
+import { composerActionList, composerActions } from '../actions';
+import type { Topic } from '../mock-data';
+import { ActionPicker } from './action-picker';
+import { TopicPicker } from './topic-picker';
 
 type ComposerContextProps = {
-	course: string;
-	topic: string;
+	control: Control<TutorRequestInput>;
+	topics: Topic[];
 };
 
-export function ComposerContext({ course, topic }: ComposerContextProps) {
+// the action and topic fields, read as a sentence: "Ask Orbi about Biology 101 › Meiosis"
+export function ComposerContext({ control, topics }: ComposerContextProps) {
+	const { field: actionField } = useController({ control, name: 'action' });
+	const { field: topicField } = useController({ control, name: 'topicId' });
+	const action = composerActions[actionField.value];
+
 	return (
-		<div className="flex flex-wrap items-center gap-2 px-2.5 pt-2">
-			<span className="text-[13px] text-muted-foreground">Questions for</span>
-			<button
-				type="button"
-				title="Change course or topic"
-				className="flex h-8 min-w-0 items-center gap-2 rounded-[10px] border border-border pr-2.5 pl-1.5 text-[13px] font-medium transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-			>
-				<span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
-					<BookOpen className="size-3" strokeWidth={2} />
-				</span>
-				<span className="truncate">{course}</span>
-				<ChevronRight className="size-3 shrink-0 text-muted-foreground" />
-				<span className="truncate">{topic}</span>
-				<ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-			</button>
+		<div className="flex min-w-0 flex-wrap items-center gap-2">
+			<ActionPicker
+				actions={composerActionList}
+				selected={action}
+				onSelect={actionField.onChange}
+			/>
+			<span className="text-[13px] text-muted-foreground">{action.joiner}</span>
+			<TopicPicker
+				topics={topics}
+				selected={topics.find(({ id }) => id === topicField.value)}
+				onSelect={topicField.onChange}
+			/>
 		</div>
 	);
 }

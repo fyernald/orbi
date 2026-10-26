@@ -26,8 +26,8 @@ export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
 			<div className="-mt-2">
 				<AddNotesButton collapsed={collapsed} />
 			</div>
-			<MiniAppsSection apps={miniApps} collapsed={collapsed} />
 			<MainNav links={mainNav} collapsed={collapsed} />
+			<MiniAppsSection apps={miniApps} collapsed={collapsed} />
 			<CoursesSection courses={courses} collapsed={collapsed} />
 			<AccountMenu collapsed={collapsed} />
 		</nav>

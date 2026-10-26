@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import type { MiniApp } from '../mock-data';
-import { LiveCount } from './live-count';
 import { MiniAppIcon } from './mini-app-icon';
 import { SidebarLink } from './sidebar-link';
 import { SidebarSectionTitle } from './sidebar-section-title';
@@ -32,10 +31,7 @@ export function MiniAppsSection({ apps, collapsed }: MiniAppsSectionProps) {
 					key={app.href}
 					href={app.href}
 					label={app.label}
-					icon={<MiniAppIcon app={app} showLiveDot={collapsed} />}
-					trailing={
-						app.liveCount ? <LiveCount count={app.liveCount} /> : undefined
-					}
+					icon={<MiniAppIcon app={app} />}
 					active={pathname.startsWith(app.href)}
 					collapsed={collapsed}
 					inPanel

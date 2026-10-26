@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import type { Suggestion, SuggestionTone } from '../mock-data';
+import type { Suggestion, SuggestionTone } from '../suggestions';
 
 const dotColor: Record<SuggestionTone, string> = {
 	primary: 'bg-primary',
-	amber: 'bg-[#f5b83d]',
-	neutral: 'bg-[#8792a8]',
+	warning: 'bg-warning',
 };
 
 export function SuggestionChip({ suggestion }: { suggestion: Suggestion }) {
@@ -15,9 +14,9 @@ export function SuggestionChip({ suggestion }: { suggestion: Suggestion }) {
 		<Link
 			href={suggestion.href}
 			className={cn(
-				'inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors',
+				'inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
 				isPrimary
-					? 'border-accent bg-accent text-accent-foreground hover:bg-[#e1e7fd]'
+					? 'border-accent bg-accent text-accent-foreground hover:bg-tone-blue'
 					: 'border-border bg-card text-subtle-foreground hover:bg-muted'
 			)}
 		>

@@ -4,7 +4,6 @@ import {
 	ChartColumn,
 	ClipboardCheck,
 	House,
-	Users,
 	type LucideIcon,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
@@ -21,7 +20,6 @@ export type NavLink = {
 
 export type MiniApp = NavLink & {
 	tone: Tone;
-	liveCount?: number;
 };
 
 export type CourseSummary = {
@@ -44,13 +42,6 @@ export const miniApps: MiniApp[] = [
 		href: routes.mockExams,
 		icon: ClipboardCheck,
 		tone: 'teal',
-	},
-	{
-		label: 'Study Rooms',
-		href: routes.studyRooms,
-		icon: Users,
-		tone: 'blue',
-		liveCount: 3,
 	},
 	{
 		label: 'Study Plan',
@@ -84,4 +75,4 @@ export const courses: CourseSummary[] = [
 	},
 ];
 
-export const account = { plan: 'Free plan', streakDays: 5 };
+export const account = { streakDays: 5 };

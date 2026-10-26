@@ -23,7 +23,7 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 	if (!session) return null;
 
 	const { name, email } = session.user;
-	const summary = `${account.plan} · ${account.streakDays}-day streak`;
+	const summary = `${account.streakDays}-day streak`;
 
 	return (
 		<div className="mt-auto border-t border-sidebar-border pt-3">

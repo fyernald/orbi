@@ -21,12 +21,6 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 				<OrbiLogo />
 			</Link>
 			<TodayLabel className="hidden text-sm text-muted-foreground md:block" />
-			<Button
-				variant="outline"
-				className="ml-auto h-9 rounded-full px-4 text-[13px]"
-			>
-				Upgrade
-			</Button>
 		</header>
 	);
 }
