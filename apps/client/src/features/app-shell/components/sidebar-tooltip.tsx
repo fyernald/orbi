@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import {
 	Tooltip,
 	TooltipContent,
@@ -15,8 +15,11 @@ type SidebarTooltipProps = {
 };
 
 export function SidebarTooltip({ label, show, children }: SidebarTooltipProps) {
+	// always controlled; Radix warns when a tooltip switches between the two
+	const [open, setOpen] = useState(false);
+
 	return (
-		<Tooltip {...(show ? {} : { open: false })}>
+		<Tooltip open={show && open} onOpenChange={setOpen}>
 			<TooltipTrigger asChild>{children}</TooltipTrigger>
 			<TooltipContent side="right" sideOffset={10}>
 				{label}
