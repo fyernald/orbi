@@ -32,7 +32,7 @@ export function SidebarLink({
 				href={href}
 				aria-current={active ? 'page' : undefined}
 				className={cn(
-					'flex h-10 items-center gap-3 overflow-hidden rounded-xl px-2.5 text-sm transition-colors',
+					'flex h-9 items-center gap-3 overflow-hidden rounded-xl px-2.5 text-sm transition-colors',
 					inPanel
 						? 'mx-1 px-1.5 font-medium text-foreground hover:bg-card/60'
 						: 'text-subtle-foreground hover:bg-sidebar-accent hover:text-foreground',

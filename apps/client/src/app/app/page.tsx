@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Home' };
 
 export default function HomePage() {
 	return (
-		<section className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12 sm:px-8 md:gap-10">
+		<section className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:px-8 md:gap-8">
 			<HomeGreeting />
 			<div className="flex w-full max-w-190 flex-col gap-6">
 				<NoteComposer

@@ -7,7 +7,7 @@ import { TodayLabel } from './today-label';
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 	return (
-		<header className="flex h-16 shrink-0 items-center gap-3 border-b border-divider px-4 md:px-7">
+		<header className="flex h-14 shrink-0 items-center gap-3 border-b border-divider px-4 md:px-7">
 			<Button
 				variant="ghost"
 				size="icon-lg"

@@ -20,7 +20,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
 				side="left"
 				showCloseButton={false}
 				aria-describedby={undefined}
-				className="w-72 max-w-[85vw] gap-0 border-r-0 bg-sidebar p-0 shadow-none data-[side=left]:sm:max-w-72"
+				className="w-64 max-w-[85vw] gap-0 border-r-0 bg-sidebar p-0 shadow-none data-[side=left]:sm:max-w-64"
 			>
 				<SheetTitle className="sr-only">Menu</SheetTitle>
 				<div className="h-full" onClickCapture={closeOnLink}>

@@ -33,7 +33,7 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 						<button
 							type="button"
 							aria-label={`Account: ${name}`}
-							className="flex h-13 w-full items-center gap-3 overflow-hidden rounded-xl px-1.5 text-left transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-sidebar-accent"
+							className="flex h-12 w-full items-center gap-3 overflow-hidden rounded-xl px-1.5 text-left transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-sidebar-accent"
 						>
 							<UserAvatar name={name} />
 							<SidebarLabel
