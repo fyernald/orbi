@@ -14,14 +14,14 @@ export function HomeGreeting() {
 	const greeting = hour === null ? '' : greetingFor(hour);
 
 	return (
-		<div className="flex flex-col items-center gap-5 text-center">
-			<OrbiMark className="size-12" />
+		<div className="flex flex-col items-center gap-4 text-center">
+			<OrbiMark className="size-10" />
 			<div className="flex flex-col gap-2">
 				{/* keeps its height while the greeting waits for the browser's clock */}
 				<p className="min-h-6 text-base text-muted-foreground">
 					{greeting && (firstName ? `${greeting}, ${firstName}` : greeting)}
 				</p>
-				<h1 className="text-2xl font-medium tracking-tight text-balance sm:text-[32px] sm:leading-tight">
+				<h1 className="text-2xl font-medium tracking-tight text-balance sm:text-[28px] sm:leading-tight">
 					What are you studying today?
 				</h1>
 			</div>

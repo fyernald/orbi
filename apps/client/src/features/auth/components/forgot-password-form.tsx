@@ -43,6 +43,7 @@ export function ForgotPasswordForm() {
 					control={form.control}
 					name="email"
 					label="Email"
+					autoFocus
 					type="email"
 					autoComplete="email"
 				/>

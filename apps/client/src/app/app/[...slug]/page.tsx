@@ -1,7 +1,10 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { routes } from '@/lib/routes';
+
+export const metadata: Metadata = { title: 'Not ready yet' };
 
 const plannedPages = new Set<string>(Object.values(routes));
 

@@ -8,7 +8,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-	title: 'Orbi',
+	title: { default: 'Orbi', template: '%s · Orbi' },
 	description: 'Personal AI Study Coach',
 };
 

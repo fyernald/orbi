@@ -6,7 +6,7 @@ import { ResetPasswordForm } from '@/features/auth/components/reset-password-for
 import { routes } from '@/lib/routes';
 
 export const metadata: Metadata = {
-	title: 'Choose a new password · Orbi',
+	title: 'Choose a new password',
 	// the token is in the address, so it must not leak to other sites
 	referrer: 'no-referrer',
 };

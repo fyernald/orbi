@@ -16,7 +16,7 @@ export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
 	return (
 		<nav
 			aria-label="Main"
-			className="flex h-full flex-col gap-6 overflow-x-hidden overflow-y-auto px-3 pt-4 pb-3"
+			className="flex h-full flex-col gap-5 overflow-x-hidden overflow-y-auto px-3 pt-3 pb-3"
 		>
 			<SidebarHeader
 				collapsed={collapsed}

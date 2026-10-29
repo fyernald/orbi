@@ -9,6 +9,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { FormError } from '@/components/form/form-error';
 import { SubmitButton } from '@/components/form/submit-button';
+import { PasswordField } from '@/components/form/password-field';
 import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { authErrorMessage } from '../errors';
@@ -37,6 +38,7 @@ export function SignUpForm() {
 					control={form.control}
 					name="name"
 					label="Name"
+					autoFocus
 					autoComplete="name"
 				/>
 				<TextField
@@ -46,11 +48,10 @@ export function SignUpForm() {
 					type="email"
 					autoComplete="email"
 				/>
-				<TextField
+				<PasswordField
 					control={form.control}
 					name="password"
 					label="Password"
-					type="password"
 					autoComplete="new-password"
 					placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
 				/>

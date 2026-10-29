@@ -4,7 +4,7 @@ import { AuthSwitch } from '@/features/auth/components/auth-switch';
 import { ForgotPasswordForm } from '@/features/auth/components/forgot-password-form';
 import { routes } from '@/lib/routes';
 
-export const metadata: Metadata = { title: 'Forgot password · Orbi' };
+export const metadata: Metadata = { title: 'Forgot password' };
 
 export default function ForgotPasswordPage() {
 	return (

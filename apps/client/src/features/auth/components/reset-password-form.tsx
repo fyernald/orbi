@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { FormError } from '@/components/form/form-error';
 import { SubmitButton } from '@/components/form/submit-button';
-import { TextField } from '@/components/form/text-field';
+import { PasswordField } from '@/components/form/password-field';
 import { Button } from '@/components/ui/button';
 import { FieldGroup } from '@/components/ui/field';
 import { routes } from '@/lib/routes';
@@ -50,11 +50,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
 		>
 			<FieldGroup>
 				<FormError message={authErrorMessage(resetPassword.error)} />
-				<TextField
+				<PasswordField
 					control={form.control}
 					name="newPassword"
 					label="New password"
-					type="password"
+					autoFocus
 					autoComplete="new-password"
 					placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
 				/>

@@ -75,4 +75,5 @@ export const courses: CourseSummary[] = [
 	},
 ];
 
-export const account = { streakDays: 5 };
+// the same due count as the home mock, until both come from the API
+export const studyStatus = { streakDays: 5, dueCount: 24 };

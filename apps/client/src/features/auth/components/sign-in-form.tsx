@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { FormError } from '@/components/form/form-error';
 import { SubmitButton } from '@/components/form/submit-button';
+import { PasswordField } from '@/components/form/password-field';
 import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { routes } from '@/lib/routes';
@@ -30,14 +31,14 @@ export function SignInForm({ notice }: { notice?: string }) {
 					control={form.control}
 					name="email"
 					label="Email"
+					autoFocus
 					type="email"
 					autoComplete="email"
 				/>
-				<TextField
+				<PasswordField
 					control={form.control}
 					name="password"
 					label="Password"
-					type="password"
 					autoComplete="current-password"
 				/>
 				<Link

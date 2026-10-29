@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import { APP_NAME } from '@orbi/shared';
 import type { Auth } from './auth';
+import { registerErrorHandler } from './error-handler';
+import { requestSerializer } from './log';
 import { createAuthRoutes } from './modules/auth/routes';
 
 export type AppDeps = {
@@ -8,7 +10,13 @@ export type AppDeps = {
 };
 
 export function buildApp({ auth }: AppDeps) {
-	const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
+	const app = Fastify({
+		logger: process.env.NODE_ENV !== 'test' && {
+			serializers: { req: requestSerializer },
+		},
+	});
+
+	registerErrorHandler(app);
 
 	// every route is live under /api, so the reverse proxy can send /api/* to this server
 	app.register(

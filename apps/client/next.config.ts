@@ -18,6 +18,8 @@ const apiUrl =
 
 const nextConfig: NextConfig = {
 	output: 'standalone',
+	// the X-Powered-By header only tells others which framework runs the site
+	poweredByHeader: false,
 	// Needed so the standalone build can find files from the packages in this monorepo.
 	outputFileTracingRoot: repoRoot,
 	// These workspace packages are shipped as TypeScript source.

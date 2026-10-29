@@ -93,6 +93,10 @@
 	/* brand colours of the AI models, from Simple Icons */
 	--brand-gemini: #8e75b2;
 	--brand-claude: #d97757;
+	/* the moving border of a 30+ day streak */
+	--flame-yellow: #f5b83d;
+	--flame-orange: #f97316;
+	--flame-red: #e5484d;
 	--border: #e3e8f0;
 	--divider: #eef1f6;
 	--input: #e3e8f0;
@@ -160,5 +164,60 @@
 	}
 	html {
 		@apply font-sans;
+	}
+}
+
+/* a 30+ day streak: a fire-coloured border that keeps turning, with a soft glow */
+@property --streak-angle {
+	syntax: '<angle>';
+	initial-value: 0deg;
+	inherits: false;
+}
+
+@layer components {
+	.streak-blazing {
+		border-color: transparent;
+		background:
+			linear-gradient(var(--tone-red), var(--tone-red)) padding-box,
+			conic-gradient(
+					from var(--streak-angle),
+					var(--flame-yellow),
+					var(--flame-orange),
+					var(--flame-red),
+					var(--flame-orange),
+					var(--flame-yellow)
+				)
+				border-box;
+		box-shadow: 0 0 12px -2px
+			color-mix(in srgb, var(--flame-orange) 45%, transparent);
+		animation: streak-turn 3s linear infinite;
+	}
+
+	.streak-flicker {
+		transform-origin: 50% 90%;
+		animation: streak-flicker 1.4s ease-in-out infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.streak-blazing,
+		.streak-flicker {
+			animation: none;
+		}
+	}
+}
+
+@keyframes streak-turn {
+	to {
+		--streak-angle: 360deg;
+	}
+}
+
+@keyframes streak-flicker {
+	0%,
+	100% {
+		transform: scale(1) rotate(-3deg);
+	}
+	50% {
+		transform: scale(1.12) rotate(3deg);
 	}
 }
