@@ -6,6 +6,8 @@ import { loadConfig } from './config';
 import { createDb } from './db';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
+import { createCourseRepository } from './modules/courses/repository';
+import { createCourseService } from './modules/courses/service';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
@@ -25,7 +27,12 @@ await migrate(db, {
 	migrationsFolder: fileURLToPath(new URL('../drizzle', import.meta.url)),
 });
 
-const app: ReturnType<typeof buildApp> = buildApp({ auth });
+const courses = createCourseService({ repo: createCourseRepository(db) });
+
+const app: ReturnType<typeof buildApp> = buildApp({
+	auth,
+	services: { courses },
+});
 app.addHook('onClose', () => db.$client.end());
 
 // a deploy stops the container with SIGTERM: finish the open requests first

@@ -1,4 +1,5 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
+import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import { AppError } from './errors';
 
 export type ErrorBody = { error: { code: string; message: string } };
@@ -24,6 +25,12 @@ export function registerErrorHandler(app: FastifyInstance) {
 			return reply
 				.status(error.status)
 				.send(errorBody(error.code, error.message));
+		}
+
+		// a route schema rejected the request; the first Zod message is the one written for users
+		if (hasZodFastifySchemaValidationErrors(error)) {
+			const message = error.validation[0]?.message ?? error.message;
+			return reply.status(400).send(errorBody('validation_error', message));
 		}
 
 		if ('validation' in error && error.validation) {

@@ -34,6 +34,8 @@ erDiagram
         text user_id FK
         varchar name
         text description
+        course_color color
+        course_goal goal
         date exam_date
     }
     topic {
@@ -58,7 +60,7 @@ Every table also has `created_at` and `updated_at`.
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `user`, `session`, `account`, `verification` | Login data, created and managed by Better Auth. Passwords are hashed in `account`, never in `user`.   |
 | `profile`                                    | One per user: education level, school, field of study, interests, language (`locale`), and time zone. |
-| `course`                                     | A course of a user, with an optional exam date.                                                       |
+| `course`                                     | A course of a user: its colour, what it is for (`goal`), and an optional exam date.                   |
 | `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                   |
 | `note`                                       | Study notes pasted into a topic. The AI will create questions from them later.                        |
 
