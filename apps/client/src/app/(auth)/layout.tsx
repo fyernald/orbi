@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { OrbiLogo } from '@/components/brand/orbi-logo';
 import { GuestOnly } from '@/features/auth/components/guest-only';
 import { SessionBoundary } from '@/features/auth/components/session-boundary';
 import { getServerSession } from '@/features/auth/server';
@@ -18,7 +19,10 @@ export default async function AuthLayout({
 		<SessionBoundary session={session}>
 			<GuestOnly>
 				<main className="flex min-h-svh items-center justify-center p-4">
-					<div className="w-full max-w-sm">{children}</div>
+					<div className="flex w-full max-w-sm flex-col gap-6">
+						<OrbiLogo className="self-center" />
+						{children}
+					</div>
 				</main>
 			</GuestOnly>
 		</SessionBoundary>
