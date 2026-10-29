@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { HomeGreeting } from '@/features/home/components/home-greeting';
 import { NoteComposer } from '@/features/home/components/note-composer';
 import { SuggestionChips } from '@/features/home/components/suggestion-chips';
@@ -8,6 +9,8 @@ import {
 	today,
 } from '@/features/home/mock-data';
 import { suggestionsFor } from '@/features/home/suggestions';
+
+export const metadata: Metadata = { title: 'Home' };
 
 export default function HomePage() {
 	return (

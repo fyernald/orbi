@@ -4,7 +4,7 @@ import { AuthSwitch } from '@/features/auth/components/auth-switch';
 import { SignUpForm } from '@/features/auth/components/sign-up-form';
 import { routes } from '@/lib/routes';
 
-export const metadata: Metadata = { title: 'Sign up · Orbi' };
+export const metadata: Metadata = { title: 'Sign up' };
 
 export default function SignUpPage() {
 	return (

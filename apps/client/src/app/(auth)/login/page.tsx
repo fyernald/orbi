@@ -5,7 +5,7 @@ import { SignInForm } from '@/features/auth/components/sign-in-form';
 import { brokenConfirmLinkMessage } from '@/features/auth/errors';
 import { routes } from '@/lib/routes';
 
-export const metadata: Metadata = { title: 'Log in · Orbi' };
+export const metadata: Metadata = { title: 'Log in' };
 
 type LoginPageProps = {
 	// set when a confirmation link did not work
