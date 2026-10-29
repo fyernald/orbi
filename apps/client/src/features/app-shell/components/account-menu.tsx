@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSession, useSignOut } from '@/features/auth/hooks';
 import { routes } from '@/lib/routes';
-import { account } from '../mock-data';
 import { SidebarLabel } from './sidebar-label';
 import { SidebarTooltip } from './sidebar-tooltip';
 import { UserAvatar } from './user-avatar';
@@ -23,7 +22,6 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 	if (!session) return null;
 
 	const { name, email } = session.user;
-	const summary = `${account.streakDays}-day streak`;
 
 	return (
 		<div className="mt-auto border-t border-sidebar-border pt-3">
@@ -42,7 +40,7 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 							>
 								<span className="truncate text-sm font-medium">{name}</span>
 								<span className="truncate text-[13px] text-muted-foreground">
-									{summary}
+									{email}
 								</span>
 							</SidebarLabel>
 							<SidebarLabel hidden={collapsed}>
