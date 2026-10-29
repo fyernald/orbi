@@ -1,5 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
-import { composerActions } from '@/features/home/actions';
+import { composerActions } from '@/features/tutor/actions';
 import type { TutorStarter } from '../tutor-starters';
 
 type TutorStarterListProps = {

@@ -2,7 +2,7 @@
 
 import type { Course, TutorAction } from '@orbi/shared';
 import { useState } from 'react';
-import type { ComposerPreset } from '@/features/home/components/note-composer';
+import type { ComposerPreset } from '@/features/tutor/components/note-composer';
 import { cn } from '@/lib/utils';
 import { useTopics } from '../hooks';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';

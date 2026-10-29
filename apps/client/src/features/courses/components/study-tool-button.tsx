@@ -1,6 +1,6 @@
 import type { TutorAction } from '@orbi/shared';
 import { ChevronRight } from 'lucide-react';
-import { composerActions } from '@/features/home/actions';
+import { composerActions } from '@/features/tutor/actions';
 
 type StudyToolButtonProps = {
 	action: TutorAction;

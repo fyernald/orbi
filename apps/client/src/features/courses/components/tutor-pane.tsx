@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
 	NoteComposer,
 	type ComposerPreset,
-} from '@/features/home/components/note-composer';
-import { defaultModelId, models } from '@/features/home/mock-data';
+} from '@/features/tutor/components/note-composer';
+import { defaultModelId, models } from '@/features/tutor/mock-data';
 import { routes } from '@/lib/routes';
 import { tutorStarters, type TutorStarter } from '../tutor-starters';
 import { CourseActions } from './course-actions';

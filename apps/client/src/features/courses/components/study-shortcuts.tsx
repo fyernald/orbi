@@ -1,6 +1,6 @@
 import type { TutorAction } from '@orbi/shared';
 import Link from 'next/link';
-import { composerActions } from '@/features/home/actions';
+import { composerActions } from '@/features/tutor/actions';
 import { courseRoute } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
