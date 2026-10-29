@@ -12,6 +12,12 @@ describe('pageTitleFor', () => {
 		expect(pageTitleFor(routes.settings)).toBe('Settings');
 	});
 
+	it('names a deeper page after its section', () => {
+		expect(pageTitleFor(`${routes.courses}/some-course-id`)).toBe(
+			'Courses & notes'
+		);
+	});
+
 	it('shows nothing for unknown pages', () => {
 		expect(pageTitleFor('/app/somewhere')).toBeNull();
 	});

@@ -7,10 +7,9 @@ import {
 	type LucideIcon,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
+import type { Tone } from '@/lib/tones';
 
 // mock data until the API is ready; replace with query hooks in hooks.ts
-
-export type Tone = 'blue' | 'teal' | 'green';
 
 export type NavLink = {
 	label: string;
@@ -19,14 +18,6 @@ export type NavLink = {
 };
 
 export type MiniApp = NavLink & {
-	tone: Tone;
-};
-
-export type CourseSummary = {
-	id: string;
-	name: string;
-	shortName: string;
-	mastery: number;
 	tone: Tone;
 };
 
@@ -47,30 +38,6 @@ export const miniApps: MiniApp[] = [
 		label: 'Study Plan',
 		href: routes.studyPlan,
 		icon: CalendarDays,
-		tone: 'green',
-	},
-];
-
-export const courses: CourseSummary[] = [
-	{
-		id: 'bio',
-		name: 'Biology 101',
-		shortName: 'Bio',
-		mastery: 64,
-		tone: 'blue',
-	},
-	{
-		id: 'calc',
-		name: 'Calculus II',
-		shortName: 'Calc',
-		mastery: 52,
-		tone: 'teal',
-	},
-	{
-		id: 'eco',
-		name: 'Macroeconomics',
-		shortName: 'Eco',
-		mastery: 71,
 		tone: 'green',
 	},
 ];

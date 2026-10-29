@@ -1,4 +1,5 @@
-import { courses, mainNav, miniApps } from '../mock-data';
+import { useCourses } from '@/features/courses/hooks';
+import { mainNav, miniApps } from '../mock-data';
 import { AccountMenu } from './account-menu';
 import { AddNotesButton } from './add-notes-button';
 import { CoursesSection } from './courses-section';
@@ -13,6 +14,8 @@ type SidebarProps = {
 };
 
 export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
+	const courses = useCourses();
+
 	return (
 		<nav
 			aria-label="Main"
@@ -28,7 +31,7 @@ export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
 			</div>
 			<MainNav links={mainNav} collapsed={collapsed} />
 			<MiniAppsSection apps={miniApps} collapsed={collapsed} />
-			<CoursesSection courses={courses} collapsed={collapsed} />
+			<CoursesSection courses={courses.data} collapsed={collapsed} />
 			<AccountMenu collapsed={collapsed} />
 		</nav>
 	);

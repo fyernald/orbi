@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { MiniApp } from '../mock-data';
-import { toneClasses } from '../tones';
+import { toneClasses } from '@/lib/tones';
 
 export function MiniAppIcon({ app }: { app: MiniApp }) {
 	const Icon = app.icon;
