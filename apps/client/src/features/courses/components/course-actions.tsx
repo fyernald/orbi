@@ -2,7 +2,6 @@
 
 import type { Course } from '@orbi/shared';
 import { Ellipsis, Trash2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,13 +11,23 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiErrorMessage } from '@/lib/api';
-import { routes } from '@/lib/routes';
 import { useDeleteCourse } from '../hooks';
 import { topicCountLabel } from '../topic-count';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 
-export function CourseActions({ course }: { course: Course }) {
-	const router = useRouter();
+type CourseActionsProps = {
+	course: Course;
+	// a table row shows the button only on hover; the course page always shows it
+	variant?: 'row' | 'page';
+	// the course page leaves, because the course is gone
+	onDeleted?: () => void;
+};
+
+export function CourseActions({
+	course,
+	variant = 'page',
+	onDeleted,
+}: CourseActionsProps) {
 	const remove = useDeleteCourse();
 	const [confirming, setConfirming] = useState(false);
 	const topics =
@@ -31,10 +40,10 @@ export function CourseActions({ course }: { course: Course }) {
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="outline"
-						size="icon-lg"
-						aria-label="Course actions"
-						className="shrink-0 rounded-full bg-card"
+						variant="ghost"
+						size={variant === 'row' ? 'icon' : 'icon-lg'}
+						aria-label={`Actions for ${course.name}`}
+						className="rounded-lg text-muted-foreground"
 					>
 						<Ellipsis />
 					</Button>
@@ -58,11 +67,11 @@ export function CourseActions({ course }: { course: Course }) {
 				title={`Delete ${course.name}?`}
 				description={`${topics} This cannot be undone.`}
 				confirmLabel="Delete course"
-				pending={remove.isPending || remove.isSuccess}
+				pending={remove.isPending || (remove.isSuccess && !!onDeleted)}
 				error={apiErrorMessage(remove.error)}
 				onConfirm={() =>
 					remove.mutate(course.id, {
-						onSuccess: () => router.replace(routes.courses),
+						onSuccess: () => (onDeleted ? onDeleted() : setConfirming(false)),
 					})
 				}
 			/>

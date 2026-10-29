@@ -2,21 +2,19 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTopicInput, type CreateTopicInput } from '@orbi/shared';
-import { Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
 import { useCreateTopic } from '../hooks';
 import { KeyHint } from './key-hint';
 
-type AddTopicRowProps = {
+type AddTopicInlineProps = {
 	courseId: string;
 	onClose: () => void;
 };
 
 // stays open after each topic, so several can be added in a row; Esc closes it
-export function AddTopicRow({ courseId, onClose }: AddTopicRowProps) {
+export function AddTopicInline({ courseId, onClose }: AddTopicInlineProps) {
 	const create = useCreateTopic(courseId);
 	const form = useForm<CreateTopicInput>({
 		resolver: zodResolver(createTopicInput),
@@ -36,50 +34,39 @@ export function AddTopicRow({ courseId, onClose }: AddTopicRowProps) {
 				})
 			)}
 			noValidate
-			className="flex flex-col gap-2 border-t border-divider bg-muted/30 px-5 py-4"
+			className="flex flex-col gap-1.5"
 		>
-			<div className="flex items-center gap-4">
-				<span
-					aria-hidden="true"
-					className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground"
-				>
-					<Plus className="size-4" />
-				</span>
+			<div className="relative">
 				<input
 					{...form.register('name')}
 					autoFocus
 					autoComplete="off"
-					placeholder="Topic name, for example Cell division"
-					aria-label="Topic name"
+					placeholder="New topic name"
+					aria-label="New topic name"
 					aria-invalid={message ? true : undefined}
-					aria-describedby="add-topic-message"
+					aria-describedby="add-topic-hint"
 					onKeyDown={(event) => {
 						if (event.key === 'Escape') onClose();
 					}}
-					className="h-10 min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground md:text-sm"
+					className="h-9 w-full rounded-md border border-ring bg-transparent pr-8 pl-2.5 text-base ring-3 ring-ring/30 outline-none placeholder:text-muted-foreground aria-invalid:border-destructive aria-invalid:ring-destructive/20 md:text-sm"
 				/>
-				<Button
-					type="submit"
-					disabled={create.isPending}
-					className="h-9 rounded-full px-4"
-				>
-					{create.isPending && <Spinner />}
-					Add
-				</Button>
+				{create.isPending && (
+					<Spinner className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground" />
+				)}
 			</div>
 			<p
-				id="add-topic-message"
-				className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-14 text-xs text-muted-foreground"
+				id="add-topic-hint"
+				className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-xs text-muted-foreground"
 			>
 				{message ? (
 					<span className="text-destructive">{message}</span>
 				) : (
 					<>
-						<span className="flex items-center gap-1.5">
-							<KeyHint>Enter</KeyHint> to add
+						<span className="flex items-center gap-1">
+							<KeyHint>Enter</KeyHint> add
 						</span>
-						<span className="flex items-center gap-1.5">
-							<KeyHint>Esc</KeyHint> to close
+						<span className="flex items-center gap-1">
+							<KeyHint>Esc</KeyHint> close
 						</span>
 					</>
 				)}

@@ -1,18 +1,30 @@
+import { TUTOR_ACTIONS, type TutorAction } from '@orbi/shared';
 import type { Metadata } from 'next';
 import { CourseView } from '@/features/courses/components/course-view';
 
 export const metadata: Metadata = { title: 'Course' };
 
+const isTutorAction = (value: unknown): value is TutorAction =>
+	TUTOR_ACTIONS.includes(value as TutorAction);
+
+// ?tool= and ?ask= come from the shortcuts on the courses page
 export default async function CoursePage({
 	params,
+	searchParams,
 }: {
 	params: Promise<{ courseId: string }>;
+	searchParams: Promise<{ tool?: string; ask?: string }>;
 }) {
 	const { courseId } = await params;
+	const { tool, ask } = await searchParams;
 
 	return (
-		<section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-8">
-			<CourseView courseId={courseId} />
-		</section>
+		<CourseView
+			courseId={courseId}
+			start={{
+				action: isTutorAction(tool) ? tool : undefined,
+				message: typeof ask === 'string' ? ask.slice(0, 2000) : undefined,
+			}}
+		/>
 	);
 }

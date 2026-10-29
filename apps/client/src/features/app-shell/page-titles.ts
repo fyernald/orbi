@@ -21,3 +21,29 @@ export function pageTitleFor(pathname: string): string | null {
 	);
 	return section ? titles[section]! : null;
 }
+
+export type Crumb = { label: string; href?: string };
+
+const coursePage = /^\/app\/courses\/([^/]+)$/;
+
+// the top bar trail: "Courses & notes › Biology 101" on a course, else the page title;
+// courseName looks the name up in the loaded course list
+export function breadcrumbFor(
+	pathname: string,
+	courseName: (courseId: string) => string | undefined
+): Crumb[] {
+	const courseId = pathname.match(coursePage)?.[1];
+	if (courseId) {
+		return [
+			{ label: titles[routes.courses]!, href: routes.courses },
+			{
+				label:
+					pathname === routes.newCourse
+						? titles[routes.newCourse]!
+						: (courseName(courseId) ?? ''),
+			},
+		];
+	}
+	const title = pageTitleFor(pathname);
+	return title ? [{ label: title }] : [];
+}

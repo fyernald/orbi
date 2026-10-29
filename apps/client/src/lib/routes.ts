@@ -17,5 +17,14 @@ export const routes = {
 	settings: '/app/settings',
 } as const;
 
-export const courseRoute = (courseId: string) =>
-	`${routes.courses}/${courseId}`;
+// tool and ask open the course's study space with that tutor action or question ready
+export function courseRoute(
+	courseId: string,
+	start: { tool?: string; ask?: string } = {}
+): string {
+	const query = new URLSearchParams();
+	if (start.tool) query.set('tool', start.tool);
+	if (start.ask) query.set('ask', start.ask);
+	const search = query.toString();
+	return `${routes.courses}/${courseId}${search ? `?${search}` : ''}`;
+}

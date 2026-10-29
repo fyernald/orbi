@@ -30,9 +30,9 @@ export function TopicActions({ topic }: { topic: Topic }) {
 				<DropdownMenuTrigger asChild>
 					<Button
 						variant="ghost"
-						size="icon-lg"
+						size="icon-sm"
 						aria-label={`Actions for ${topic.name}`}
-						className="shrink-0 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
+						className="mr-1 shrink-0 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
 					>
 						<Ellipsis />
 					</Button>
