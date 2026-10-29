@@ -55,6 +55,8 @@ describe('courses', () => {
 			goal: 'exam_prep',
 			examDate: '2027-01-15',
 			topicCount: 0,
+			noteCount: 0,
+			lastActivityAt: expect.any(String),
 		});
 
 		const list = await send(ada, 'GET', '/api/courses');
@@ -96,6 +98,21 @@ describe('courses', () => {
 		expect(response.statusCode).toBe(400);
 		expect(response.json().error.message).toBe('Enter a topic name.');
 		expect((await send(user, 'GET', '/api/courses')).json()).toEqual([]);
+	});
+
+	it('moves the last activity forward when a topic is added', async () => {
+		const created = await createCourse(ada, 'Activity');
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await send(ada, 'POST', `/api/courses/${created.id}/topics`, {
+			name: 'Fresh',
+		});
+
+		const course = (
+			await send(ada, 'GET', `/api/courses/${created.id}`)
+		).json();
+		expect(Date.parse(course.lastActivityAt)).toBeGreaterThan(
+			Date.parse(created.lastActivityAt)
+		);
 	});
 
 	it('rejects an unknown colour', async () => {

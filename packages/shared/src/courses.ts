@@ -55,6 +55,9 @@ export const course = z.object({
 	goal: z.enum(COURSE_GOALS),
 	examDate: z.iso.date().nullable(),
 	topicCount: z.int(),
+	noteCount: z.int(),
+	// the latest change to the course, its topics, or their notes
+	lastActivityAt: z.iso.datetime(),
 });
 
 export const topic = z.object({

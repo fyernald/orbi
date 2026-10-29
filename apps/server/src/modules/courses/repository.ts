@@ -4,7 +4,7 @@ import type {
 	CreateTopicInput,
 	Topic,
 } from '@orbi/shared';
-import { and, asc, count, eq, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
 import { course, note, topic } from '../../db/schema';
 
@@ -36,7 +36,19 @@ const courseColumns = {
 	examDate: course.examDate,
 };
 
-const withTopicCount = { ...courseColumns, topicCount: count(topic.id) };
+const toIso = (value: Date | string) => new Date(value).toISOString();
+
+// needs course LEFT JOIN topic LEFT JOIN note, grouped by course
+const courseSummary = {
+	...courseColumns,
+	topicCount: countDistinct(topic.id),
+	noteCount: count(note.id),
+	// greatest() skips the nulls of a course without topics or notes
+	lastActivityAt:
+		sql<string>`greatest(${course.updatedAt}, max(${topic.updatedAt}), max(${note.updatedAt}))`.mapWith(
+			toIso
+		),
+};
 
 const topicColumns = {
 	id: topic.id,
@@ -51,18 +63,20 @@ export function createCourseRepository(db: Db): CourseRepository {
 	return {
 		listCourses: (userId) =>
 			db
-				.select(withTopicCount)
+				.select(courseSummary)
 				.from(course)
 				.leftJoin(topic, eq(topic.courseId, course.id))
+				.leftJoin(note, eq(note.topicId, topic.id))
 				.where(eq(course.userId, userId))
 				.groupBy(course.id)
 				.orderBy(asc(course.createdAt), asc(course.id)),
 
 		async findCourse(userId, courseId) {
 			const [found] = await db
-				.select(withTopicCount)
+				.select(courseSummary)
 				.from(course)
 				.leftJoin(topic, eq(topic.courseId, course.id))
+				.leftJoin(note, eq(note.topicId, topic.id))
 				.where(and(eq(course.userId, userId), eq(course.id, courseId)))
 				.groupBy(course.id);
 			return found;
@@ -74,7 +88,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 				const [created] = await tx
 					.insert(course)
 					.values({ userId, ...input, description: description || null })
-					.returning(courseColumns);
+					.returning({ ...courseColumns, updatedAt: course.updatedAt });
 				if (topics.length > 0) {
 					await tx.insert(topic).values(
 						topics.map((name, position) => ({
@@ -85,7 +99,13 @@ export function createCourseRepository(db: Db): CourseRepository {
 						}))
 					);
 				}
-				return { ...created!, topicCount: topics.length };
+				const { updatedAt, ...saved } = created!;
+				return {
+					...saved,
+					topicCount: topics.length,
+					noteCount: 0,
+					lastActivityAt: updatedAt.toISOString(),
+				};
 			}),
 
 		listTopics: (userId, courseId) =>
