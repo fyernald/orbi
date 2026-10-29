@@ -5,16 +5,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // read as UTC, so the day never moves with the time zone
 const utcDay = (isoDate: string) => Date.parse(`${isoDate}T00:00:00Z`);
 
-// "2027-01-15" becomes "15 Jan 2027"
-export function formatExamDate(isoDate: string): string {
-	return new Date(utcDay(isoDate)).toLocaleDateString('en-GB', {
-		day: 'numeric',
-		month: 'short',
-		year: 'numeric',
-		timeZone: 'UTC',
-	});
-}
-
 // whole days from today to the exam; negative once it is over
 export const daysUntil = (examDate: string, now: Date): number =>
 	Math.round((utcDay(examDate) - utcDay(toIsoDate(now))) / DAY_MS);

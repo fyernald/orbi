@@ -1,4 +1,8 @@
-import { TUTOR_ACTIONS, type TutorAction } from '@orbi/shared';
+import {
+	TUTOR_ACTIONS,
+	TUTOR_MESSAGE_MAX_LENGTH,
+	type TutorAction,
+} from '@orbi/shared';
 import type { Metadata } from 'next';
 import { CourseView } from '@/features/courses/components/course-view';
 
@@ -23,7 +27,10 @@ export default async function CoursePage({
 			courseId={courseId}
 			start={{
 				action: isTutorAction(tool) ? tool : undefined,
-				message: typeof ask === 'string' ? ask.slice(0, 2000) : undefined,
+				message:
+					typeof ask === 'string'
+						? ask.slice(0, TUTOR_MESSAGE_MAX_LENGTH)
+						: undefined,
 			}}
 		/>
 	);

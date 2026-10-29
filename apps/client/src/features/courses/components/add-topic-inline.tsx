@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTopicInput, type CreateTopicInput } from '@orbi/shared';
+import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
@@ -16,6 +17,7 @@ type AddTopicInlineProps = {
 // stays open after each topic, so several can be added in a row; Esc closes it
 export function AddTopicInline({ courseId, onClose }: AddTopicInlineProps) {
 	const create = useCreateTopic(courseId);
+	const hintId = useId();
 	const form = useForm<CreateTopicInput>({
 		resolver: zodResolver(createTopicInput),
 		defaultValues: { name: '' },
@@ -44,7 +46,7 @@ export function AddTopicInline({ courseId, onClose }: AddTopicInlineProps) {
 					placeholder="New topic name"
 					aria-label="New topic name"
 					aria-invalid={message ? true : undefined}
-					aria-describedby="add-topic-hint"
+					aria-describedby={hintId}
 					onKeyDown={(event) => {
 						if (event.key === 'Escape') onClose();
 					}}
@@ -55,7 +57,7 @@ export function AddTopicInline({ courseId, onClose }: AddTopicInlineProps) {
 				)}
 			</div>
 			<p
-				id="add-topic-hint"
+				id={hintId}
 				className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-xs text-muted-foreground"
 			>
 				{message ? (

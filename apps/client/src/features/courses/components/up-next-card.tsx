@@ -1,10 +1,12 @@
 'use client';
 
-import type { Course } from '@orbi/shared';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { tutorRequestInput, type Course } from '@orbi/shared';
 import { ArrowRight, ArrowUp, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useForm } from 'react-hook-form';
+import type { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { formatTimeAgo } from '@/lib/dates';
 import { courseRoute } from '@/lib/routes';
@@ -16,6 +18,10 @@ import { topicCountLabel } from '../topic-count';
 import { CourseBadge } from './course-badge';
 import { StudyShortcuts } from './study-shortcuts';
 
+// the same message rules as the tutor composer the question goes to
+const askInput = tutorRequestInput.pick({ message: true });
+type AskInput = z.infer<typeof askInput>;
+
 type UpNextCardProps = {
 	course: Course;
 	now: Date;
@@ -24,13 +30,15 @@ type UpNextCardProps = {
 // the course to study next, with the tutor one question away
 export function UpNextCard({ course, now }: UpNextCardProps) {
 	const router = useRouter();
-	const [question, setQuestion] = useState('');
+	const form = useForm<AskInput>({
+		resolver: zodResolver(askInput),
+		defaultValues: { message: '' },
+	});
+	const error = form.formState.errors.message?.message;
 
-	const ask = (event: FormEvent) => {
-		event.preventDefault();
-		const text = question.trim();
-		router.push(courseRoute(course.id, text ? { ask: text } : {}));
-	};
+	const ask = form.handleSubmit(({ message }) =>
+		router.push(courseRoute(course.id, message ? { ask: message } : {}))
+	);
 
 	return (
 		<section
@@ -73,12 +81,13 @@ export function UpNextCard({ course, now }: UpNextCardProps) {
 
 			<form
 				onSubmit={ask}
+				noValidate
 				className="flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pr-1.5 pl-3 shadow-xs transition-colors focus-within:border-primary"
 			>
 				<Sparkles className="size-4 shrink-0 text-primary" />
 				<input
-					value={question}
-					onChange={(event) => setQuestion(event.target.value)}
+					{...form.register('message')}
+					aria-invalid={error ? true : undefined}
 					placeholder={`Ask Orbi about ${course.name}…`}
 					aria-label={`Ask Orbi about ${course.name}`}
 					className="h-9 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
@@ -92,6 +101,7 @@ export function UpNextCard({ course, now }: UpNextCardProps) {
 					<ArrowUp />
 				</Button>
 			</form>
+			{error && <p className="-mt-3 text-sm text-destructive">{error}</p>}
 
 			<StudyShortcuts
 				courseId={course.id}

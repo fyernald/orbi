@@ -1,11 +1,9 @@
 'use client';
 
 import type { Course, Topic } from '@orbi/shared';
-import type { UseQueryResult } from '@tanstack/react-query';
 import { Layers, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { AddTopicInline } from './add-topic-inline';
 import { LoadError } from './load-error';
@@ -15,7 +13,10 @@ import { TopicRowsLoading } from './topic-rows-loading';
 
 type TopicsPaneProps = {
 	course: Course;
-	topics: UseQueryResult<Topic[]>;
+	// undefined while loading, or when loading failed (loadError)
+	topics: Topic[] | undefined;
+	loadError: string | undefined;
+	onRetry: () => void;
 	// null means the whole course
 	selectedTopicId: string | null;
 	onSelect: (topicId: string | null) => void;
@@ -25,13 +26,15 @@ type TopicsPaneProps = {
 export function TopicsPane({
 	course,
 	topics,
+	loadError,
+	onRetry,
 	selectedTopicId,
 	onSelect,
 	className,
 }: TopicsPaneProps) {
 	const [query, setQuery] = useState('');
 	const [adding, setAdding] = useState(false);
-	const shown = topics.data?.filter((topic) =>
+	const shown = topics?.filter((topic) =>
 		topic.name.toLowerCase().includes(query.trim().toLowerCase())
 	);
 
@@ -41,9 +44,9 @@ export function TopicsPane({
 				title={
 					<>
 						<h2 id="topics-pane-title">Topics</h2>
-						{topics.data && (
+						{topics && (
 							<span className="text-xs font-normal text-muted-foreground tabular-nums">
-								{topics.data.length}
+								{topics.length}
 							</span>
 						)}
 					</>
@@ -61,7 +64,7 @@ export function TopicsPane({
 				}
 			/>
 
-			{topics.data && topics.data.length > 6 && (
+			{topics && topics.length > 6 && (
 				<div className="relative px-3 pt-3">
 					<Search className="pointer-events-none absolute top-1/2 left-5.5 mt-1.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
 					<input
@@ -76,13 +79,10 @@ export function TopicsPane({
 			)}
 
 			<div className="flex-1 overflow-y-auto p-2">
-				{topics.isPending && <TopicRowsLoading />}
-				{topics.isError && (
+				{!topics && !loadError && <TopicRowsLoading />}
+				{loadError && (
 					<div className="p-2">
-						<LoadError
-							message={apiErrorMessage(topics.error)}
-							onRetry={() => topics.refetch()}
-						/>
+						<LoadError message={loadError} onRetry={onRetry} />
 					</div>
 				)}
 				{shown && (
@@ -115,12 +115,12 @@ export function TopicsPane({
 						))}
 					</ul>
 				)}
-				{topics.data?.length === 0 && !adding && (
+				{topics?.length === 0 && !adding && (
 					<p className="px-2 py-6 text-center text-sm text-muted-foreground">
 						No topics yet. Add one for each chapter or lecture.
 					</p>
 				)}
-				{shown && shown.length === 0 && topics.data!.length > 0 && (
+				{shown && shown.length === 0 && topics!.length > 0 && (
 					<p className="px-2 py-6 text-center text-sm text-muted-foreground">
 						No topic matches “{query}”.
 					</p>

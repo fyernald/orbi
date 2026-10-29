@@ -15,8 +15,6 @@ export type TextFieldProps<TValues extends FieldValues> = {
 	control: Control<TValues>;
 	name: Path<TValues>;
 	label: string;
-	// only for screen readers, when the form around it already says what to type
-	hideLabel?: boolean;
 	// a small button inside the input, on the right
 	action?: ReactNode;
 } & Omit<ComponentProps<typeof Input>, 'name' | 'id'>;
@@ -26,7 +24,6 @@ export function TextField<TValues extends FieldValues>({
 	control,
 	name,
 	label,
-	hideLabel = false,
 	action,
 	className,
 	...inputProps
@@ -38,9 +35,7 @@ export function TextField<TValues extends FieldValues>({
 
 	return (
 		<Field data-invalid={invalid}>
-			<FieldLabel htmlFor={id} className={cn(hideLabel && 'sr-only')}>
-				{label}
-			</FieldLabel>
+			<FieldLabel htmlFor={id}>{label}</FieldLabel>
 			<div className="relative">
 				<Input
 					{...inputProps}

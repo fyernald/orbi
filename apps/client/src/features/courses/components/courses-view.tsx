@@ -13,7 +13,7 @@ import { LoadError } from './load-error';
 import { NoMatchingCourses } from './no-matching-courses';
 import { UpNextCard } from './up-next-card';
 
-const noFilters: CourseFilters = { query: '', goal: 'all', sort: 'recent' };
+const noFilters: CourseFilters = { query: '', goal: 'all' };
 
 export function CoursesView() {
 	const courses = useCourses();

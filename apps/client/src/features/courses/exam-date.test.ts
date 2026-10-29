@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { examCountdown, formatExamDate } from './exam-date';
+import { examCountdown } from './exam-date';
 
 // late in the evening, when UTC is already the next day in some places
 const now = new Date(2026, 9, 30, 23, 30);
@@ -13,11 +13,5 @@ describe('examCountdown', () => {
 		['2026-10-20', 'Exam was 10 days ago'],
 	])('%s is "%s"', (examDate, label) => {
 		expect(examCountdown(examDate, now)).toBe(label);
-	});
-});
-
-describe('formatExamDate', () => {
-	it('writes the day, short month, and year', () => {
-		expect(formatExamDate('2027-01-15')).toBe('15 Jan 2027');
 	});
 });

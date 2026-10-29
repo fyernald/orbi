@@ -36,33 +36,21 @@ const names = (courses: Course[]) => courses.map((item) => item.name);
 describe('filterCourses', () => {
 	it('finds words in the name and the description', () => {
 		expect(
-			names(
-				filterCourses(all, { query: 'genetics', goal: 'all', sort: 'name' })
-			)
+			names(filterCourses(all, { query: 'genetics', goal: 'all' }))
 		).toEqual(['Biology 101']);
 	});
 
 	it('keeps only the chosen goal', () => {
 		expect(
-			names(filterCourses(all, { query: '', goal: 'self_study', sort: 'name' }))
+			names(filterCourses(all, { query: '', goal: 'self_study' }))
 		).toEqual(['Art history']);
 	});
 
-	it('sorts by name without caring about capitals', () => {
-		expect(
-			names(filterCourses(all, { query: '', goal: 'all', sort: 'name' }))
-		).toEqual(['Art history', 'Biology 101', 'calculus II']);
-	});
-
-	it('puts the nearest exam first and courses without one last', () => {
-		expect(
-			names(filterCourses(all, { query: '', goal: 'all', sort: 'exam' }))
-		).toEqual(['calculus II', 'Biology 101', 'Art history']);
-	});
-
 	it('puts the most recent activity first', () => {
-		expect(
-			names(filterCourses(all, { query: '', goal: 'all', sort: 'recent' }))
-		).toEqual(['calculus II', 'Biology 101', 'Art history']);
+		expect(names(filterCourses(all, { query: '', goal: 'all' }))).toEqual([
+			'calculus II',
+			'Biology 101',
+			'Art history',
+		]);
 	});
 });

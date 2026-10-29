@@ -3,6 +3,7 @@
 import type { Course, TutorAction } from '@orbi/shared';
 import { useState } from 'react';
 import type { ComposerPreset } from '@/features/tutor/components/note-composer';
+import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTopics } from '../hooks';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';
@@ -73,14 +74,17 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 			<MobilePaneTabs value={mobilePane} onChange={setMobilePane} />
 			<div
 				className={cn(
-					// one row of fixed height, so each pane scrolls on its own
+					// one row of fixed height, so each pane scrolls on its own;
+					// 5rem is the app shell's top bar (3.5rem) and its margins (2 × 0.75rem)
 					'flex flex-1 flex-col lg:grid lg:h-[calc(100svh-5rem)] lg:flex-none lg:grid-rows-1 lg:divide-x lg:divide-divider',
 					columns[open]
 				)}
 			>
 				<TopicsPane
 					course={course}
-					topics={topics}
+					topics={topics.data}
+					loadError={topics.isError ? apiErrorMessage(topics.error) : undefined}
+					onRetry={() => topics.refetch()}
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
 					className={paneClass('topics', topicsOpen)}

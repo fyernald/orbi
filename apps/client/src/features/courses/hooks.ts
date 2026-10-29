@@ -61,13 +61,14 @@ export function useTopics(courseId: string) {
 	});
 }
 
-// keeps the topic count on the course list and the course page in step
-function useAdjustTopicCount() {
+// after a topic changes, the course list and the course load again, so their note
+// count and last activity come from the server; the topic count moves at once meanwhile
+function useTopicsChanged(courseId: string) {
 	const queryClient = useQueryClient();
-	return (courseId: string, change: number) => {
+	return (topicChange: number) => {
 		const adjusted = (course: Course) =>
 			course.id === courseId
-				? { ...course, topicCount: course.topicCount + change }
+				? { ...course, topicCount: course.topicCount + topicChange }
 				: course;
 		queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
 			courses?.map(adjusted)
@@ -76,12 +77,17 @@ function useAdjustTopicCount() {
 			courseKey(courseId),
 			(course) => course && adjusted(course)
 		);
+		void queryClient.invalidateQueries({ queryKey: coursesKey, exact: true });
+		void queryClient.invalidateQueries({
+			queryKey: courseKey(courseId),
+			exact: true,
+		});
 	};
 }
 
 export function useCreateTopic(courseId: string) {
 	const queryClient = useQueryClient();
-	const adjustTopicCount = useAdjustTopicCount();
+	const topicsChanged = useTopicsChanged(courseId);
 	return useMutation({
 		mutationFn: (input: CreateTopicInput) =>
 			api.post(`/courses/${courseId}/topics`, topic, input),
@@ -89,14 +95,14 @@ export function useCreateTopic(courseId: string) {
 			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
 				topics ? [...topics, created] : topics
 			);
-			adjustTopicCount(courseId, 1);
+			topicsChanged(1);
 		},
 	});
 }
 
 export function useDeleteTopic(courseId: string) {
 	const queryClient = useQueryClient();
-	const adjustTopicCount = useAdjustTopicCount();
+	const topicsChanged = useTopicsChanged(courseId);
 	return useMutation({
 		mutationFn: (topicId: string) =>
 			api.delete(`/courses/${courseId}/topics/${topicId}`),
@@ -104,7 +110,7 @@ export function useDeleteTopic(courseId: string) {
 			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
 				topics?.filter((item) => item.id !== topicId)
 			);
-			adjustTopicCount(courseId, -1);
+			topicsChanged(-1);
 		},
 	});
 }
