@@ -23,7 +23,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			<Link href={routes.app} aria-label="Orbi home" className="md:hidden">
 				<OrbiLogo />
 			</Link>
-			<PageTitle className="hidden text-sm font-medium md:block" />
+			<PageTitle className="hidden text-sm font-medium md:flex" />
 			<div className="ml-auto flex items-center gap-2">
 				<StreakLink days={studyStatus.streakDays} />
 				<ReviewButton dueCount={studyStatus.dueCount} />

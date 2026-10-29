@@ -17,6 +17,12 @@ export class ValidationError extends AppError {
 	}
 }
 
+export class UnauthorizedError extends AppError {
+	constructor(message = 'Log in to continue.') {
+		super(401, 'unauthorized', message);
+	}
+}
+
 export class ForbiddenError extends AppError {
 	constructor(message = 'You cannot do this.') {
 		super(403, 'forbidden', message);

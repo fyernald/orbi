@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 import { HomeGreeting } from '@/features/home/components/home-greeting';
-import { NoteComposer } from '@/features/home/components/note-composer';
+import { NoteComposer } from '@/features/tutor/components/note-composer';
 import { SuggestionChips } from '@/features/home/components/suggestion-chips';
-import {
-	defaultModelId,
-	models,
-	recentTopics,
-	today,
-} from '@/features/home/mock-data';
+import { recentTopics, today } from '@/features/home/mock-data';
 import { suggestionsFor } from '@/features/home/suggestions';
+import { defaultModelId, models } from '@/features/tutor/mock-data';
 
 export const metadata: Metadata = { title: 'Home' };
 

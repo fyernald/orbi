@@ -1,17 +1,23 @@
+'use client';
+
+import type { Course } from '@orbi/shared';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { routes } from '@/lib/routes';
-import type { CourseSummary } from '../mock-data';
-import { CourseBadge } from './course-badge';
+import { usePathname } from 'next/navigation';
+import { CourseBadge } from '@/features/courses/components/course-badge';
+import { courseRoute, routes } from '@/lib/routes';
 import { SidebarLink } from './sidebar-link';
 import { SidebarSectionTitle } from './sidebar-section-title';
 
 type CoursesSectionProps = {
-	courses: CourseSummary[];
+	// undefined while the courses are loading
+	courses: Course[] | undefined;
 	collapsed: boolean;
 };
 
 export function CoursesSection({ courses, collapsed }: CoursesSectionProps) {
+	const pathname = usePathname();
+
 	return (
 		<section
 			aria-labelledby="sidebar-courses"
@@ -24,8 +30,8 @@ export function CoursesSection({ courses, collapsed }: CoursesSectionProps) {
 				className="pr-1 text-muted-foreground"
 				action={
 					<Link
-						href={routes.courses}
-						aria-label="Add course"
+						href={routes.newCourse}
+						aria-label="New course"
 						className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
 					>
 						<Plus className="size-4" />
@@ -34,23 +40,24 @@ export function CoursesSection({ courses, collapsed }: CoursesSectionProps) {
 			>
 				My courses
 			</SidebarSectionTitle>
-			{courses.map((course) => (
-				<SidebarLink
-					key={course.id}
-					href={routes.courses}
-					label={course.name}
-					icon={<CourseBadge course={course} />}
-					trailing={
-						<span
-							aria-label={`${course.mastery}% mastery`}
-							className="text-[13px] text-muted-foreground tabular-nums"
-						>
-							{course.mastery}%
-						</span>
-					}
-					collapsed={collapsed}
-				/>
-			))}
+			{courses?.length === 0 && !collapsed && (
+				<p className="px-2.5 py-1 text-[13px] text-muted-foreground">
+					No courses yet
+				</p>
+			)}
+			{courses?.map((course) => {
+				const href = courseRoute(course.id);
+				return (
+					<SidebarLink
+						key={course.id}
+						href={href}
+						label={course.name}
+						icon={<CourseBadge course={course} />}
+						active={pathname === href}
+						collapsed={collapsed}
+					/>
+				);
+			})}
 		</section>
 	);
 }

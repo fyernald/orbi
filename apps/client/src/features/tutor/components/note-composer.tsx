@@ -1,7 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { tutorRequestInput, type TutorRequestInput } from '@orbi/shared';
+import {
+	tutorRequestInput,
+	type TutorAction,
+	type TutorRequestInput,
+} from '@orbi/shared';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
 import { sendBlockedReason } from '../composer';
@@ -14,16 +19,27 @@ import { ComposerToolbar } from './composer-toolbar';
 import { DropOverlay } from './drop-overlay';
 import { NotesField } from './notes-field';
 
+// lets the page around the composer pick an action, a topic, or a message,
+// for example from a study tool; a new version applies it again
+export type ComposerPreset = {
+	version: number;
+	action?: TutorAction;
+	topicId?: string;
+	message?: string;
+};
+
 type NoteComposerProps = {
 	topics: Topic[];
 	models: AiModel[];
 	defaultModelId: string;
+	preset?: ComposerPreset;
 };
 
 export function NoteComposer({
 	topics,
 	models,
 	defaultModelId,
+	preset,
 }: NoteComposerProps) {
 	const form = useForm<TutorRequestInput>({
 		resolver: zodResolver(tutorRequestInput),
@@ -37,6 +53,15 @@ export function NoteComposer({
 	const values = form.watch();
 	const { attachments, add, remove } = useAttachments();
 	const { isDragging, dropZoneProps } = useFileDrop(add);
+
+	useEffect(() => {
+		if (!preset) return;
+		if (preset.action) form.setValue('action', preset.action);
+		if (preset.topicId) form.setValue('topicId', preset.topicId);
+		if (preset.message !== undefined) form.setValue('message', preset.message);
+		form.setFocus('message');
+		// only a new version applies the preset, not every render
+	}, [preset?.version]);
 
 	const action = composerActions[values.action];
 	const blockedReason = sendBlockedReason({ values, attachments });
