@@ -19,3 +19,14 @@ describe('GET /api/health', () => {
 		expect(response.json()).toEqual({ status: 'ok', app: 'Orbi' });
 	});
 });
+
+describe('unknown routes', () => {
+	it('answer 404 in the shared error shape', async () => {
+		const response = await app.inject({ method: 'GET', url: '/api/nope' });
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json()).toEqual({
+			error: { code: 'not_found', message: 'This route does not exist.' },
+		});
+	});
+});
