@@ -26,6 +26,21 @@ await migrate(db, {
 });
 
 const app: ReturnType<typeof buildApp> = buildApp({ auth });
+app.addHook('onClose', () => db.$client.end());
+
+// a deploy stops the container with SIGTERM: finish the open requests first
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+	process.once(signal, () => {
+		app.log.info(`${signal} received, shutting down`);
+		app.close().then(
+			() => process.exit(0),
+			(error) => {
+				app.log.error(error);
+				process.exit(1);
+			}
+		);
+	});
+}
 
 app.listen({ port: config.port, host: config.host }).catch((error) => {
 	app.log.error(error);
