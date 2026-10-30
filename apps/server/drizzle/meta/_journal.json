@@ -15,6 +15,20 @@
       "when": 1793307801784,
       "tag": "0001_course-color-and-goal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793392357226,
+      "tag": "0002_onboarding",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793394658317,
+      "tag": "0003_preferred-name-and-birth-date",
+      "breakpoints": true
     }
   ]
 }

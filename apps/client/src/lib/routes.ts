@@ -6,6 +6,8 @@ export const routes = {
 	signup: '/signup',
 	forgotPassword: '/forgot-password',
 	resetPassword: '/reset-password',
+	// the questions a new user answers before the app opens
+	welcome: '/welcome',
 	app: '/app',
 	courses: '/app/courses',
 	newCourse: '/app/courses/new',

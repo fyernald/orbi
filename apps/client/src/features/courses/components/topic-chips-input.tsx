@@ -3,9 +3,9 @@
 import { FIRST_TOPICS_MAX, topicName } from '@orbi/shared';
 import { ListPlus, Plus, X } from 'lucide-react';
 import { useId, useState, type KeyboardEvent, type Ref } from 'react';
+import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { KeyHint } from './key-hint';
 
 type TopicChipsInputProps = {
 	value: string[];

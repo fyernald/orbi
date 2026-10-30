@@ -21,6 +21,8 @@ erDiagram
     }
     profile {
         text user_id PK,FK
+        varchar preferred_name
+        date birth_date
         education_level education_level
         text institution
         text field_of_study
@@ -28,6 +30,11 @@ erDiagram
         text locale
         text_array interests
         text timezone
+        profile_use_array uses
+        explanation_style explanation_style
+        integer daily_minutes
+        study_time study_time
+        timestamptz onboarded_at
     }
     course {
         uuid id PK
@@ -56,13 +63,13 @@ erDiagram
 
 Every table also has `created_at` and `updated_at`.
 
-| Table                                        | What it holds                                                                                         |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `user`, `session`, `account`, `verification` | Login data, created and managed by Better Auth. Passwords are hashed in `account`, never in `user`.   |
-| `profile`                                    | One per user: education level, school, field of study, interests, language (`locale`), and time zone. |
-| `course`                                     | A course of a user: its colour, what it is for (`goal`), and an optional exam date.                   |
-| `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                   |
-| `note`                                       | Study notes pasted into a topic. The AI will create questions from them later.                        |
+| Table                                        | What it holds                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user`, `session`, `account`, `verification` | Login data, created and managed by Better Auth. Passwords are hashed in `account`, never in `user`.                                                                                                                                                                                                                                             |
+| `profile`                                    | One per user: the onboarding answers (what Orbi calls them, date of birth, how they use Orbi, level, field, interests, explanation style, daily minutes, study time, language, time zone). `onboarded_at` is set once every answer is there; until then the app sends the user to `/welcome`. `institution` and `occupation` are not asked yet. |
+| `course`                                     | A course of a user: its colour, what it is for (`goal`), and an optional exam date.                                                                                                                                                                                                                                                             |
+| `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                                                                                                                                                                                                                                                             |
+| `note`                                       | Study notes pasted into a topic. The AI will create questions from them later.                                                                                                                                                                                                                                                                  |
 
 ## Rules the database enforces
 

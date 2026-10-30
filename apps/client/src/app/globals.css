@@ -281,3 +281,322 @@
 		transform: rotate(360deg);
 	}
 }
+
+/* Onboarding: the night sky behind the questions, and how one question hands over to the next */
+:root {
+	--star: color-mix(in srgb, var(--primary) 28%, transparent);
+	--shooting-star: color-mix(in srgb, var(--primary) 70%, transparent);
+	--sky-glow: color-mix(in srgb, var(--primary) 10%, transparent);
+	--ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+	--star: rgb(255 255 255 / 0.45);
+	--shooting-star: rgb(255 255 255 / 0.85);
+	--sky-glow: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+@layer components {
+	/* Each star layer is a repeating tile. --travel is the question number, so every
+	   question moves the sky on: near stars further than far ones, like flying forward. */
+	.star-field,
+	.star-field-near,
+	.star-field-twinkle {
+		background-repeat: repeat;
+		transition: background-position 1.6s var(--ease-out-quint);
+	}
+
+	.star-field {
+		background-size: 520px 520px;
+		background-position: 0 calc(var(--travel, 0) * -40px);
+		background-image:
+			radial-gradient(1.2px 1.2px at 9% 14%, var(--star) 50%, transparent 51%),
+			radial-gradient(1px 1px at 23% 71%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.4px 1.4px at 41% 9%, var(--star) 50%, transparent 51%),
+			radial-gradient(1px 1px at 58% 88%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.2px 1.2px at 71% 23%, var(--star) 50%, transparent 51%),
+			radial-gradient(1px 1px at 86% 61%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.3px 1.3px at 94% 8%, var(--star) 50%, transparent 51%),
+			radial-gradient(1px 1px at 33% 42%, var(--star) 50%, transparent 51%),
+			radial-gradient(1px 1px at 64% 51%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.2px 1.2px at 15% 93%, var(--star) 50%, transparent 51%);
+	}
+
+	.star-field-near {
+		background-size: 780px 780px;
+		background-position: 0 calc(var(--travel, 0) * -110px);
+		background-image:
+			radial-gradient(1.8px 1.8px at 12% 58%, var(--star) 50%, transparent 51%),
+			radial-gradient(2px 2px at 47% 36%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.8px 1.8px at 83% 74%, var(--star) 50%, transparent 51%),
+			radial-gradient(2px 2px at 66% 6%, var(--star) 50%, transparent 51%);
+	}
+
+	/* a sparser layer that slowly fades in and out */
+	.star-field-twinkle {
+		background-size: 640px 640px;
+		background-position: 0 calc(var(--travel, 0) * -70px);
+		background-image:
+			radial-gradient(1.6px 1.6px at 18% 32%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.4px 1.4px at 52% 18%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.6px 1.6px at 79% 42%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.4px 1.4px at 38% 81%, var(--star) 50%, transparent 51%),
+			radial-gradient(1.6px 1.6px at 90% 86%, var(--star) 50%, transparent 51%);
+		animation: twinkle 6s ease-in-out infinite;
+	}
+
+	/* a streak that crosses the sky once each time the question changes */
+	.shooting-star {
+		width: 160px;
+		height: 1.5px;
+		border-radius: 999px;
+		background: linear-gradient(90deg, transparent, var(--shooting-star));
+		animation: shooting-star 1100ms var(--ease-out-quint) 120ms both;
+	}
+
+	.shooting-star::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		right: -2px;
+		width: 4px;
+		height: 4px;
+		border-radius: 999px;
+		background: var(--shooting-star);
+		box-shadow: 0 0 10px 2px var(--shooting-star);
+		transform: translateY(-50%);
+	}
+
+	.sky-glow {
+		background: radial-gradient(
+			60% 50% at 50% 0%,
+			var(--sky-glow),
+			transparent 70%
+		);
+	}
+
+	/* forward: the new question rises in from below; back: it comes down from above */
+	.step-forward {
+		--step-shift: 20px;
+	}
+	.step-back {
+		--step-shift: -20px;
+	}
+
+	.step-enter {
+		animation: step-enter 560ms var(--ease-out-quint) both;
+	}
+
+	.step-leave {
+		animation: step-leave 200ms cubic-bezier(0.4, 0, 1, 1) both;
+		pointer-events: none;
+	}
+
+	/* items inside a question follow one after another; --stagger is their place */
+	.stagger-in {
+		animation: stagger-in 520ms var(--ease-out-quint) both;
+		animation-delay: calc(90ms + var(--stagger, 0) * 45ms);
+	}
+
+	/* the check on a picked card */
+	.pop-in {
+		animation: pop-in 320ms var(--ease-out-quint) both;
+	}
+
+	/* the "all set" celebration: rings that spread out, sparkles that fly off, a check that draws itself */
+	.celebrate-in {
+		animation: celebrate-in 700ms var(--ease-out-quint) both;
+	}
+
+	.ripple {
+		animation: ripple 1800ms var(--ease-out-quint) both;
+		animation-delay: var(--delay, 0ms);
+	}
+
+	.burst {
+		animation: burst 1300ms var(--ease-out-quint) both;
+		animation-delay: var(--delay, 0ms);
+	}
+
+	.draw-check {
+		stroke-dasharray: 24;
+		stroke-dashoffset: 24;
+		animation: draw-check 500ms var(--ease-out-quint) 550ms forwards;
+	}
+
+	/* fills once over --duration, then the app opens */
+	.countdown {
+		transform-origin: left;
+		animation: countdown var(--duration) linear both;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.star-field,
+		.star-field-near,
+		.star-field-twinkle {
+			transition: none;
+		}
+		.star-field-twinkle,
+		.shooting-star,
+		.step-enter,
+		.step-leave,
+		.stagger-in,
+		.pop-in,
+		.celebrate-in,
+		.ripple,
+		.burst {
+			animation: none;
+		}
+		.shooting-star,
+		.ripple,
+		.burst {
+			display: none;
+		}
+		.draw-check {
+			animation: none;
+			stroke-dashoffset: 0;
+		}
+	}
+}
+
+@keyframes twinkle {
+	0%,
+	100% {
+		opacity: 0.2;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+@keyframes step-enter {
+	from {
+		opacity: 0;
+		transform: translateY(var(--step-shift, 20px));
+		filter: blur(6px);
+	}
+}
+
+@keyframes step-leave {
+	to {
+		opacity: 0;
+		transform: translateY(calc(var(--step-shift, 20px) * -0.6));
+		filter: blur(4px);
+	}
+}
+
+@keyframes stagger-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+}
+
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		transform: scale(0.4);
+	}
+}
+
+@keyframes shooting-star {
+	0% {
+		opacity: 0;
+		translate: 0 0;
+	}
+	20% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		translate: 320px 0;
+	}
+}
+
+@keyframes celebrate-in {
+	0% {
+		opacity: 0;
+		transform: scale(0.3);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.08);
+	}
+}
+
+@keyframes ripple {
+	from {
+		opacity: 0.6;
+		transform: scale(0.6);
+	}
+	to {
+		opacity: 0;
+		transform: scale(2.8);
+	}
+}
+
+@keyframes burst {
+	0% {
+		opacity: 0;
+		transform: rotate(var(--angle)) translateX(0) scale(0.3);
+	}
+	18% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: rotate(var(--angle)) translateX(var(--distance)) scale(1);
+	}
+}
+
+@keyframes draw-check {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes countdown {
+	from {
+		transform: scaleX(0);
+	}
+}
+
+/* From the end of onboarding into the app: onboarding flies towards the viewer and fades,
+   while the app grows into place behind it (lib/transitions.ts names the navigation) */
+::view-transition {
+	/* clicks during the animation reach the page instead of getting lost */
+	pointer-events: none;
+}
+
+::view-transition-old(.onboarding-leave) {
+	animation: onboarding-leave 650ms cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+
+::view-transition-new(.app-arrive) {
+	animation: app-arrive 850ms var(--ease-out-quint) 180ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(*),
+	::view-transition-new(*),
+	::view-transition-group(*) {
+		animation-duration: 0s !important;
+		animation-delay: 0s !important;
+	}
+}
+
+@keyframes onboarding-leave {
+	to {
+		opacity: 0;
+		transform: scale(1.12);
+		filter: blur(10px);
+	}
+}
+
+@keyframes app-arrive {
+	from {
+		opacity: 0;
+		transform: scale(0.94);
+		filter: blur(8px);
+	}
+}

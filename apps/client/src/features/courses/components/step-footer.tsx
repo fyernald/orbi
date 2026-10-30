@@ -1,8 +1,8 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { KeyHint } from './key-hint';
 
 type StepFooterProps = {
 	isFirst: boolean;
