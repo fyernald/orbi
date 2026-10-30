@@ -17,6 +17,13 @@ type SidebarTooltipProps = {
 export function SidebarTooltip({ label, show, children }: SidebarTooltipProps) {
 	// always controlled; Radix warns when a tooltip switches between the two
 	const [open, setOpen] = useState(false);
+	const [shownBefore, setShownBefore] = useState(show);
+
+	// a hover from before the sidebar opened or closed must not pop up afterwards
+	if (show !== shownBefore) {
+		setShownBefore(show);
+		setOpen(false);
+	}
 
 	return (
 		<Tooltip open={show && open} onOpenChange={setOpen}>
