@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { createTopicInput, type CreateTopicInput } from '@orbi/shared';
 import { useId } from 'react';
 import { useForm } from 'react-hook-form';
+import { KeyHint } from '@/components/key-hint';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
 import { useCreateTopic } from '../hooks';
-import { KeyHint } from './key-hint';
 
 type AddTopicInlineProps = {
 	courseId: string;

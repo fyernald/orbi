@@ -5,6 +5,8 @@ import type { Mailer } from './mail/mailer';
 import { createMemoryMailer } from './mail/testing';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
+import { createProfileRepository } from './modules/profile/repository';
+import { createProfileService } from './modules/profile/service';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
 
@@ -23,7 +25,8 @@ export async function createTestApp(
 		requireEmailVerification,
 	});
 	const courses = createCourseService({ repo: createCourseRepository(db) });
-	return buildApp({ auth, services: { courses } });
+	const profiles = createProfileService({ repo: createProfileRepository(db) });
+	return buildApp({ auth, services: { courses, profiles } });
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;

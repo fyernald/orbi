@@ -38,15 +38,22 @@ async function request<T>(
 	return schema.parse(body);
 }
 
+const withJson = (method: string, body: unknown): RequestInit =>
+	body === undefined
+		? { method }
+		: {
+				method,
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(body),
+			};
+
 // use it only through the feature hooks
 export const api = {
 	get: <T>(path: string, schema: ZodType<T>) => request(path, schema),
-	post: <T>(path: string, schema: ZodType<T>, body: unknown) =>
-		request(path, schema, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body),
-		}),
+	post: <T>(path: string, schema: ZodType<T>, body?: unknown) =>
+		request(path, schema, withJson('POST', body)),
+	patch: <T>(path: string, schema: ZodType<T>, body: unknown) =>
+		request(path, schema, withJson('PATCH', body)),
 	// the server answers 204 with no body
 	delete: (path: string) => request(path, z.null(), { method: 'DELETE' }),
 };

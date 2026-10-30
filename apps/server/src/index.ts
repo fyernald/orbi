@@ -8,6 +8,8 @@ import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
+import { createProfileRepository } from './modules/profile/repository';
+import { createProfileService } from './modules/profile/service';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
@@ -28,10 +30,11 @@ await migrate(db, {
 });
 
 const courses = createCourseService({ repo: createCourseRepository(db) });
+const profiles = createProfileService({ repo: createProfileRepository(db) });
 
 const app: ReturnType<typeof buildApp> = buildApp({
 	auth,
-	services: { courses },
+	services: { courses, profiles },
 });
 app.addHook('onClose', () => db.$client.end());
 
