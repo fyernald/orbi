@@ -6,7 +6,7 @@ export const menuItemHeight = 'h-13';
 
 export function MenuScrollArea({ children }: { children: ReactNode }) {
 	return (
-		<div className="max-h-[11.375rem] overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+		<div className="max-h-[11.375rem] overflow-y-auto overscroll-contain">
 			{children}
 		</div>
 	);
