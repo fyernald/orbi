@@ -1,62 +1,30 @@
 import type { Course } from '@orbi/shared';
 import Link from 'next/link';
-import { formatTimeAgo } from '@/lib/dates';
 import { courseRoute } from '@/lib/routes';
-import { cn } from '@/lib/utils';
-import { courseShortName } from '../badge';
-import { covers } from '../covers';
-import { goals } from '../goals';
-import { noteCountLabel } from '../note-count';
-import { topicCountLabel } from '../topic-count';
+import { courseStatus } from '../course-status';
 import { CourseActions } from './course-actions';
-import { ExamPill } from './exam-pill';
-import { StudyShortcuts } from './study-shortcuts';
+import { CoursePill } from './course-pill';
+import { MasteryRing } from './mastery-ring';
 
 type CourseCardProps = {
 	course: Course;
 	now: Date;
 };
 
-// a course as a cover, like a notebook or a deck; the name link covers the whole card,
-// and the menu and shortcuts sit above it
+// the name link covers the whole card, and the menu sits above it
+// (with a mouse the menu shows on hover, on touch screens it always shows)
 export function CourseCard({ course, now }: CourseCardProps) {
-	const cover = covers[course.color];
-	const goal = goals[course.goal];
-
 	return (
-		<article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-md focus-within:shadow-md">
-			<div
-				className={cn(
-					'relative flex h-32 items-start justify-between overflow-hidden p-3',
-					cover.cover
-				)}
-			>
-				<span
-					aria-hidden="true"
-					className={cn(
-						'pointer-events-none absolute -right-2 -bottom-6 text-8xl leading-none font-bold tracking-tighter select-none',
-						cover.initials
-					)}
-				>
-					{courseShortName(course.name)}
-				</span>
-				<span className="relative inline-flex h-6 items-center gap-1 rounded-md bg-card/80 px-2 text-xs font-medium text-foreground backdrop-blur-sm">
-					<goal.icon className="size-3.5" />
-					{goal.shortLabel}
-				</span>
-				<div className="relative z-10 rounded-lg bg-card/80 backdrop-blur-sm">
+		<article className="group relative flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow focus-within:shadow-md hover:shadow-md">
+			<div className="flex items-start justify-between gap-2">
+				{/* the mastery score comes with the review scheduler in Sprint 3 */}
+				<MasteryRing value={null} color={course.color} />
+				<div className="relative z-10 -mt-1 -mr-1 transition-opacity pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100 pointer-fine:has-data-[state=open]:opacity-100">
 					<CourseActions course={course} variant="row" />
 				</div>
-				{course.examDate && (
-					<ExamPill
-						examDate={course.examDate}
-						now={now}
-						className="absolute bottom-3 left-3"
-					/>
-				)}
 			</div>
-			<div className="flex flex-1 flex-col gap-1 p-4 pb-3">
-				<h3 className="truncate font-medium">
+			<div className="flex min-w-0 flex-1 flex-col gap-1">
+				<h3 className="truncate font-semibold">
 					<Link
 						href={courseRoute(course.id)}
 						className="outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
@@ -64,22 +32,11 @@ export function CourseCard({ course, now }: CourseCardProps) {
 						{course.name}
 					</Link>
 				</h3>
-				<p className="text-sm text-muted-foreground">
-					{topicCountLabel(course.topicCount)} ·{' '}
-					{noteCountLabel(course.noteCount).toLowerCase()}
+				<p className="line-clamp-2 text-sm text-muted-foreground">
+					{courseStatus(course, now)}
 				</p>
-				<div className="mt-auto flex items-center justify-between gap-2 pt-3">
-					<span className="text-xs text-muted-foreground">
-						Active {formatTimeAgo(course.lastActivityAt, now)}
-					</span>
-					<StudyShortcuts
-						courseId={course.id}
-						actions={['ask', 'questions', 'flashcards']}
-						compact
-						className="relative z-10"
-					/>
-				</div>
 			</div>
+			<CoursePill course={course} now={now} />
 		</article>
 	);
 }

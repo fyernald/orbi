@@ -1,6 +1,6 @@
 import type { Course } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
-import { upNextCourse } from './up-next';
+import { upNextCourse, upNextStep } from './up-next';
 
 const course = (name: string, fields: Partial<Course> = {}): Course => ({
 	id: name,
@@ -37,5 +37,31 @@ describe('upNextCourse', () => {
 
 	it('has nothing without courses', () => {
 		expect(upNextCourse([], now)).toBeUndefined();
+	});
+});
+
+describe('upNextStep', () => {
+	it('asks for topics, then notes', () => {
+		expect(upNextStep(course('Biology'), now).action).toBe('Add topics');
+		expect(upNextStep(course('Biology', { topicCount: 2 }), now).action).toBe(
+			'Add notes'
+		);
+	});
+
+	it('carries on with the exam ahead', () => {
+		const step = upNextStep(
+			course('Biology', {
+				topicCount: 2,
+				noteCount: 3,
+				examDate: '2026-11-11',
+				lastActivityAt: '2026-10-29T10:00:00.000Z',
+			}),
+			now
+		);
+		expect(step).toEqual({
+			title: 'Continue Biology',
+			detail: 'Exam in 12 days. Last active yesterday.',
+			action: 'Open course',
+		});
 	});
 });
