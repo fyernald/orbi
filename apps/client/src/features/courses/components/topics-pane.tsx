@@ -2,10 +2,14 @@
 
 import type { Course, Topic } from '@orbi/shared';
 import { Layers, Plus, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { AddTopicInline } from './add-topic-inline';
+import { CourseActions } from './course-actions';
+import { CourseIntro } from './course-intro';
 import { LoadError } from './load-error';
 import { PaneHeader } from './pane-header';
 import { TopicListItem } from './topic-list-item';
@@ -32,6 +36,7 @@ export function TopicsPane({
 	onSelect,
 	className,
 }: TopicsPaneProps) {
+	const router = useRouter();
 	const [query, setQuery] = useState('');
 	const [adding, setAdding] = useState(false);
 	const shown = topics?.filter((topic) =>
@@ -39,19 +44,32 @@ export function TopicsPane({
 	);
 
 	return (
-		<section aria-labelledby="topics-pane-title" className={className}>
+		<section aria-labelledby="course-title" className={className}>
 			<PaneHeader
 				title={
-					<>
-						<h2 id="topics-pane-title">Topics</h2>
-						{topics && (
-							<span className="text-xs font-normal text-muted-foreground tabular-nums">
-								{topics.length}
-							</span>
-						)}
-					</>
+					<h1 id="course-title" className="truncate text-base font-semibold">
+						{course.name}
+					</h1>
 				}
 				actions={
+					<CourseActions
+						course={course}
+						onDeleted={() => router.replace(routes.courses)}
+					/>
+				}
+			/>
+
+			<div className="flex-1 overflow-y-auto">
+				<CourseIntro course={course} />
+
+				<div className="flex items-center justify-between px-4 pt-4">
+					<h2
+						id="topics-title"
+						className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground"
+					>
+						Topics
+						{topics && <span className="tabular-nums">{topics.length}</span>}
+					</h2>
 					<Button
 						variant="ghost"
 						size="icon-sm"
@@ -61,70 +79,74 @@ export function TopicsPane({
 					>
 						<Plus />
 					</Button>
-				}
-			/>
-
-			{topics && topics.length > 6 && (
-				<div className="relative px-3 pt-3">
-					<Search className="pointer-events-none absolute top-1/2 left-5.5 mt-1.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-					<input
-						type="search"
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						placeholder="Find a topic"
-						aria-label="Find a topic"
-						className="h-8 w-full rounded-md border border-input bg-transparent pr-2 pl-7 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-					/>
 				</div>
-			)}
 
-			<div className="flex-1 overflow-y-auto p-2">
-				{!topics && !loadError && <TopicRowsLoading />}
-				{loadError && (
-					<div className="p-2">
-						<LoadError message={loadError} onRetry={onRetry} />
+				{topics && topics.length > 6 && (
+					<div className="relative px-3 pt-2">
+						<Search className="pointer-events-none absolute top-1/2 left-5.5 mt-1 size-3.5 -translate-y-1/2 text-muted-foreground" />
+						<input
+							type="search"
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder="Find a topic"
+							aria-label="Find a topic"
+							className="h-8 w-full rounded-md border border-input bg-transparent pr-2 pl-7 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+						/>
 					</div>
 				)}
-				{shown && (
-					<ul className="flex flex-col gap-0.5">
-						<li>
-							<button
-								type="button"
-								onClick={() => onSelect(null)}
-								aria-pressed={selectedTopicId === null}
-								className={cn(
-									'flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors',
-									selectedTopicId === null
-										? 'bg-muted font-medium'
-										: 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-								)}
-							>
-								<Layers className="size-4 shrink-0" />
-								Whole course
-							</button>
-						</li>
-						{shown.map((topic, index) => (
-							<TopicListItem
-								key={topic.id}
-								topic={topic}
-								number={index + 1}
-								color={course.color}
-								selected={topic.id === selectedTopicId}
-								onSelect={() => onSelect(topic.id)}
-							/>
-						))}
-					</ul>
-				)}
-				{topics?.length === 0 && !adding && (
-					<p className="px-2 py-6 text-center text-sm text-muted-foreground">
-						No topics yet. Add one for each chapter or lecture.
-					</p>
-				)}
-				{shown && shown.length === 0 && topics!.length > 0 && (
-					<p className="px-2 py-6 text-center text-sm text-muted-foreground">
-						No topic matches “{query}”.
-					</p>
-				)}
+
+				<div className="p-2">
+					{!topics && !loadError && <TopicRowsLoading />}
+					{loadError && (
+						<div className="p-2">
+							<LoadError message={loadError} onRetry={onRetry} />
+						</div>
+					)}
+					{shown && (
+						<ul
+							aria-labelledby="topics-title"
+							className="flex flex-col gap-0.5"
+						>
+							<li>
+								<button
+									type="button"
+									onClick={() => onSelect(null)}
+									aria-pressed={selectedTopicId === null}
+									className={cn(
+										'flex h-11 w-full items-center gap-3 rounded-lg px-2 text-left text-sm transition-colors',
+										selectedTopicId === null
+											? 'bg-muted font-semibold'
+											: 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+									)}
+								>
+									<span className="flex size-7 shrink-0 items-center justify-center">
+										<Layers className="size-4" />
+									</span>
+									Whole course
+								</button>
+							</li>
+							{shown.map((topic) => (
+								<TopicListItem
+									key={topic.id}
+									topic={topic}
+									color={course.color}
+									selected={topic.id === selectedTopicId}
+									onSelect={() => onSelect(topic.id)}
+								/>
+							))}
+						</ul>
+					)}
+					{topics?.length === 0 && !adding && (
+						<p className="px-2 py-6 text-center text-sm text-muted-foreground">
+							No topics yet. Add one for each chapter or lecture.
+						</p>
+					)}
+					{shown && shown.length === 0 && topics!.length > 0 && (
+						<p className="px-2 py-6 text-center text-sm text-muted-foreground">
+							No topic matches “{query}”.
+						</p>
+					)}
+				</div>
 			</div>
 
 			<div className="shrink-0 border-t border-divider p-2">

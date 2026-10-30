@@ -2,16 +2,12 @@
 
 import type { Course, Topic } from '@orbi/shared';
 import { PanelLeft, PanelRight, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import {
 	NoteComposer,
 	type ComposerPreset,
 } from '@/features/tutor/components/note-composer';
 import { defaultModelId, models } from '@/features/tutor/mock-data';
-import { routes } from '@/lib/routes';
 import { tutorStarters, type TutorStarter } from '../tutor-starters';
-import { CourseActions } from './course-actions';
-import { CourseIntro } from './course-intro';
 import { PaneHeader } from './pane-header';
 import { PaneToggle } from './pane-toggle';
 import { TutorStarterList } from './tutor-starter-list';
@@ -45,7 +41,6 @@ export function TutorPane({
 	onToggleStudy,
 	className,
 }: TutorPaneProps) {
-	const router = useRouter();
 	const selected = topics?.find((topic) => topic.id === selectedTopicId);
 	const composerTopics = topics?.map((topic) => ({
 		id: topic.id,
@@ -66,32 +61,26 @@ export function TutorPane({
 				}
 				title={
 					<>
-						<h2 id="tutor-pane-title">Tutor</h2>
-						{selected ? (
-							<span className="flex min-w-0 items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-xs font-normal">
-								<span className="truncate">{selected.name}</span>
-								<button
-									type="button"
-									onClick={onClearTopic}
-									aria-label="Ask about the whole course"
-									className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-foreground"
-								>
-									<X className="size-3" />
-								</button>
-							</span>
-						) : (
-							<span className="text-xs font-normal text-muted-foreground">
-								Whole course
-							</span>
+						<h2 id="tutor-pane-title" className="truncate font-semibold">
+							{selected ? selected.name : 'Whole course'}
+						</h2>
+						<span className="text-xs font-normal text-muted-foreground">
+							Tutor
+						</span>
+						{selected && (
+							<button
+								type="button"
+								onClick={onClearTopic}
+								aria-label="Ask about the whole course"
+								className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+							>
+								<X className="size-3.5" />
+							</button>
 						)}
 					</>
 				}
 				actions={
 					<>
-						<CourseActions
-							course={course}
-							onDeleted={() => router.replace(routes.courses)}
-						/>
 						<PaneToggle
 							label={studyOpen ? 'Hide study tools' : 'Show study tools'}
 							pressed={studyOpen}
@@ -103,7 +92,6 @@ export function TutorPane({
 			/>
 			<div className="flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-10">
-					<CourseIntro course={course} />
 					<TutorStarterList
 						starters={tutorStarters(course, topics ?? [])}
 						onStart={onStart}

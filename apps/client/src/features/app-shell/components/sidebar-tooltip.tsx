@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTooltipWhen } from '@/hooks/use-tooltip-when';
 
 type SidebarTooltipProps = {
 	label: string;
@@ -15,11 +16,10 @@ type SidebarTooltipProps = {
 };
 
 export function SidebarTooltip({ label, show, children }: SidebarTooltipProps) {
-	// always controlled; Radix warns when a tooltip switches between the two
-	const [open, setOpen] = useState(false);
+	const tooltip = useTooltipWhen(show);
 
 	return (
-		<Tooltip open={show && open} onOpenChange={setOpen}>
+		<Tooltip {...tooltip}>
 			<TooltipTrigger asChild>{children}</TooltipTrigger>
 			<TooltipContent side="right" sideOffset={10}>
 				{label}

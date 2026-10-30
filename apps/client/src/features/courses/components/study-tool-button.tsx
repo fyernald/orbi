@@ -1,13 +1,13 @@
 import type { TutorAction } from '@orbi/shared';
-import { ChevronRight } from 'lucide-react';
 import { composerActions } from '@/features/tutor/actions';
+import { BetaBadge } from '@/features/tutor/components/beta-badge';
 
 type StudyToolButtonProps = {
 	action: TutorAction;
 	onClick: () => void;
 };
 
-// opens the tool in the tutor composer, on the chosen topic
+// a tile that opens the tool in the tutor composer, on the chosen topic
 export function StudyToolButton({ action, onClick }: StudyToolButtonProps) {
 	const { label, description, icon: Icon, beta } = composerActions[action];
 
@@ -15,25 +15,18 @@ export function StudyToolButton({ action, onClick }: StudyToolButtonProps) {
 		<button
 			type="button"
 			onClick={onClick}
-			className="group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+			className="group flex h-full w-full flex-col items-start gap-2.5 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-foreground/20 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
 		>
-			<span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground group-hover:bg-card group-hover:text-foreground">
-				<Icon className="size-4" />
-			</span>
-			<span className="flex min-w-0 flex-1 flex-col">
-				<span className="flex items-center gap-1.5 text-sm font-medium">
+			<Icon className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
+			<span className="flex min-w-0 flex-col gap-0.5">
+				<span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
 					{label}
-					{beta && (
-						<span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground uppercase">
-							Beta
-						</span>
-					)}
+					{beta && <BetaBadge />}
 				</span>
-				<span className="truncate text-xs text-muted-foreground">
+				<span className="line-clamp-2 text-xs text-muted-foreground">
 					{description}
 				</span>
 			</span>
-			<ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
 		</button>
 	);
 }

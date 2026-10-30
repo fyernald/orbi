@@ -1,13 +1,13 @@
 'use client';
 
 import { ArrowUp } from 'lucide-react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTooltipWhen } from '@/hooks/use-tooltip-when';
 
 type SendButtonProps = {
 	label: string;
@@ -18,11 +18,10 @@ type SendButtonProps = {
 // and hovered to show why it is not ready
 export function SendButton({ label, blockedReason }: SendButtonProps) {
 	const blocked = blockedReason !== null;
-	// always controlled; Radix warns when a tooltip switches between the two
-	const [open, setOpen] = useState(false);
+	const tooltip = useTooltipWhen(blocked);
 
 	return (
-		<Tooltip open={blocked && open} onOpenChange={setOpen}>
+		<Tooltip {...tooltip}>
 			<TooltipTrigger asChild>
 				<Button
 					type="submit"
