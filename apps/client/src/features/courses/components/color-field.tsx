@@ -58,7 +58,7 @@ export function ColorField({
 								<span
 									aria-hidden="true"
 									className={cn(
-										'flex size-9 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-card transition-shadow peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50',
+										'flex size-9 items-center justify-center rounded-full text-card ring-offset-2 ring-offset-card transition-shadow peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50',
 										swatchClasses[color],
 										checked && 'ring-2'
 									)}
