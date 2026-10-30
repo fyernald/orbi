@@ -9,6 +9,15 @@ const utcDay = (isoDate: string) => Date.parse(`${isoDate}T00:00:00Z`);
 export const daysUntil = (examDate: string, now: Date): number =>
 	Math.round((utcDay(examDate) - utcDay(toIsoDate(now))) / DAY_MS);
 
+// the time left before an exam, for example "23 days"; null once it is over
+export function examDaysLabel(examDate: string, now: Date): string | null {
+	const days = daysUntil(examDate, now);
+	if (days < 0) return null;
+	if (days === 0) return 'Today';
+	if (days === 1) return 'Tomorrow';
+	return `${days} days`;
+}
+
 // how far the exam is from today, for example "Exam in 23 days"
 export function examCountdown(examDate: string, now: Date): string {
 	const days = daysUntil(examDate, now);

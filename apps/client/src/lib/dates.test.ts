@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatLongDate, formatTimeAgo, fromIsoDate, toIsoDate } from './dates';
+import {
+	formatLongDate,
+	formatShortDate,
+	formatTimeAgo,
+	fromIsoDate,
+	toIsoDate,
+} from './dates';
 
 describe('dates', () => {
 	it('uses the local calendar day, even late in the evening', () => {
@@ -12,6 +18,10 @@ describe('dates', () => {
 
 	it('writes the month in full', () => {
 		expect(formatLongDate('2027-01-15')).toBe('15 January 2027');
+	});
+
+	it('writes a short date with the weekday', () => {
+		expect(formatShortDate('2026-11-11')).toBe('Wed 11 Nov');
 	});
 });
 

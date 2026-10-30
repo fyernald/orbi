@@ -20,6 +20,15 @@ export function formatLongDate(isoDate: string): string {
 	});
 }
 
+// "2026-11-11" becomes "Wed 11 Nov"
+export function formatShortDate(isoDate: string): string {
+	return fromIsoDate(isoDate).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+	});
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
