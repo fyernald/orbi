@@ -1,6 +1,6 @@
 import type { Course } from '@orbi/shared';
 import { formatTimeAgo } from '@/lib/dates';
-import { daysUntil, examCountdown } from './exam-date';
+import { coursesWithExamAhead, examCountdown, upcomingExam } from './exam-date';
 
 export type UpNextStep = {
 	title: string;
@@ -25,10 +25,8 @@ export function upNextStep(course: Course, now: Date): UpNextStep {
 		};
 	}
 	const lastActive = `Last active ${formatTimeAgo(course.lastActivityAt, now)}.`;
-	const examAhead =
-		course.examDate && daysUntil(course.examDate, now) >= 0
-			? `${examCountdown(course.examDate, now)}. `
-			: '';
+	const examDate = upcomingExam(course, now);
+	const examAhead = examDate ? `${examCountdown(examDate, now)}. ` : '';
 	return {
 		title: `Continue ${course.name}`,
 		detail: examAhead + lastActive,
@@ -38,9 +36,7 @@ export function upNextStep(course: Course, now: Date): UpNextStep {
 
 // the course to study next: the nearest exam still to come, else the latest activity
 export function upNextCourse(courses: Course[], now: Date): Course | undefined {
-	const nextExam = courses
-		.filter((course) => course.examDate && daysUntil(course.examDate, now) >= 0)
-		.sort((a, b) => a.examDate!.localeCompare(b.examDate!))[0];
+	const nextExam = coursesWithExamAhead(courses, now)[0];
 	if (nextExam) return nextExam;
 	return courses
 		.slice()

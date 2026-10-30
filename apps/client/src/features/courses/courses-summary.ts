@@ -1,5 +1,5 @@
 import type { Course } from '@orbi/shared';
-import { daysUntil } from './exam-date';
+import { coursesWithExamAhead, daysUntil } from './exam-date';
 
 function whenIsExam(days: number): string {
 	if (days === 0) return 'is today';
@@ -10,10 +10,7 @@ function whenIsExam(days: number): string {
 // one sentence about what matters most across all courses, for example
 // "Biology 101 exam in 12 days. 1 more exam after that."
 export function coursesSummary(courses: Course[], now: Date): string {
-	const upcoming = courses
-		.filter((course) => course.examDate && daysUntil(course.examDate, now) >= 0)
-		.sort((a, b) => a.examDate!.localeCompare(b.examDate!));
-	const [next, ...rest] = upcoming;
+	const [next, ...rest] = coursesWithExamAhead(courses, now);
 	if (!next) return 'No exams coming up.';
 
 	const first = `${next.name} exam ${whenIsExam(daysUntil(next.examDate!, now))}.`;

@@ -1,6 +1,6 @@
 import type { Course } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
-import { groupCourses } from './course-groups';
+import { groupCourses, orderCourses } from './course-groups';
 
 const course = (name: string, fields: Partial<Course> = {}): Course => ({
 	id: name,
@@ -51,5 +51,22 @@ describe('groupCourses', () => {
 
 	it('leaves out empty groups', () => {
 		expect(summary([])).toEqual([]);
+	});
+});
+
+describe('orderCourses', () => {
+	it('lists the nearest exam first, then the latest activity', () => {
+		const courses = [
+			course('Quiet'),
+			course('Busy', { lastActivityAt: '2026-10-29T10:00:00.000Z' }),
+			course('Later', { examDate: '2026-11-30' }),
+			course('Soon', { examDate: '2026-11-06' }),
+		];
+		expect(orderCourses(courses, now).map(({ name }) => name)).toEqual([
+			'Soon',
+			'Later',
+			'Busy',
+			'Quiet',
+		]);
 	});
 });

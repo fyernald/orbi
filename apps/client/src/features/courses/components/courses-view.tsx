@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { apiErrorMessage } from '@/lib/api';
 import { filterCourses, type CourseFilters } from '../course-filters';
-import { groupCourses } from '../course-groups';
+import { orderCourses } from '../course-groups';
 import { useCourses } from '../hooks';
 import { upNextCourse } from '../up-next';
-import { CourseGroupList } from './course-group-list';
+import { CourseGrid } from './course-grid';
 import { CoursesEmpty } from './courses-empty';
+import { CoursesOrbit } from './courses-orbit';
 import { CoursesToolbar } from './courses-toolbar';
 import { ListLoader } from './list-loader';
 import { LoadError } from './load-error';
@@ -42,16 +43,19 @@ export function CoursesView() {
 		: courses.data;
 
 	return (
-		<div className="flex flex-col gap-8">
-			{upNext && <UpNextRow course={upNext} now={now} />}
-			{searchable && (
-				<CoursesToolbar filters={filters} onFiltersChange={setFilters} />
-			)}
-			{shown.length === 0 ? (
-				<NoMatchingCourses onClear={() => setFilters(noFilters)} />
-			) : (
-				<CourseGroupList groups={groupCourses(shown, now)} now={now} />
-			)}
+		<div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_19rem]">
+			<div className="flex min-w-0 flex-col gap-8">
+				{upNext && <UpNextRow course={upNext} now={now} />}
+				{searchable && (
+					<CoursesToolbar filters={filters} onFiltersChange={setFilters} />
+				)}
+				{shown.length === 0 ? (
+					<NoMatchingCourses onClear={() => setFilters(noFilters)} />
+				) : (
+					<CourseGrid courses={orderCourses(shown, now)} now={now} />
+				)}
+			</div>
+			<CoursesOrbit courses={courses.data} now={now} />
 		</div>
 	);
 }
