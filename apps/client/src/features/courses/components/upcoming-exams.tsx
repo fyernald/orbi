@@ -5,6 +5,9 @@ import { courseRoute } from '@/lib/routes';
 import { coursesWithExamAhead } from '../exam-date';
 import { CourseBadge } from './course-badge';
 
+// at most this many, so the panel stays as tall as two rows of course cards
+const MAX_SHOWN = 7;
+
 type UpcomingExamsProps = {
 	courses: Course[];
 	now: Date;
@@ -12,6 +15,8 @@ type UpcomingExamsProps = {
 
 export function UpcomingExams({ courses, now }: UpcomingExamsProps) {
 	const upcoming = coursesWithExamAhead(courses, now);
+	const shown = upcoming.slice(0, MAX_SHOWN);
+	const more = upcoming.length - shown.length;
 
 	return (
 		<section
@@ -30,7 +35,7 @@ export function UpcomingExams({ courses, now }: UpcomingExamsProps) {
 				</p>
 			) : (
 				<ol className="flex flex-col">
-					{upcoming.map((course) => (
+					{shown.map((course) => (
 						<li
 							key={course.id}
 							className="flex items-center gap-3 border-t border-divider py-2.5 first:border-t-0"
@@ -48,6 +53,11 @@ export function UpcomingExams({ courses, now }: UpcomingExamsProps) {
 						</li>
 					))}
 				</ol>
+			)}
+			{more > 0 && (
+				<p className="border-t border-divider pt-2.5 text-sm text-muted-foreground">
+					and {more} more
+				</p>
 			)}
 		</section>
 	);
