@@ -127,6 +127,7 @@ apps/client/src/
 | Data from the server, including the session | TanStack Query                                         |
 | Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
 | Small UI state (a menu is open)             | `useState` in the component                            |
+| Light, dark, or system theme                | `next-themes`, saved in the browser                    |
 
 - Who may see a page is decided **on the server** before anything is sent: the `/app` and login layouts call `getServerSession()` (`features/auth/server.ts`) and redirect. The browser never shows a page it should not, not even for a moment. Before that, `src/proxy.ts` sends anyone without a session cookie away from `/app`. It only looks at the cookie, so it never replaces the real check.
 - A layout check does not run again when the user moves between pages under it. So a server page that renders the user's data calls `getServerSession()` itself (it is cached per request, so this costs nothing), and the API checks the session on every request.

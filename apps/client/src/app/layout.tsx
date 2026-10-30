@@ -14,7 +14,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
-		<html lang="en" className={cn('font-sans', inter.variable)}>
+		// the theme script sets the dark class before React loads, so the server's html differs
+		<html
+			lang="en"
+			className={cn('font-sans', inter.variable)}
+			suppressHydrationWarning
+		>
 			<body>
 				<Providers>{children}</Providers>
 			</body>

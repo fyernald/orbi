@@ -63,7 +63,7 @@ export function ConfirmDeleteDialog({
 					<Button
 						onClick={onConfirm}
 						disabled={pending}
-						className="h-10 rounded-full bg-destructive px-4 text-white hover:bg-destructive/90"
+						className="h-10 rounded-full bg-destructive px-4 text-destructive-foreground hover:bg-destructive/90"
 					>
 						{pending && <Spinner />}
 						{confirmLabel}

@@ -7,6 +7,7 @@ import { studyStatus } from '../mock-data';
 import { PageTitle } from './page-title';
 import { ReviewButton } from './review-button';
 import { StreakLink } from './streak-link';
+import { ThemeMenu } from './theme-menu';
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 	return (
@@ -25,6 +26,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			</Link>
 			<PageTitle className="hidden text-sm font-medium md:flex" />
 			<div className="ml-auto flex items-center gap-2">
+				<ThemeMenu />
 				<StreakLink days={studyStatus.streakDays} />
 				<ReviewButton dueCount={studyStatus.dueCount} />
 			</div>
