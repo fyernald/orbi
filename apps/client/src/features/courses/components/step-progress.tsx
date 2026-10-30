@@ -86,7 +86,7 @@ export function StepProgress({ steps, current, onSelect }: StepProgressProps) {
 				})}
 			</ol>
 
-			<p className="hidden gap-2.5 rounded-xl border border-tone-blue-foreground/15 bg-tone-blue/60 p-3.5 text-sm text-tone-blue-foreground lg:flex">
+			<p className="hidden gap-2.5 rounded-xl border border-primary/15 bg-accent p-3.5 text-sm text-accent-foreground lg:flex">
 				<Lightbulb className="mt-0.5 size-4 shrink-0" />
 				{steps[current]!.tip}
 			</p>
