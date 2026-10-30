@@ -224,3 +224,10 @@
 		transform: scale(1.12) rotate(3deg);
 	}
 }
+
+/* one full turn of a ring on the courses orbit */
+@keyframes orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
