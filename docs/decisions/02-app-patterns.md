@@ -125,6 +125,7 @@ apps/client/src/
 | State                                       | Where it lives                                         |
 | ------------------------------------------- | ------------------------------------------------------ |
 | Data from the server, including the session | TanStack Query                                         |
+| Sidebar collapsed or open                   | A cookie, so the server draws it right after a refresh |
 | Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
 | Small UI state (a menu is open)             | `useState` in the component                            |
 
