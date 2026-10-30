@@ -103,7 +103,6 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					className={paneClass('tutor')}
 				/>
 				<StudyPane
-					course={course}
 					onStartTool={startTool}
 					className={paneClass('study', studyOpen)}
 				/>

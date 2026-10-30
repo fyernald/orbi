@@ -1,34 +1,37 @@
 import type { Course } from '@orbi/shared';
-import { examCountdown } from '../exam-date';
+import { formatShortDate } from '@/lib/dates';
+import { examCountdown, upcomingExam } from '../exam-date';
 import { goals } from '../goals';
-import { noteCountLabel } from '../note-count';
-import { topicCountLabel } from '../topic-count';
-import { CourseBadge } from './course-badge';
+import { MasteryRing } from './mastery-ring';
 
-// the top of the tutor pane before a conversation starts, like a notebook's cover
+// what the course is working towards: the exam ahead, else its goal
+function timeline(course: Course, now: Date): string {
+	const examDate = upcomingExam(course, now);
+	if (examDate) {
+		return `${examCountdown(examDate, now)} · ${formatShortDate(examDate)}`;
+	}
+	return goals[course.goal].shortLabel;
+}
+
+// the top of the topics pane: where the course stands
 export function CourseIntro({ course }: { course: Course }) {
-	const facts = [
-		topicCountLabel(course.topicCount),
-		noteCountLabel(course.noteCount),
-		course.examDate
-			? examCountdown(course.examDate, new Date())
-			: goals[course.goal].shortLabel,
-	];
-
 	return (
-		<header className="flex flex-col gap-4">
-			<CourseBadge course={course} className="size-12 rounded-xl text-sm" />
-			<div className="flex flex-col gap-1.5">
-				<h1 className="text-2xl font-semibold tracking-tight break-words sm:text-3xl">
-					{course.name}
-				</h1>
-				<p className="text-sm text-muted-foreground">{facts.join(' · ')}</p>
+		<div className="flex flex-col gap-4 px-4 pt-4 pb-2">
+			<p className="text-sm text-subtle-foreground">
+				{timeline(course, new Date())}
+			</p>
+			<div className="flex items-center gap-3">
+				{/* the mastery score comes with the review scheduler in Sprint 3 */}
+				<MasteryRing value={null} color={course.color} className="size-14" />
+				<p className="text-sm text-muted-foreground">
+					Mastery shows after your first study session.
+				</p>
 			</div>
 			{course.description && (
-				<p className="leading-relaxed text-subtle-foreground">
+				<p className="line-clamp-3 text-sm leading-relaxed text-subtle-foreground">
 					{course.description}
 				</p>
 			)}
-		</header>
+		</div>
 	);
 }

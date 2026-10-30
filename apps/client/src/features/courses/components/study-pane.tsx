@@ -1,51 +1,43 @@
-import { TUTOR_ACTIONS, type Course, type TutorAction } from '@orbi/shared';
-import { formatTimeAgo } from '@/lib/dates';
-import { goals } from '../goals';
-import { CourseDetail } from './course-detail';
-import { ExamCountdown } from './exam-countdown';
+import { TUTOR_ACTIONS, type TutorAction } from '@orbi/shared';
 import { PaneHeader } from './pane-header';
 import { StudyToolButton } from './study-tool-button';
 
 type StudyPaneProps = {
-	course: Course;
 	onStartTool: (action: TutorAction) => void;
 	className?: string;
 };
 
-export function StudyPane({ course, onStartTool, className }: StudyPaneProps) {
-	const goal = goals[course.goal];
-
+export function StudyPane({ onStartTool, className }: StudyPaneProps) {
 	return (
 		<section aria-labelledby="study-pane-title" className={className}>
 			<PaneHeader title={<h2 id="study-pane-title">Study</h2>} />
-			<div className="flex-1 overflow-y-auto">
-				<div className="flex flex-col gap-1 p-2">
+			<div className="flex flex-1 flex-col gap-7 overflow-y-auto p-3">
+				<ul className="grid grid-cols-2 gap-2">
 					{TUTOR_ACTIONS.map((action) => (
-						<StudyToolButton
-							key={action}
-							action={action}
-							onClick={() => onStartTool(action)}
-						/>
+						<li key={action}>
+							<StudyToolButton
+								action={action}
+								onClick={() => onStartTool(action)}
+							/>
+						</li>
 					))}
-				</div>
+				</ul>
 
-				<div className="border-t border-divider p-4">
-					<ExamCountdown examDate={course.examDate} />
-				</div>
-
-				<dl className="flex flex-col gap-2.5 border-t border-divider p-4 text-sm">
-					<CourseDetail label="Goal">
-						<span className="flex items-center gap-1.5">
-							<goal.icon className="size-3.5 text-muted-foreground" />
-							{goal.shortLabel}
-						</span>
-					</CourseDetail>
-					<CourseDetail label="Topics">{course.topicCount}</CourseDetail>
-					<CourseDetail label="Notes">{course.noteCount}</CourseDetail>
-					<CourseDetail label="Last activity">
-						{formatTimeAgo(course.lastActivityAt, new Date())}
-					</CourseDetail>
-				</dl>
+				{/* lists what was generated once the AI work lands in Sprint 2 */}
+				<section
+					aria-labelledby="made-title"
+					className="flex flex-col gap-2 px-1"
+				>
+					<h3
+						id="made-title"
+						className="text-[13px] font-medium text-muted-foreground"
+					>
+						Made for this course
+					</h3>
+					<p className="text-sm text-muted-foreground">
+						Questions, flashcards, and mock exams you make show up here.
+					</p>
+				</section>
 			</div>
 		</section>
 	);

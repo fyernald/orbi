@@ -19,12 +19,9 @@ export function TutorStarterList({ starters, onStart }: TutorStarterListProps) {
 
 	return (
 		<section aria-labelledby="starters-title" className="flex flex-col gap-3">
-			<h2
-				id="starters-title"
-				className="text-xs font-medium text-muted-foreground"
-			>
-				Start with
-			</h2>
+			<h3 id="starters-title" className="text-lg font-semibold tracking-tight">
+				Where do you want to start?
+			</h3>
 			<ul className="grid gap-2 sm:grid-cols-2">
 				{starters.map(({ label, ...starter }) => {
 					const Icon = composerActions[starter.action].icon;
