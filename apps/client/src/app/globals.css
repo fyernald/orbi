@@ -4,6 +4,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* still scrolls with the wheel, touch, and keys; for places too narrow for a scrollbar */
+@utility scrollbar-none {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @theme inline {
 	--font-heading: var(--font-sans);
 	--font-sans: var(--font-sans);
