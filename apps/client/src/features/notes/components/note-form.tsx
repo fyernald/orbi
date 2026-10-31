@@ -33,6 +33,7 @@ export function NoteForm({ courseId, topicId }: NoteFormProps) {
 	const contentError = form.formState.errors.content?.message;
 	const titleError = form.formState.errors.title?.message;
 	const length = form.watch('content').length;
+	const saving = create.isPending || form.formState.isSubmitting;
 
 	const save = form.handleSubmit((values) =>
 		create.mutate(values, {
@@ -43,10 +44,13 @@ export function NoteForm({ courseId, topicId }: NoteFormProps) {
 		})
 	);
 
-	// Ctrl+Enter (Cmd+Enter on a Mac) saves; plain Enter starts a new line
+	// Ctrl+Enter (Cmd+Enter on a Mac) saves; plain Enter starts a new line. Like
+	// the disabled button, it does nothing while a save is running, so a second
+	// press cannot save the same note twice
 	const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
 			event.preventDefault();
+			if (saving) return;
 			void save();
 		}
 	};
@@ -111,7 +115,7 @@ export function NoteForm({ courseId, topicId }: NoteFormProps) {
 					</p>
 					<Button
 						type="submit"
-						disabled={create.isPending}
+						disabled={saving}
 						className="h-8 shrink-0 rounded-lg px-3"
 					>
 						{create.isPending && <Spinner />}

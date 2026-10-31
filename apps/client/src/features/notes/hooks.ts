@@ -27,16 +27,22 @@ export function useNotes(courseId: string, topicId: string) {
 }
 
 // the new note goes on top, like the server lists them; the topic counts it at
-// once, and the course list and the course load again for their counts and activity
+// once, and the course list and the course load again for their counts and activity.
+// The notes list loads again too. A request still on its way was sent before the
+// insert, so it is cancelled first: otherwise the reload would reuse it and the
+// new note would be missing from the list
 export function useCreateNote(courseId: string, topicId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (input: CreateNoteInput) =>
 			api.post(notesPath(courseId, topicId), note, input),
-		onSuccess: (created) => {
+		onSuccess: async (created) => {
+			const notesQuery = { queryKey: notesKey(courseId, topicId), exact: true };
+			await queryClient.cancelQueries(notesQuery);
 			queryClient.setQueryData<Note[]>(notesKey(courseId, topicId), (notes) =>
 				notes ? [created, ...notes] : notes
 			);
+			void queryClient.invalidateQueries(notesQuery);
 			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
 				topics?.map((topic) =>
 					topic.id === topicId
