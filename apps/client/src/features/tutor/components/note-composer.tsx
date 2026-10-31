@@ -10,8 +10,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
 import { sendBlockedReason } from '../composer';
-import { useAttachments, useFileDrop } from '../hooks';
-import type { AiModel, Topic } from '../mock-data';
+import { useAttachments, useFileDrop, useModels } from '../hooks';
+import type { Topic } from '../mock-data';
 import { AttachmentList } from './attachment-list';
 import { ComposerContext } from './composer-context';
 import { ComposerNote } from './composer-note';
@@ -25,28 +25,53 @@ export type ComposerPreset = {
 	version: number;
 	action?: TutorAction;
 	topicId?: string;
+	modelId?: string;
 	message?: string;
+};
+
+// what the student had in the composer when they picked another topic
+export type ComposerDraft = {
+	message: string;
+	action: TutorAction;
+	modelId: string;
 };
 
 type NoteComposerProps = {
 	topics: Topic[];
-	models: AiModel[];
-	defaultModelId: string;
+	// the topic it starts on; '' is the whole course
+	topicId?: string;
+	// the course's name, when the composer can send about the whole course
+	wholeCourse?: string;
+	// picking a topic opens that topic's chat, with the draft; '' is the whole course
+	onTopicChange?: (topicId: string, draft: ComposerDraft) => void;
 	preset?: ComposerPreset;
+	// without it the composer is only a preview (Home, until it has real topics)
+	onSend?: (request: TutorRequestInput) => void;
+	// a reply is on its way: the send button stops it instead
+	busy?: boolean;
+	onStop?: () => void;
+	// a reason from outside the form, like the limit on parallel replies
+	limitReason?: string | null;
 };
 
 export function NoteComposer({
 	topics,
-	models,
-	defaultModelId,
+	topicId,
+	wholeCourse,
+	onTopicChange,
 	preset,
+	onSend,
+	busy = false,
+	onStop,
+	limitReason,
 }: NoteComposerProps) {
+	const models = useModels();
 	const form = useForm<TutorRequestInput>({
 		resolver: zodResolver(tutorRequestInput),
 		defaultValues: {
 			action: 'ask',
-			topicId: topics[0]?.id ?? '',
-			modelId: defaultModelId,
+			topicId: topicId ?? topics[0]?.id ?? '',
+			modelId: '',
 			message: '',
 		},
 	});
@@ -54,23 +79,45 @@ export function NoteComposer({
 	const { attachments, add, remove } = useAttachments();
 	const { isDragging, dropZoneProps } = useFileDrop(add);
 
+	// the list comes from the server, so the default model is set once it is there
+	const defaultModelId = models.data?.defaultModelId;
+	useEffect(() => {
+		if (defaultModelId && !form.getValues('modelId')) {
+			form.setValue('modelId', defaultModelId);
+		}
+	}, [defaultModelId, form]);
+
 	useEffect(() => {
 		if (!preset) return;
 		if (preset.action) form.setValue('action', preset.action);
 		if (preset.topicId) form.setValue('topicId', preset.topicId);
+		if (preset.modelId) form.setValue('modelId', preset.modelId);
 		if (preset.message !== undefined) form.setValue('message', preset.message);
 		form.setFocus('message');
 		// only a new version applies the preset, not every render
 	}, [preset?.version]);
 
 	const action = composerActions[values.action];
-	const blockedReason = sendBlockedReason({ values, attachments });
+	const noModels = models.isSuccess && models.data.models.length === 0;
+	const blockedReason = noModels
+		? 'The AI tutor is not set up on this server yet.'
+		: (limitReason ??
+			sendBlockedReason({
+				values,
+				attachments,
+				allowWholeCourse: wholeCourse !== undefined,
+			}));
 	const focusMessage = () => form.setFocus('message');
 
-	// there is no tutor API yet (AI work starts in Sprint 2), so a valid send
-	// does nothing for now; a blocked one moves focus to the message
-	const send = () => {
-		if (blockedReason) focusMessage();
+	const send = (request: TutorRequestInput) => {
+		if (busy) return;
+		if (blockedReason || !onSend) {
+			focusMessage();
+			return;
+		}
+		onSend(request);
+		form.setValue('message', '');
+		focusMessage();
 	};
 
 	// the removed chip had focus, so it moves to the message instead of the page
@@ -88,7 +135,21 @@ export function NoteComposer({
 				className="relative rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-primary"
 			>
 				<div className="flex flex-wrap items-center gap-2 px-2.5 pt-2">
-					<ComposerContext control={form.control} topics={topics} />
+					<ComposerContext
+						control={form.control}
+						topics={topics}
+						wholeCourse={wholeCourse}
+						onTopicChange={
+							onTopicChange &&
+							((next) => {
+								if (next === form.getValues('topicId')) return;
+								const { message, action, modelId } = form.getValues();
+								// the draft goes with the student to the other chat
+								form.setValue('message', '');
+								onTopicChange(next, { message, action, modelId });
+							})
+						}
+					/>
 					<AttachmentList
 						attachments={attachments}
 						onRemove={removeAttachment}
@@ -102,10 +163,12 @@ export function NoteComposer({
 				/>
 				<ComposerToolbar
 					control={form.control}
-					models={models}
+					models={models.data?.models ?? []}
 					onFiles={add}
 					sendLabel={action.submitLabel}
 					blockedReason={blockedReason}
+					busy={busy}
+					onStop={onStop}
 				/>
 				{isDragging && <DropOverlay />}
 			</form>

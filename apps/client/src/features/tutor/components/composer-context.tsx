@@ -10,10 +10,19 @@ import { TopicPicker } from './topic-picker';
 type ComposerContextProps = {
 	control: Control<TutorRequestInput>;
 	topics: Topic[];
+	// the course's name, when the whole course is a choice
+	wholeCourse?: string;
+	// set when picking a topic does more than fill the field (it opens that topic's chat)
+	onTopicChange?: (topicId: string) => void;
 };
 
 // the action and topic fields, read as a sentence: "Ask Orbi about Biology 101 › Meiosis"
-export function ComposerContext({ control, topics }: ComposerContextProps) {
+export function ComposerContext({
+	control,
+	topics,
+	wholeCourse,
+	onTopicChange,
+}: ComposerContextProps) {
 	const { field: actionField } = useController({ control, name: 'action' });
 	const { field: topicField } = useController({ control, name: 'topicId' });
 	const action = composerActions[actionField.value];
@@ -29,7 +38,8 @@ export function ComposerContext({ control, topics }: ComposerContextProps) {
 			<TopicPicker
 				topics={topics}
 				selected={topics.find(({ id }) => id === topicField.value)}
-				onSelect={topicField.onChange}
+				onSelect={onTopicChange ?? topicField.onChange}
+				wholeCourse={wholeCourse}
 			/>
 		</div>
 	);

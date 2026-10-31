@@ -2,6 +2,7 @@ import type { CourseColor, Topic } from '@orbi/shared';
 import { cn } from '@/lib/utils';
 import { noteCountLabel } from '../note-count';
 import { MasteryRing } from './mastery-ring';
+import { ReplyingDot } from './replying-dot';
 import { TopicActions } from './topic-actions';
 
 type TopicListItemProps = {
@@ -10,6 +11,8 @@ type TopicListItemProps = {
 	selected: boolean;
 	onSelect: () => void;
 	onOpenNotes: () => void;
+	// Orbi is still answering in this topic's chat
+	replying: boolean;
 };
 
 export function TopicListItem({
@@ -18,6 +21,7 @@ export function TopicListItem({
 	selected,
 	onSelect,
 	onOpenNotes,
+	replying,
 }: TopicListItemProps) {
 	return (
 		<li
@@ -34,7 +38,7 @@ export function TopicListItem({
 			>
 				{/* the topic's mastery score comes with the review scheduler in Sprint 3 */}
 				<MasteryRing value={null} color={color} className="size-7" />
-				<span className="flex min-w-0 flex-col">
+				<span className="flex min-w-0 flex-1 flex-col">
 					<span className={cn('truncate', selected && 'font-semibold')}>
 						{topic.name}
 					</span>
@@ -42,6 +46,7 @@ export function TopicListItem({
 						{noteCountLabel(topic.noteCount)}
 					</span>
 				</span>
+				{replying && <ReplyingDot />}
 			</button>
 			<TopicActions topic={topic} onOpenNotes={onOpenNotes} />
 		</li>
