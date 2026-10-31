@@ -5,6 +5,8 @@ import type { Mailer } from './mail/mailer';
 import { createMemoryMailer } from './mail/testing';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
+import { createNoteRepository } from './modules/notes/repository';
+import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
 
@@ -25,8 +27,9 @@ export async function createTestApp(
 		requireEmailVerification,
 	});
 	const courses = createCourseService({ repo: createCourseRepository(db) });
+	const notes = createNoteService({ repo: createNoteRepository(db) });
 	const profiles = createProfileService({ repo: createProfileRepository(db) });
-	return buildApp({ auth, services: { courses, profiles } });
+	return buildApp({ auth, services: { courses, notes, profiles } });
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;

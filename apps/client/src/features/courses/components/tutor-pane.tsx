@@ -1,7 +1,9 @@
 'use client';
 
 import type { Course, Topic } from '@orbi/shared';
-import { PanelLeft, PanelRight, X } from 'lucide-react';
+import { NotebookPen, PanelLeft, PanelRight, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AddNotesPrompt } from '@/features/notes/components/add-notes-prompt';
 import {
 	NoteComposer,
 	type ComposerPreset,
@@ -18,6 +20,7 @@ type TutorPaneProps = {
 	topics: Topic[] | undefined;
 	selectedTopicId: string | null;
 	onClearTopic: () => void;
+	onOpenNotes: (topicId: string) => void;
 	preset: ComposerPreset | undefined;
 	onStart: (starter: Omit<TutorStarter, 'label'>) => void;
 	topicsOpen: boolean;
@@ -33,6 +36,7 @@ export function TutorPane({
 	topics,
 	selectedTopicId,
 	onClearTopic,
+	onOpenNotes,
 	preset,
 	onStart,
 	topicsOpen,
@@ -81,6 +85,18 @@ export function TutorPane({
 				}
 				actions={
 					<>
+						{selected && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => onOpenNotes(selected.id)}
+								className="rounded-md text-muted-foreground"
+							>
+								<NotebookPen />
+								Notes
+								<span className="tabular-nums">{selected.noteCount}</span>
+							</Button>
+						)}
 						<PaneToggle
 							label={studyOpen ? 'Hide study tools' : 'Show study tools'}
 							pressed={studyOpen}
@@ -92,6 +108,12 @@ export function TutorPane({
 			/>
 			<div className="flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-10">
+					{selected?.noteCount === 0 && (
+						<AddNotesPrompt
+							topicName={selected.name}
+							onAddNotes={() => onOpenNotes(selected.id)}
+						/>
+					)}
 					<TutorStarterList
 						starters={tutorStarters(course, topics ?? [])}
 						onStart={onStart}

@@ -3,7 +3,7 @@ import { note, user } from '../../db/schema';
 import { createTestDb } from '../../db/testing';
 import { createCourseRepository, type CourseRepository } from './repository';
 
-// notes have no API yet, so this test writes them straight into the database
+// notes belong to the notes module, so this test writes them straight into the database
 let db: Awaited<ReturnType<typeof createTestDb>>;
 let repo: CourseRepository;
 

@@ -2,6 +2,7 @@
 
 import type { Course, TutorAction } from '@orbi/shared';
 import { useState } from 'react';
+import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
 import type { ComposerPreset } from '@/features/tutor/components/note-composer';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,9 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	const [studyOpen, setStudyOpen] = useState(true);
 	const [mobilePane, setMobilePane] = useState<WorkspacePane>('tutor');
 	const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+	// the topic stays set while the sheet closes, so it can slide out with its content
+	const [notesTopicId, setNotesTopicId] = useState<string | null>(null);
+	const [notesOpen, setNotesOpen] = useState(false);
 	const [preset, setPreset] = useState<ComposerPreset | undefined>(() =>
 		start.action || start.message ? { version: 1, ...start } : undefined
 	);
@@ -52,6 +56,11 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 
 	const startTool = (action: TutorAction) =>
 		sendToTutor({ action, topicId: selectedTopicId ?? firstTopicId });
+
+	const openNotes = (topicId: string) => {
+		setNotesTopicId(topicId);
+		setNotesOpen(true);
+	};
 
 	const open =
 		topicsOpen && studyOpen
@@ -87,6 +96,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onRetry={() => topics.refetch()}
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
+					onOpenNotes={openNotes}
 					className={paneClass('topics', topicsOpen)}
 				/>
 				<TutorPane
@@ -94,6 +104,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					topics={topics.data}
 					selectedTopicId={selectedTopicId}
 					onClearTopic={() => setSelectedTopicId(null)}
+					onOpenNotes={openNotes}
 					preset={preset}
 					onStart={sendToTutor}
 					topicsOpen={topicsOpen}
@@ -107,6 +118,12 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					className={paneClass('study', studyOpen)}
 				/>
 			</div>
+			<TopicNotesSheet
+				courseId={course.id}
+				topic={topics.data?.find((topic) => topic.id === notesTopicId)}
+				open={notesOpen}
+				onOpenChange={setNotesOpen}
+			/>
 		</div>
 	);
 }

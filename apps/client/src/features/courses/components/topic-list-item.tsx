@@ -9,6 +9,7 @@ type TopicListItemProps = {
 	color: CourseColor;
 	selected: boolean;
 	onSelect: () => void;
+	onOpenNotes: () => void;
 };
 
 export function TopicListItem({
@@ -16,6 +17,7 @@ export function TopicListItem({
 	color,
 	selected,
 	onSelect,
+	onOpenNotes,
 }: TopicListItemProps) {
 	return (
 		<li
@@ -41,7 +43,7 @@ export function TopicListItem({
 					</span>
 				</span>
 			</button>
-			<TopicActions topic={topic} />
+			<TopicActions topic={topic} onOpenNotes={onOpenNotes} />
 		</li>
 	);
 }
