@@ -99,7 +99,7 @@ TypeScript everywhere, in a pnpm monorepo:
 
 - **Frontend:** Next.js, Tailwind CSS + shadcn/ui, TanStack Query
 - **Backend:** Fastify, PostgreSQL with Drizzle ORM, Better Auth, Zod
-- **AI:** Google Gemini API, server-side only, behind the `QuestionGenerator` interface
+- **AI:** Google Gemini API, server-side only, behind the `QuestionGenerator` interface (moving to several providers the user picks from, see [docs/decisions/02-app-patterns.md](docs/decisions/02-app-patterns.md))
 - **Testing:** Vitest (unit), Playwright (e2e, Sprint 4)
 - **Hosting:** Docker Compose on the team VPS, behind nginx
 
@@ -191,7 +191,7 @@ A task is done when:
 
    With the recommended VS Code extensions, files are formatted on save.
 
-Database migrations will be added with T-02.
+To change the database schema, see [docs/database.md](docs/database.md#changing-the-schema). New migrations are applied by the server when it starts.
 
 ## Environment variables
 
