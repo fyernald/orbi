@@ -21,6 +21,9 @@ const envSchema = z
 		SMTP_FROM: z.string().optional(),
 		SMTP_USER: z.string().optional(),
 		SMTP_PASSWORD: z.string().optional(),
+		// each provider is offered only when its key is set; with none, the tutor is off
+		GEMINI_API_KEY: z.string().optional(),
+		ANTHROPIC_API_KEY: z.string().optional(),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -50,6 +53,7 @@ export type Config = {
 	databaseUrl: string;
 	auth: { secret: string; baseURL: string };
 	smtp: SmtpOptions | null;
+	aiKeys: { google?: string; anthropic?: string };
 };
 
 // fails at startup with every missing or wrong variable listed
@@ -78,5 +82,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 						user: vars.SMTP_USER || undefined,
 						password: vars.SMTP_PASSWORD || undefined,
 					},
+		aiKeys: {
+			google: vars.GEMINI_API_KEY || undefined,
+			anthropic: vars.ANTHROPIC_API_KEY || undefined,
+		},
 	};
 }

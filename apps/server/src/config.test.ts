@@ -40,4 +40,18 @@ describe('loadConfig', () => {
 
 		expect(config.smtp?.host).toBe('smtp.example.com');
 	});
+
+	it('treats an empty AI key as not set', () => {
+		const config = loadConfig({
+			...base,
+			APP_ENV: 'local',
+			GEMINI_API_KEY: 'gemini-key',
+			ANTHROPIC_API_KEY: '',
+		});
+
+		expect(config.aiKeys).toEqual({
+			google: 'gemini-key',
+			anthropic: undefined,
+		});
+	});
 });
