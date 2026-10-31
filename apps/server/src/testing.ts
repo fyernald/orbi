@@ -1,3 +1,4 @@
+import { createModelRegistry, type ModelRegistry } from './ai/models';
 import { buildApp } from './app';
 import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
@@ -9,14 +10,28 @@ import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
+import type { ReplyLimiter } from './modules/tutor/reply-limiter';
+import { createTutorRepository } from './modules/tutor/repository';
+import { createTutorService } from './modules/tutor/service';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
+
+type TestAppOptions = {
+	requireEmailVerification?: boolean;
+	// a registry with mock models; by default no AI provider is set up
+	models?: ModelRegistry;
+	limiter?: ReplyLimiter;
+};
 
 // the whole app on an in-memory database, for tests with app.inject();
 // pass a memory mailer to read the emails it sends
 export async function createTestApp(
 	mailer: Mailer = createMemoryMailer(),
-	{ requireEmailVerification = true } = {}
+	{
+		requireEmailVerification = true,
+		models = createModelRegistry({ providers: {} }),
+		limiter,
+	}: TestAppOptions = {}
 ) {
 	const db = await createTestDb();
 	const auth = createAuth({
@@ -29,7 +44,13 @@ export async function createTestApp(
 	const courses = createCourseService({ repo: createCourseRepository(db) });
 	const notes = createNoteService({ repo: createNoteRepository(db) });
 	const profiles = createProfileService({ repo: createProfileRepository(db) });
-	return buildApp({ auth, services: { courses, notes, profiles } });
+	const tutor = createTutorService({
+		repo: createTutorRepository(db),
+		models,
+		limiter,
+		logError: () => {},
+	});
+	return buildApp({ auth, services: { courses, notes, profiles, tutor } });
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;

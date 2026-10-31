@@ -15,6 +15,8 @@ import { createNoteRoutes } from './modules/notes/routes';
 import type { NoteService } from './modules/notes/service';
 import { createProfileRoutes } from './modules/profile/routes';
 import type { ProfileService } from './modules/profile/service';
+import { createTutorRoutes } from './modules/tutor/routes';
+import type { TutorService } from './modules/tutor/service';
 
 export type AppDeps = {
 	auth: Auth;
@@ -22,6 +24,7 @@ export type AppDeps = {
 		courses: CourseService;
 		notes: NoteService;
 		profiles: ProfileService;
+		tutor: TutorService;
 	};
 };
 
@@ -51,6 +54,7 @@ export function buildApp({ auth, services }: AppDeps) {
 			api.register(
 				createProfileRoutes({ profiles: services.profiles, requireUser })
 			);
+			api.register(createTutorRoutes({ tutor: services.tutor, requireUser }));
 		},
 		{ prefix: '/api' }
 	);
