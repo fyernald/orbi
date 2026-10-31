@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { AddTopicInline } from './add-topic-inline';
 import { CourseActions } from './course-actions';
 import { CourseIntro } from './course-intro';
-import { LoadError } from './load-error';
+import { LoadError } from '@/components/load-error';
 import { PaneHeader } from './pane-header';
 import { TopicListItem } from './topic-list-item';
 import { TopicRowsLoading } from './topic-rows-loading';
@@ -24,6 +24,7 @@ type TopicsPaneProps = {
 	// null means the whole course
 	selectedTopicId: string | null;
 	onSelect: (topicId: string | null) => void;
+	onOpenNotes: (topicId: string) => void;
 	className?: string;
 };
 
@@ -34,6 +35,7 @@ export function TopicsPane({
 	onRetry,
 	selectedTopicId,
 	onSelect,
+	onOpenNotes,
 	className,
 }: TopicsPaneProps) {
 	const router = useRouter();
@@ -132,6 +134,7 @@ export function TopicsPane({
 									color={course.color}
 									selected={topic.id === selectedTopicId}
 									onSelect={() => onSelect(topic.id)}
+									onOpenNotes={() => onOpenNotes(topic.id)}
 								/>
 							))}
 						</ul>

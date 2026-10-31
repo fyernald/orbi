@@ -11,12 +11,18 @@ import { createAuthRoutes } from './modules/auth/routes';
 import { createRequireUser } from './modules/auth/session';
 import { createCourseRoutes } from './modules/courses/routes';
 import type { CourseService } from './modules/courses/service';
+import { createNoteRoutes } from './modules/notes/routes';
+import type { NoteService } from './modules/notes/service';
 import { createProfileRoutes } from './modules/profile/routes';
 import type { ProfileService } from './modules/profile/service';
 
 export type AppDeps = {
 	auth: Auth;
-	services: { courses: CourseService; profiles: ProfileService };
+	services: {
+		courses: CourseService;
+		notes: NoteService;
+		profiles: ProfileService;
+	};
 };
 
 export function buildApp({ auth, services }: AppDeps) {
@@ -41,6 +47,7 @@ export function buildApp({ auth, services }: AppDeps) {
 			api.register(
 				createCourseRoutes({ courses: services.courses, requireUser })
 			);
+			api.register(createNoteRoutes({ notes: services.notes, requireUser }));
 			api.register(
 				createProfileRoutes({ profiles: services.profiles, requireUser })
 			);

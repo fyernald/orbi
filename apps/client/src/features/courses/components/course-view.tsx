@@ -6,7 +6,7 @@ import { useCourse } from '../hooks';
 import { BackToCourses } from './back-to-courses';
 import { CourseWorkspace } from './course-workspace';
 import { ListLoader } from './list-loader';
-import { LoadError } from './load-error';
+import { LoadError } from '@/components/load-error';
 
 type CourseViewProps = {
 	courseId: string;

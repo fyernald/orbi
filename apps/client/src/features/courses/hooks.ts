@@ -11,11 +11,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-
-const coursesKey = ['courses'] as const;
-const courseKey = (courseId: string) => [...coursesKey, courseId] as const;
-const topicsKey = (courseId: string) =>
-	[...courseKey(courseId), 'topics'] as const;
+import { courseKey, coursesKey, topicsKey } from './query-keys';
 
 export function useCourses() {
 	return useQuery({
