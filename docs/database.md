@@ -10,6 +10,10 @@ erDiagram
     user ||--o{ course : owns
     course ||--o{ topic : contains
     topic ||--o{ note : contains
+    topic ||--o{ question : "has practice"
+    course ||--o{ chat : "has tutor"
+    topic ||--o{ chat : "has tutor"
+    chat ||--o{ chat_message : contains
     user ||--o{ session : "logs in with"
     user ||--o{ account : "logs in with"
 
@@ -59,6 +63,39 @@ erDiagram
         varchar title
         text content
     }
+    chat {
+        uuid id PK
+        text user_id FK
+        uuid course_id FK
+        uuid topic_id FK
+        varchar title
+    }
+    chat_message {
+        uuid id PK
+        text user_id FK
+        uuid chat_id FK
+        chat_role role
+        jsonb parts
+        uuid topic_id FK
+        tutor_action action
+        varchar model_id
+        integer notes_used
+    }
+    question {
+        uuid id PK
+        text user_id FK
+        uuid topic_id FK
+        question_type type
+        text text
+        jsonb choices
+        integer correct_choice
+        text explanation
+        question_status status
+        question_source source
+        ai_provider ai_provider
+        varchar ai_model
+        uuid chat_message_id
+    }
 ```
 
 Every table also has `created_at` and `updated_at`.
@@ -69,11 +106,16 @@ Every table also has `created_at` and `updated_at`.
 | `profile`                                    | One per user: the onboarding answers (what Orbi calls them, date of birth, how they use Orbi, level, field, interests, explanation style, daily minutes, study time, language, time zone). `onboarded_at` is set once every answer is there; until then the app sends the user to `/welcome`. `institution` and `occupation` are not asked yet. |
 | `course`                                     | A course of a user: its colour, what it is for (`goal`), and an optional exam date.                                                                                                                                                                                                                                                             |
 | `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                                                                                                                                                                                                                                                             |
-| `note`                                       | Study notes pasted into a topic. The AI will create questions from them later.                                                                                                                                                                                                                                                                  |
+| `note`                                       | Study notes pasted into a topic. The tutor reads them and makes questions from them.                                                                                                                                                                                                                                                            |
+| `chat`                                       | A tutor chat of one topic, or of the whole course when `topic_id` is null. It is named after its first message. The browser makes the id, so the first message needs no extra request.                                                                                                                                                          |
+| `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, and how many notes the tutor read. See [decision 0003](decisions/03-tutor-chat.md).                                                      |
+| `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them.                                                                                             |
 
 ## Rules the database enforces
 
-- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics and their notes. Deleting a topic deletes its notes.
+- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics, their notes and questions, and its chats. Deleting a topic deletes its notes, questions, and chats. A chat message about a deleted topic stays, without the link.
+- **Questions keep their chat message id without a foreign key.** A question is saved while its reply is still streaming, before the message exists, and deleting a chat should not delete the questions.
+- **A question is well formed.** Its text is not blank, `correct_choice` points at one of its `choices`, and an AI question always has `ai_provider` and `ai_model`.
 - **Ownership always matches.** `topic` and `note` keep a `user_id` so the server can check ownership with one simple `WHERE user_id = ...`. Their foreign keys include `user_id`, so a topic can only point at a course of the same user, and a note only at a topic of the same user. The server cannot get this wrong by mistake.
 - **One profile per user.** `profile.user_id` is the primary key.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).

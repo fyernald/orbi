@@ -14,8 +14,11 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
+		"@ai-sdk/anthropic": "^4.0.94",
+		"@ai-sdk/google": "^4.0.109",
 		"@orbi/core": "workspace:*",
 		"@orbi/shared": "workspace:*",
+		"ai": "^7.0.159",
 		"better-auth": "^1.7.12",
 		"drizzle-orm": "^0.45.4",
 		"fastify": "^5.12.7",
@@ -25,6 +28,7 @@
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
+		"@ai-sdk/provider": "^4.0.35",
 		"@electric-sql/pglite": "^0.5.11",
 		"@types/nodemailer": "^8.0.2",
 		"@types/pg": "^8.23.1",

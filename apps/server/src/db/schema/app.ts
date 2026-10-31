@@ -5,6 +5,7 @@ import {
 	foreignKey,
 	index,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	text,
@@ -14,12 +15,17 @@ import {
 	varchar,
 } from 'drizzle-orm/pg-core';
 import {
+	AI_PROVIDERS,
 	COURSE_COLORS,
 	COURSE_GOALS,
 	EDUCATION_LEVELS,
 	EXPLANATION_STYLES,
 	PROFILE_USES,
+	QUESTION_SOURCES,
+	QUESTION_STATUSES,
+	QUESTION_TYPES,
 	STUDY_TIMES,
+	TUTOR_ACTIONS,
 } from '@orbi/shared';
 import { user } from './auth';
 
@@ -142,6 +148,117 @@ export const note = pgTable(
 	]
 );
 
+export const tutorAction = pgEnum('tutor_action', TUTOR_ACTIONS);
+
+export const chatRole = pgEnum('chat_role', ['user', 'assistant']);
+
+export const aiProvider = pgEnum('ai_provider', AI_PROVIDERS);
+
+export const questionType = pgEnum('question_type', QUESTION_TYPES);
+
+export const questionStatus = pgEnum('question_status', QUESTION_STATUSES);
+
+export const questionSource = pgEnum('question_source', QUESTION_SOURCES);
+
+// A tutor chat belongs to one topic, or to the whole course when topic_id is null.
+// The id comes from the browser, so a new chat needs no extra request.
+export const chat = pgTable(
+	'chat',
+	{
+		id: uuid('id').primaryKey(),
+		userId: text('user_id').notNull(),
+		courseId: uuid('course_id').notNull(),
+		topicId: uuid('topic_id'),
+		title: varchar('title', { length: 255 }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'chat_course_fk',
+			columns: [t.userId, t.courseId],
+			foreignColumns: [course.userId, course.id],
+		}).onDelete('cascade'),
+		// a topic's chats go with the topic
+		foreignKey({
+			name: 'chat_topic_fk',
+			columns: [t.userId, t.topicId],
+			foreignColumns: [topic.userId, topic.id],
+		}).onDelete('cascade'),
+		unique('chat_user_id_id_key').on(t.userId, t.id),
+		index('chat_course_id_idx').on(t.courseId, t.updatedAt),
+	]
+);
+
+// parts are the AI SDK's UIMessage parts: text, reasoning, and tool calls with their data
+export const chatMessage = pgTable(
+	'chat_message',
+	{
+		id: uuid('id').primaryKey(),
+		userId: text('user_id').notNull(),
+		chatId: uuid('chat_id').notNull(),
+		role: chatRole('role').notNull(),
+		parts: jsonb('parts').$type<Record<string, unknown>[]>().notNull(),
+		// a deleted topic keeps the history, just without the link
+		topicId: uuid('topic_id').references(() => topic.id, {
+			onDelete: 'set null',
+		}),
+		action: tutorAction('action'),
+		// the catalog id, for assistant messages
+		modelId: varchar('model_id', { length: 100 }),
+		notesUsed: integer('notes_used'),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'chat_message_chat_fk',
+			columns: [t.userId, t.chatId],
+			foreignColumns: [chat.userId, chat.id],
+		}).onDelete('cascade'),
+		index('chat_message_chat_id_idx').on(t.chatId, t.createdAt),
+	]
+);
+
+export const question = pgTable(
+	'question',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		topicId: uuid('topic_id').notNull(),
+		type: questionType('type').notNull().default('multiple_choice'),
+		text: text('text').notNull(),
+		choices: jsonb('choices').$type<string[]>().notNull(),
+		correctChoice: integer('correct_choice').notNull(),
+		explanation: text('explanation'),
+		status: questionStatus('status').notNull().default('pending'),
+		source: questionSource('source').notNull(),
+		aiProvider: aiProvider('ai_provider'),
+		aiModel: varchar('ai_model', { length: 100 }),
+		// the reply that made it; no foreign key, because the question is saved while
+		// that reply is still streaming, and deleting a chat should keep its questions
+		chatMessageId: uuid('chat_message_id'),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'question_topic_fk',
+			columns: [t.userId, t.topicId],
+			foreignColumns: [topic.userId, topic.id],
+		}).onDelete('cascade'),
+		index('question_topic_id_idx').on(t.topicId, t.status),
+		index('question_user_id_idx').on(t.userId),
+		check('question_text_not_empty', sql`${t.text} ~ '\\S'`),
+		check(
+			'question_correct_choice_in_range',
+			sql`${t.correctChoice} >= 0 and ${t.correctChoice} < jsonb_array_length(${t.choices})`
+		),
+		// an AI question always says which model made it
+		check(
+			'question_ai_has_model',
+			sql`${t.source} <> 'ai' or (${t.aiProvider} is not null and ${t.aiModel} is not null)`
+		),
+	]
+);
+
 export const profileRelations = relations(profile, ({ one }) => ({
 	user: one(user, { fields: [profile.userId], references: [user.id] }),
 }));
@@ -158,4 +275,17 @@ export const topicRelations = relations(topic, ({ one, many }) => ({
 
 export const noteRelations = relations(note, ({ one }) => ({
 	topic: one(topic, { fields: [note.topicId], references: [topic.id] }),
+}));
+
+export const chatRelations = relations(chat, ({ one, many }) => ({
+	course: one(course, { fields: [chat.courseId], references: [course.id] }),
+	messages: many(chatMessage),
+}));
+
+export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
+	chat: one(chat, { fields: [chatMessage.chatId], references: [chat.id] }),
+}));
+
+export const questionRelations = relations(question, ({ one }) => ({
+	topic: one(topic, { fields: [question.topicId], references: [topic.id] }),
 }));

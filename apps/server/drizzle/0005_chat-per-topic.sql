@@ -1,0 +1,2 @@
+ALTER TABLE "chat" ADD COLUMN "topic_id" uuid;--> statement-breakpoint
+ALTER TABLE "chat" ADD CONSTRAINT "chat_topic_fk" FOREIGN KEY ("user_id","topic_id") REFERENCES "public"."topic"("user_id","id") ON DELETE cascade ON UPDATE no action;
