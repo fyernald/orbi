@@ -11,7 +11,7 @@ import { CoursesEmpty } from './courses-empty';
 import { CoursesOrbit } from './courses-orbit';
 import { CoursesToolbar } from './courses-toolbar';
 import { ListLoader } from './list-loader';
-import { LoadError } from './load-error';
+import { LoadError } from '@/components/load-error';
 import { NoMatchingCourses } from './no-matching-courses';
 import { UpNextRow } from './up-next-row';
 

@@ -1,13 +1,14 @@
 'use client';
 
 import type { Topic } from '@orbi/shared';
-import { Ellipsis, Trash2 } from 'lucide-react';
+import { Ellipsis, NotebookPen, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiErrorMessage } from '@/lib/api';
@@ -15,8 +16,13 @@ import { useDeleteTopic } from '../hooks';
 import { noteCountLabel } from '../note-count';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 
+type TopicActionsProps = {
+	topic: Topic;
+	onOpenNotes: () => void;
+};
+
 // the menu button shows on hover and focus, and always on touch screens
-export function TopicActions({ topic }: { topic: Topic }) {
+export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 	const remove = useDeleteTopic(topic.courseId);
 	const [confirming, setConfirming] = useState(false);
 	const notes =
@@ -38,6 +44,11 @@ export function TopicActions({ topic }: { topic: Topic }) {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-44">
+					<DropdownMenuItem onSelect={onOpenNotes}>
+						<NotebookPen />
+						Notes
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
 						onSelect={() => setConfirming(true)}
