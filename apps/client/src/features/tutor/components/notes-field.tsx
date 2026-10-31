@@ -1,7 +1,7 @@
 'use client';
 
 import type { TutorRequestInput } from '@orbi/shared';
-import type { KeyboardEvent } from 'react';
+import { useId, type KeyboardEvent } from 'react';
 import { useController, type Control } from 'react-hook-form';
 
 type NotesFieldProps = {
@@ -19,29 +19,27 @@ export function NotesField({
 	sendOnEnter,
 }: NotesFieldProps) {
 	const { field } = useController({ control, name: 'message' });
+	// several chats can be on the page at once, each with its own field
+	const id = useId();
 
+	// Ctrl+Enter (Cmd+Enter on a Mac) sends in every action, like the notes form
 	const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		// isComposing: Enter also confirms a word in IME keyboards (for example Japanese)
-		if (
-			!sendOnEnter ||
-			event.key !== 'Enter' ||
-			event.shiftKey ||
-			event.nativeEvent.isComposing
-		) {
-			return;
-		}
+		if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+		const shortcut = event.ctrlKey || event.metaKey;
+		if (!shortcut && (!sendOnEnter || event.shiftKey)) return;
 		event.preventDefault();
 		event.currentTarget.form?.requestSubmit();
 	};
 
 	return (
 		<>
-			<label htmlFor="home-notes" className="sr-only">
+			<label htmlFor={id} className="sr-only">
 				{label}
 			</label>
 			<textarea
 				{...field}
-				id="home-notes"
+				id={id}
 				rows={3}
 				onKeyDown={handleKeyDown}
 				placeholder={placeholder}

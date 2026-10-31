@@ -14,7 +14,8 @@ export const CHAT_TITLE_MAX_LENGTH = 120;
 // when the upload endpoint is built
 export const tutorRequestInput = z.object({
 	action: z.enum(TUTOR_ACTIONS),
-	topicId: z.string().min(1, 'Choose a topic first.'),
+	// empty means the whole course; the composer decides when that is allowed
+	topicId: z.string(),
 	modelId: z.string().min(1, 'Choose a model first.'),
 	message: z
 		.string()

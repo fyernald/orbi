@@ -2,7 +2,16 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+/* the tutor's markdown renderer styles itself with Tailwind classes inside the package */
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/math/dist/*.js";
+
 @custom-variant dark (&:is(.dark *));
+
+/* the width of the tutor chat's column: messages, cards, and the message box (max-w-chat) */
+@theme {
+	--container-chat: 54rem;
+}
 
 /* still scrolls with the wheel, touch, and keys; for places too narrow for a scrollbar */
 @utility scrollbar-none {
@@ -272,6 +281,45 @@
 	}
 	50% {
 		transform: scale(1.12) rotate(3deg);
+	}
+}
+
+/* "Orbi is thinking": light passes over the words */
+@layer components {
+	.shimmer-text {
+		background: linear-gradient(
+				90deg,
+				var(--muted-foreground) 35%,
+				color-mix(in srgb, var(--muted-foreground) 30%, var(--background)) 50%,
+				var(--muted-foreground) 65%
+			)
+			0 0 / 250% 100%;
+		background-clip: text;
+		color: transparent;
+		animation: shimmer 1.6s linear infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.shimmer-text {
+			animation: none;
+			background: none;
+			color: var(--muted-foreground);
+		}
+
+		/* the tutor's words fade in as they arrive */
+		[data-sd-animate],
+		[data-sd-animate-marker]::marker {
+			animation: none;
+		}
+	}
+}
+
+@keyframes shimmer {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: -150% 0;
 	}
 }
 

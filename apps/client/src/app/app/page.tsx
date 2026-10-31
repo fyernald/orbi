@@ -5,7 +5,6 @@ import { SuggestionChips } from '@/features/home/components/suggestion-chips';
 import { recentTopics, today } from '@/features/home/mock-data';
 import { suggestionsFor } from '@/features/home/suggestions';
 import { getServerProfile } from '@/features/profile/server';
-import { defaultModelId, models } from '@/features/tutor/mock-data';
 
 export const metadata: Metadata = { title: 'Home' };
 
@@ -17,11 +16,7 @@ export default async function HomePage() {
 		<section className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:px-8 md:gap-8">
 			<HomeGreeting name={preferredName ?? ''} />
 			<div className="flex w-full max-w-190 flex-col gap-6">
-				<NoteComposer
-					topics={recentTopics}
-					models={models}
-					defaultModelId={defaultModelId}
-				/>
+				<NoteComposer topics={recentTopics} />
 				<SuggestionChips suggestions={suggestionsFor(today)} />
 			</div>
 		</section>

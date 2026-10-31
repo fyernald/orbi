@@ -1,7 +1,7 @@
 import type { TutorRequestInput } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
 import { composerActions } from './actions';
-import type { Attachment, AttachmentStatus } from './attachments';
+import type { Attachment } from './attachments';
 import { sendBlockedReason } from './composer';
 
 const values = (
@@ -14,21 +14,24 @@ const values = (
 	...changes,
 });
 
-const attachmentWith = (status: AttachmentStatus): Attachment => ({
+const readyFile: Attachment = {
 	id: '1',
 	file: new File(['notes'], 'notes.pdf'),
 	kind: 'pdf',
-	status,
-	progress: status === 'ready' ? 1 : 0.5,
-});
+	status: 'ready',
+	progress: 1,
+};
 
 describe('sendBlockedReason', () => {
-	it('allows a message or a finished file', () => {
+	it('allows a message', () => {
 		expect(sendBlockedReason({ values: values(), attachments: [] })).toBeNull();
+	});
+
+	it('lets Questions start from the saved notes without a message', () => {
 		expect(
 			sendBlockedReason({
 				values: values({ action: 'questions', message: '' }),
-				attachments: [attachmentWith('ready')],
+				attachments: [],
 			})
 		).toBeNull();
 	});
@@ -42,33 +45,41 @@ describe('sendBlockedReason', () => {
 		).toBe('Choose a model first.');
 	});
 
+	it('lets the whole-course chat send without a topic, except for questions', () => {
+		expect(
+			sendBlockedReason({
+				values: values({ topicId: '' }),
+				attachments: [],
+				allowWholeCourse: true,
+			})
+		).toBeNull();
+		expect(
+			sendBlockedReason({
+				values: values({ topicId: '', action: 'questions' }),
+				attachments: [],
+				allowWholeCourse: true,
+			})
+		).toMatch(/Pick a topic first/);
+	});
+
 	it("shows the action's own hint when there is nothing to send", () => {
 		expect(
 			sendBlockedReason({ values: values({ message: '   ' }), attachments: [] })
 		).toBe(composerActions.ask.emptyHint);
 	});
 
-	it('lets a mock exam start without a message', () => {
+	it('says which actions are not ready yet', () => {
 		expect(
 			sendBlockedReason({
 				values: values({ action: 'mockExam', message: '' }),
 				attachments: [],
 			})
-		).toBeNull();
+		).toBe('Mock exam is coming soon.');
 	});
 
-	it('waits for uploads and for failed files to be removed', () => {
+	it('does not send files the tutor cannot read yet', () => {
 		expect(
-			sendBlockedReason({
-				values: values(),
-				attachments: [attachmentWith('uploading')],
-			})
-		).toMatch(/finish uploading/);
-		expect(
-			sendBlockedReason({
-				values: values(),
-				attachments: [attachmentWith('error')],
-			})
-		).toMatch(/could not be attached/);
+			sendBlockedReason({ values: values(), attachments: [readyFile] })
+		).toMatch(/cannot read files yet/);
 	});
 });

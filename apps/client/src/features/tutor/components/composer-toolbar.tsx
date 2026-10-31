@@ -1,11 +1,11 @@
 'use client';
 
-import type { TutorRequestInput } from '@orbi/shared';
+import type { AiModel, TutorRequestInput } from '@orbi/shared';
 import { useController, type Control } from 'react-hook-form';
-import type { AiModel } from '../mock-data';
 import { AttachButton } from './attach-button';
 import { ModelPicker } from './model-picker';
 import { SendButton } from './send-button';
+import { StopButton } from './stop-button';
 
 type ComposerToolbarProps = {
 	control: Control<TutorRequestInput>;
@@ -13,6 +13,8 @@ type ComposerToolbarProps = {
 	onFiles: (files: File[]) => void;
 	sendLabel: string;
 	blockedReason: string | null;
+	busy: boolean;
+	onStop?: () => void;
 };
 
 export function ComposerToolbar({
@@ -21,6 +23,8 @@ export function ComposerToolbar({
 	onFiles,
 	sendLabel,
 	blockedReason,
+	busy,
+	onStop,
 }: ComposerToolbarProps) {
 	const { field: modelField } = useController({ control, name: 'modelId' });
 
@@ -33,7 +37,11 @@ export function ComposerToolbar({
 					selectedId={modelField.value}
 					onSelect={modelField.onChange}
 				/>
-				<SendButton label={sendLabel} blockedReason={blockedReason} />
+				{busy && onStop ? (
+					<StopButton onStop={onStop} />
+				) : (
+					<SendButton label={sendLabel} blockedReason={blockedReason} />
+				)}
 			</div>
 		</div>
 	);

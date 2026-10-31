@@ -1,18 +1,21 @@
 'use client';
 
-import type { Course, Topic } from '@orbi/shared';
-import { NotebookPen, PanelLeft, PanelRight, X } from 'lucide-react';
+import { MAX_PARALLEL_REPLIES, type Course, type Topic } from '@orbi/shared';
+import { NotebookPen, PanelLeft, PanelRight, SquarePen, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AddNotesPrompt } from '@/features/notes/components/add-notes-prompt';
-import {
-	NoteComposer,
-	type ComposerPreset,
+import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
+import type {
+	ComposerDraft,
+	ComposerPreset,
 } from '@/features/tutor/components/note-composer';
-import { defaultModelId, models } from '@/features/tutor/mock-data';
-import { tutorStarters, type TutorStarter } from '../tutor-starters';
+import type { TutorStarter } from '../tutor-starters';
 import { PaneHeader } from './pane-header';
 import { PaneToggle } from './pane-toggle';
-import { TutorStarterList } from './tutor-starter-list';
+import { ChatLoading, ScopeChat } from './scope-chat';
+
+// a preset for one chat: a topic id, or the whole-course scope
+export type ScopedPreset = ComposerPreset & { scope: string };
 
 type TutorPaneProps = {
 	course: Course;
@@ -21,8 +24,12 @@ type TutorPaneProps = {
 	selectedTopicId: string | null;
 	onClearTopic: () => void;
 	onOpenNotes: (topicId: string) => void;
-	preset: ComposerPreset | undefined;
+	preset: ScopedPreset | undefined;
 	onStart: (starter: Omit<TutorStarter, 'label'>) => void;
+	// the chats with a reply running, by scope
+	busyScopes: ReadonlySet<string>;
+	onBusyChange: (scope: string, busy: boolean) => void;
+	onSwitchTopic: (topicId: string | null, draft: ComposerDraft) => void;
 	topicsOpen: boolean;
 	onToggleTopics: () => void;
 	studyOpen: boolean;
@@ -30,7 +37,8 @@ type TutorPaneProps = {
 	className?: string;
 };
 
-// the tutor answers once US-28 connects it; until then the composer works like on Home
+// Each topic has its own chat, and the course has one more. Every chat opened in
+// this visit stays mounted, so switching topics keeps its reply streaming and its draft.
 export function TutorPane({
 	course,
 	topics,
@@ -39,18 +47,44 @@ export function TutorPane({
 	onOpenNotes,
 	preset,
 	onStart,
+	busyScopes,
+	onBusyChange,
+	onSwitchTopic,
 	topicsOpen,
 	onToggleTopics,
 	studyOpen,
 	onToggleStudy,
 	className,
 }: TutorPaneProps) {
+	const activeScope = scopeOf(selectedTopicId);
 	const selected = topics?.find((topic) => topic.id === selectedTopicId);
-	const composerTopics = topics?.map((topic) => ({
-		id: topic.id,
-		course: course.name,
-		name: topic.name,
-	}));
+	const [opened, setOpened] = useState<string[]>([activeScope]);
+	const [newChat, setNewChat] = useState<Record<string, number>>({});
+	const [withMessages, setWithMessages] = useState<Record<string, boolean>>({});
+
+	useEffect(() => {
+		setOpened((scopes) =>
+			scopes.includes(activeScope) ? scopes : [...scopes, activeScope]
+		);
+	}, [activeScope]);
+
+	const markMessages = useCallback(
+		(scope: string, value: boolean) =>
+			setWithMessages((current) =>
+				current[scope] === value ? current : { ...current, [scope]: value }
+			),
+		[]
+	);
+
+	// a deleted topic's chat goes away with it
+	const scopes = [
+		...opened.filter(
+			(scope) =>
+				scope === COURSE_SCOPE || topics?.some(({ id }) => id === scope)
+		),
+		...(opened.includes(activeScope) ? [] : [activeScope]),
+	];
+	const atLimit = busyScopes.size >= MAX_PARALLEL_REPLIES;
 
 	return (
 		<section aria-labelledby="tutor-pane-title" className={className}>
@@ -75,7 +109,7 @@ export function TutorPane({
 							<button
 								type="button"
 								onClick={onClearTopic}
-								aria-label="Ask about the whole course"
+								aria-label="Go to the whole-course chat"
 								className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
 							>
 								<X className="size-3.5" />
@@ -97,6 +131,22 @@ export function TutorPane({
 								<span className="tabular-nums">{selected.noteCount}</span>
 							</Button>
 						)}
+						{withMessages[activeScope] && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() =>
+									setNewChat((current) => ({
+										...current,
+										[activeScope]: (current[activeScope] ?? 0) + 1,
+									}))
+								}
+								className="rounded-md text-muted-foreground"
+							>
+								<SquarePen />
+								<span className="hidden sm:inline">New chat</span>
+							</Button>
+						)}
 						<PaneToggle
 							label={studyOpen ? 'Hide study tools' : 'Show study tools'}
 							pressed={studyOpen}
@@ -106,32 +156,32 @@ export function TutorPane({
 					</>
 				}
 			/>
-			<div className="flex-1 overflow-y-auto">
-				<div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-10">
-					{selected?.noteCount === 0 && (
-						<AddNotesPrompt
-							topicName={selected.name}
-							onAddNotes={() => onOpenNotes(selected.id)}
-						/>
-					)}
-					<TutorStarterList
-						starters={tutorStarters(course, topics ?? [])}
+			{topics ? (
+				scopes.map((scope) => (
+					<ScopeChat
+						key={scope}
+						course={course}
+						topics={topics}
+						scope={scope}
+						active={scope === activeScope}
+						preset={preset?.scope === scope ? preset : undefined}
+						newChatVersion={newChat[scope] ?? 0}
+						focusOnOpen={scope !== opened[0]}
+						limitReason={
+							atLimit && !busyScopes.has(scope)
+								? `You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
+								: null
+						}
 						onStart={onStart}
+						onOpenNotes={onOpenNotes}
+						onHasMessages={markMessages}
+						onBusyChange={onBusyChange}
+						onSwitchTopic={onSwitchTopic}
 					/>
-				</div>
-			</div>
-			<div className="shrink-0 px-4 pb-4">
-				<div className="mx-auto w-full max-w-2xl">
-					{composerTopics && (
-						<NoteComposer
-							topics={composerTopics}
-							models={models}
-							defaultModelId={defaultModelId}
-							preset={preset}
-						/>
-					)}
-				</div>
-			</div>
+				))
+			) : (
+				<ChatLoading />
+			)}
 		</section>
 	);
 }

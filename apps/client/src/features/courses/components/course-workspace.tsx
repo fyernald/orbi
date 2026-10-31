@@ -1,16 +1,20 @@
 'use client';
 
 import type { Course, TutorAction } from '@orbi/shared';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
-import type { ComposerPreset } from '@/features/tutor/components/note-composer';
+import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
+import type {
+	ComposerDraft,
+	ComposerPreset,
+} from '@/features/tutor/components/note-composer';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTopics } from '../hooks';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';
 import { StudyPane } from './study-pane';
 import { TopicsPane } from './topics-pane';
-import { TutorPane } from './tutor-pane';
+import { TutorPane, type ScopedPreset } from './tutor-pane';
 
 // the grid for each mix of open side panes on wide screens
 const columns = {
@@ -36,26 +40,57 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	// the topic stays set while the sheet closes, so it can slide out with its content
 	const [notesTopicId, setNotesTopicId] = useState<string | null>(null);
 	const [notesOpen, setNotesOpen] = useState(false);
-	const [preset, setPreset] = useState<ComposerPreset | undefined>(() =>
-		start.action || start.message ? { version: 1, ...start } : undefined
+	const [preset, setPreset] = useState<ScopedPreset | undefined>(() =>
+		start.action || start.message
+			? { version: 1, scope: COURSE_SCOPE, ...start }
+			: undefined
 	);
+	// the chats with a reply running, for the limit on parallel replies and the topic list
+	const [busyScopes, setBusyScopes] = useState<ReadonlySet<string>>(
+		() => new Set()
+	);
+	const setScopeBusy = useCallback((scope: string, busy: boolean) => {
+		setBusyScopes((current) => {
+			if (current.has(scope) === busy) return current;
+			const next = new Set(current);
+			if (busy) next.add(scope);
+			else next.delete(scope);
+			return next;
+		});
+	}, []);
 
-	const firstTopicId = topics.data?.[0]?.id;
+	// a request about a topic opens that topic's chat; others go to the open chat
 	const sendToTutor = (changes: Omit<ComposerPreset, 'version'>) => {
+		if (changes.topicId) setSelectedTopicId(changes.topicId);
+		const scope = changes.topicId ?? scopeOf(selectedTopicId);
 		setPreset((current) => ({
 			version: (current?.version ?? 0) + 1,
 			...changes,
+			scope,
 		}));
 		setMobilePane('tutor');
 	};
 
 	const selectTopic = (topicId: string | null) => {
 		setSelectedTopicId(topicId);
-		if (topicId) sendToTutor({ topicId });
+		setMobilePane('tutor');
 	};
 
-	const startTool = (action: TutorAction) =>
-		sendToTutor({ action, topicId: selectedTopicId ?? firstTopicId });
+	const startTool = (action: TutorAction) => sendToTutor({ action });
+
+	// picking a topic in the message box opens that topic's chat; what the student
+	// typed goes with them
+	const switchTopic = (topicId: string | null, draft: ComposerDraft) => {
+		setSelectedTopicId(topicId);
+		if (!draft.message.trim()) return;
+		setPreset((current) => ({
+			version: (current?.version ?? 0) + 1,
+			scope: scopeOf(topicId),
+			message: draft.message,
+			action: draft.action,
+			modelId: draft.modelId,
+		}));
+	};
 
 	const openNotes = (topicId: string) => {
 		setNotesTopicId(topicId);
@@ -97,6 +132,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
 					onOpenNotes={openNotes}
+					busyScopes={busyScopes}
 					className={paneClass('topics', topicsOpen)}
 				/>
 				<TutorPane
@@ -107,6 +143,9 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onOpenNotes={openNotes}
 					preset={preset}
 					onStart={sendToTutor}
+					busyScopes={busyScopes}
+					onBusyChange={setScopeBusy}
+					onSwitchTopic={switchTopic}
 					topicsOpen={topicsOpen}
 					onToggleTopics={() => setTopicsOpen((value) => !value)}
 					studyOpen={studyOpen}

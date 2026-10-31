@@ -5,6 +5,7 @@ import { Layers, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { COURSE_SCOPE } from '@/features/tutor/chat';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { AddTopicInline } from './add-topic-inline';
@@ -12,6 +13,7 @@ import { CourseActions } from './course-actions';
 import { CourseIntro } from './course-intro';
 import { LoadError } from '@/components/load-error';
 import { PaneHeader } from './pane-header';
+import { ReplyingDot } from './replying-dot';
 import { TopicListItem } from './topic-list-item';
 import { TopicRowsLoading } from './topic-rows-loading';
 
@@ -25,6 +27,8 @@ type TopicsPaneProps = {
 	selectedTopicId: string | null;
 	onSelect: (topicId: string | null) => void;
 	onOpenNotes: (topicId: string) => void;
+	// the chats with a reply running: topic ids, or the whole-course scope
+	busyScopes: ReadonlySet<string>;
 	className?: string;
 };
 
@@ -36,6 +40,7 @@ export function TopicsPane({
 	selectedTopicId,
 	onSelect,
 	onOpenNotes,
+	busyScopes,
 	className,
 }: TopicsPaneProps) {
 	const router = useRouter();
@@ -124,7 +129,8 @@ export function TopicsPane({
 									<span className="flex size-7 shrink-0 items-center justify-center">
 										<Layers className="size-4" />
 									</span>
-									Whole course
+									<span className="flex-1">Whole course</span>
+									{busyScopes.has(COURSE_SCOPE) && <ReplyingDot />}
 								</button>
 							</li>
 							{shown.map((topic) => (
@@ -135,6 +141,7 @@ export function TopicsPane({
 									selected={topic.id === selectedTopicId}
 									onSelect={() => onSelect(topic.id)}
 									onOpenNotes={() => onOpenNotes(topic.id)}
+									replying={busyScopes.has(topic.id)}
 								/>
 							))}
 						</ul>

@@ -1,5 +1,6 @@
 'use client';
 
+import type { AiModel } from '@orbi/shared';
 import { ChevronDown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +12,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { AiModel } from '../mock-data';
 import { MenuScrollArea, menuItemHeight } from './menu-scroll-area';
 import { ModelLogo } from './model-logo';
 
@@ -39,7 +39,7 @@ export function ModelPicker({
 					className="h-9 gap-1.5 rounded-full px-2.5 text-[13px] text-subtle-foreground"
 				>
 					{selected ? (
-						<ModelLogo family={selected.family} />
+						<ModelLogo provider={selected.provider} />
 					) : (
 						<Sparkles className="size-4" />
 					)}
@@ -64,7 +64,7 @@ export function ModelPicker({
 								className={cn(menuItemHeight, 'gap-2.5 rounded-lg px-2')}
 							>
 								<span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-									<ModelLogo family={model.family} />
+									<ModelLogo provider={model.provider} />
 								</span>
 								<span className="flex min-w-0 flex-col">
 									<span className="truncate font-medium">{model.label}</span>

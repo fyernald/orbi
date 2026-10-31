@@ -21,8 +21,10 @@ export type ComposerAction = {
 	// null when the action works without text or files
 	emptyHint: string | null;
 	note: string;
-	// shown until the AI behind it is connected
+	// shown until the AI behind it is connected; such an action cannot be sent yet
 	beta: boolean;
+	// what the chat shows as the student's message when they send without writing one
+	defaultMessage: ((topicName: string) => string) | null;
 };
 
 export const composerActions: Record<TutorAction, ComposerAction> = {
@@ -36,9 +38,10 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		placeholder:
 			'Ask anything about this topic, or paste notes to go through them together.',
 		submitLabel: 'Send',
-		emptyHint: 'Write a message or attach a file first.',
+		emptyHint: 'Write a message first.',
 		note: 'Orbi answers from your notes first and tells you when it goes beyond them.',
-		beta: true,
+		beta: false,
+		defaultMessage: null,
 	},
 	questions: {
 		id: 'questions',
@@ -46,13 +49,15 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		description: 'Practice questions you approve one by one',
 		icon: CircleHelp,
 		joiner: 'from',
-		fieldLabel: 'Your notes',
+		fieldLabel: 'What to focus on',
 		placeholder:
-			'Paste your notes or drop files here. Orbi turns them into practice questions.',
+			'Optional: what to focus on, for example “only anaphase, 8 harder questions”.',
 		submitLabel: 'Generate questions',
-		emptyHint: 'Add notes or attach a file first.',
-		note: 'Orbi writes questions only from your notes, and you approve each one.',
+		emptyHint: null,
+		note: 'Orbi writes questions only from your saved notes, and you approve each one.',
 		beta: false,
+		defaultMessage: (topicName) =>
+			`Make practice questions from my notes on ${topicName}`,
 	},
 	flashcards: {
 		id: 'flashcards',
@@ -67,6 +72,8 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		emptyHint: 'Add notes or attach a file first.',
 		note: 'Flashcards come only from your notes, and you can edit each one.',
 		beta: true,
+		defaultMessage: (topicName) =>
+			`Make flashcards from my notes on ${topicName}`,
 	},
 	mockExam: {
 		id: 'mockExam',
@@ -81,6 +88,7 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		emptyHint: null,
 		note: 'The exam uses questions you already approved for this topic.',
 		beta: true,
+		defaultMessage: (topicName) => `Start a mock exam on ${topicName}`,
 	},
 };
 
