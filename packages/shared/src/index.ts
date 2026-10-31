@@ -10,3 +10,4 @@ export * from './notes';
 export * from './profile';
 export * from './questions';
 export * from './tutor';
+export * from './tutor-tools';

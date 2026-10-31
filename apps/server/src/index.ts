@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { createModelRegistry, createProviderFactories } from './ai/models';
 import { buildApp } from './app';
 import { createAuth } from './auth';
 import { loadConfig } from './config';
@@ -12,6 +13,8 @@ import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
+import { createTutorRepository } from './modules/tutor/repository';
+import { createTutorService } from './modules/tutor/service';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
@@ -34,10 +37,17 @@ await migrate(db, {
 const courses = createCourseService({ repo: createCourseRepository(db) });
 const notes = createNoteService({ repo: createNoteRepository(db) });
 const profiles = createProfileService({ repo: createProfileRepository(db) });
+const tutor = createTutorService({
+	repo: createTutorRepository(db),
+	models: createModelRegistry({
+		providers: createProviderFactories(config.aiKeys),
+	}),
+	logError: (error) => app.log.error(error),
+});
 
 const app: ReturnType<typeof buildApp> = buildApp({
 	auth,
-	services: { courses, notes, profiles },
+	services: { courses, notes, profiles, tutor },
 });
 app.addHook('onClose', () => db.$client.end());
 

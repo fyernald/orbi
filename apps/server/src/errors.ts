@@ -40,3 +40,16 @@ export class ConflictError extends AppError {
 		super(409, 'conflict', message);
 	}
 }
+
+export class TooManyRequestsError extends AppError {
+	constructor(message: string) {
+		super(429, 'too_many_requests', message);
+	}
+}
+
+// a part of the app that depends on something not set up on this server, like an AI key
+export class ServiceUnavailableError extends AppError {
+	constructor(message: string) {
+		super(503, 'service_unavailable', message);
+	}
+}
