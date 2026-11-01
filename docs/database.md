@@ -11,6 +11,7 @@ erDiagram
     course ||--o{ topic : contains
     topic ||--o{ note : contains
     topic ||--o{ question : "has practice"
+    question ||--o{ answer : "answered in"
     course ||--o{ chat : "has tutor"
     topic ||--o{ chat : "has tutor"
     chat ||--o{ chat_message : contains
@@ -97,6 +98,15 @@ erDiagram
         uuid chat_message_id
         integer position
     }
+    answer {
+        uuid id PK
+        text user_id FK
+        uuid question_id FK
+        integer choice
+        boolean correct
+        answer_context context
+        timestamptz answered_at
+    }
 ```
 
 Every table also has `created_at` and `updated_at`.
@@ -111,13 +121,15 @@ Every table also has `created_at` and `updated_at`.
 | `chat`                                       | A tutor chat of one topic, or of the whole course when `topic_id` is null. It is named after its first message. The browser makes the id, so the first message needs no extra request.                                                                                                                                                          |
 | `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, and how many notes the tutor read. See [decision 0003](decisions/03-tutor-chat.md).                                                      |
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                           |
+| `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                             |
 
 ## Rules the database enforces
 
-- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics, their notes and questions, and its chats. Deleting a topic deletes its notes, questions, and chats. A chat message about a deleted topic stays, without the link.
+- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics, their notes and questions, and its chats. Deleting a topic deletes its notes, questions, and chats. Deleting a question deletes its answers. A chat message about a deleted topic stays, without the link.
 - **Questions keep their chat message id without a foreign key.** A question is saved while its reply is still streaming, before the message exists, and deleting a chat should not delete the questions.
 - **A question is well formed.** Its text is not blank, `correct_choice` points at one of its `choices`, and an AI question always has `ai_provider` and `ai_model`.
 - **Ownership always matches.** `topic` and `note` keep a `user_id` so the server can check ownership with one simple `WHERE user_id = ...`. Their foreign keys include `user_id`, so a topic can only point at a course of the same user, and a note only at a topic of the same user. The server cannot get this wrong by mistake.
+- **A question in the chat is answered once.** A unique index allows one `chat` answer per question, so two clicks at the same time still save only one. Study sessions can add as many `session` answers as they need.
 - **One profile per user.** `profile.user_id` is the primary key.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).
 
