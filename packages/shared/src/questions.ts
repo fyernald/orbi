@@ -118,3 +118,29 @@ export const chatAnswersQuery = z.object({
 export type AnswerContext = (typeof ANSWER_CONTEXTS)[number];
 export type AnswerQuestionInput = z.infer<typeof answerQuestionInput>;
 export type ChatAnswer = z.infer<typeof chatAnswer>;
+
+// a question in a study session: the answer stays on the server until the student picks one
+export const studyQuestion = question.pick({
+	id: true,
+	text: true,
+	choices: true,
+});
+
+// the approved questions of one topic, in the order they were made
+export const studySession = z.object({
+	courseName: z.string(),
+	topicName: z.string(),
+	questions: z.array(studyQuestion),
+	// questions still waiting for review, so an empty session can say what to do first
+	pendingCount: z.int(),
+});
+
+// one answer in a study session, with what the student needs to learn from it
+export const sessionAnswer = chatAnswer.extend({
+	correctChoice: z.int(),
+	explanation: z.string().nullable(),
+});
+
+export type StudyQuestion = z.infer<typeof studyQuestion>;
+export type StudySession = z.infer<typeof studySession>;
+export type SessionAnswer = z.infer<typeof sessionAnswer>;

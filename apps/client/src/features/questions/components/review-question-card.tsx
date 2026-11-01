@@ -8,9 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { choiceLetter } from '../choices';
 import { useSetQuestionStatus } from '../hooks';
-
-const letters = ['A', 'B', 'C', 'D'];
 
 type ReviewQuestionCardProps = {
 	question: Question;
@@ -105,7 +104,7 @@ export function ReviewQuestionCard({
 							)}
 						>
 							<span className="text-xs font-medium text-muted-foreground">
-								{letters[index]}
+								{choiceLetter(index)}
 							</span>
 							<span className="min-w-0 flex-1 break-words">{choice}</span>
 							{correct && (

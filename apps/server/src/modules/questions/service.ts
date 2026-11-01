@@ -3,9 +3,15 @@ import type {
 	Question,
 	QuestionStatus,
 	ReviewTopic,
+	SessionAnswer,
+	StudySession,
 } from '@orbi/shared';
 import { ConflictError, NotFoundError, ValidationError } from '../../errors';
-import type { PendingQuestion, QuestionRepository } from './repository';
+import type {
+	AnswerKey,
+	PendingQuestion,
+	QuestionRepository,
+} from './repository';
 
 export interface QuestionService {
 	listForReview(userId: string): Promise<ReviewTopic[]>;
@@ -26,6 +32,26 @@ export interface QuestionService {
 		choice: number
 	): Promise<ChatAnswer>;
 	listChatAnswers(userId: string, questionIds: string[]): Promise<ChatAnswer[]>;
+	startSession(
+		userId: string,
+		courseId: string,
+		topicId: string
+	): Promise<StudySession>;
+	// only approved questions are studied; every answer is saved for the mastery score
+	answerInSession(
+		userId: string,
+		questionId: string,
+		choice: number
+	): Promise<SessionAnswer>;
+}
+
+// another user's question answers the same as a missing one, so ids cannot be probed
+function checkChoice(key: AnswerKey | undefined, choice: number): AnswerKey {
+	if (!key) throw new NotFoundError('Question not found.');
+	if (choice >= key.choiceCount) {
+		throw new ValidationError('Pick one of the answers.');
+	}
+	return key;
 }
 
 // one group per topic; the topic with the newest questions comes first
@@ -83,15 +109,14 @@ export function createQuestionService({
 		},
 
 		async answerInChat(userId, questionId, choice) {
-			const choices = await repo.findChoices(userId, questionId);
-			if (!choices) throw new NotFoundError('Question not found.');
-			if (choice >= choices.count) {
-				throw new ValidationError('Pick one of the answers.');
-			}
+			const key = checkChoice(
+				await repo.findAnswerKey(userId, questionId),
+				choice
+			);
 			const saved = await repo.insertChatAnswer(userId, {
 				questionId,
 				choice,
-				correct: choice === choices.correct,
+				correct: choice === key.correctChoice,
 			});
 			if (!saved) {
 				throw new ConflictError('You already answered this question.');
@@ -101,6 +126,40 @@ export function createQuestionService({
 
 		async listChatAnswers(userId, questionIds) {
 			return repo.listChatAnswers(userId, questionIds);
+		},
+
+		async startSession(userId, courseId, topicId) {
+			const names = await repo.findTopicNames(userId, courseId, topicId);
+			if (!names) throw new NotFoundError('Topic not found.');
+			const [questions, pendingCount] = await Promise.all([
+				repo.listApproved(userId, topicId),
+				repo.countPending(userId, topicId),
+			]);
+			return { ...names, questions, pendingCount };
+		},
+
+		async answerInSession(userId, questionId, choice) {
+			const key = checkChoice(
+				await repo.findAnswerKey(userId, questionId),
+				choice
+			);
+			// rejected or sent back for review in another tab while the session was open
+			if (key.status !== 'approved') {
+				throw new ConflictError(
+					'This question is no longer in your study questions.'
+				);
+			}
+			const saved = {
+				questionId,
+				choice,
+				correct: choice === key.correctChoice,
+			};
+			await repo.insertSessionAnswer(userId, saved);
+			return {
+				...saved,
+				correctChoice: key.correctChoice,
+				explanation: key.explanation,
+			};
 		},
 	};
 }
