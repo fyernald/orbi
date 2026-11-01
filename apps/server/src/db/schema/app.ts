@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+	boolean,
 	check,
 	date,
 	foreignKey,
@@ -11,11 +12,13 @@ import {
 	text,
 	timestamp,
 	unique,
+	uniqueIndex,
 	uuid,
 	varchar,
 } from 'drizzle-orm/pg-core';
 import {
 	AI_PROVIDERS,
+	ANSWER_CONTEXTS,
 	COURSE_COLORS,
 	COURSE_GOALS,
 	EDUCATION_LEVELS,
@@ -160,6 +163,8 @@ export const questionStatus = pgEnum('question_status', QUESTION_STATUSES);
 
 export const questionSource = pgEnum('question_source', QUESTION_SOURCES);
 
+export const answerContext = pgEnum('answer_context', ANSWER_CONTEXTS);
+
 // A tutor chat belongs to one topic, or to the whole course when topic_id is null.
 // The id comes from the browser, so a new chat needs no extra request.
 export const chat = pgTable(
@@ -236,6 +241,9 @@ export const question = pgTable(
 		// the reply that made it; no foreign key, because the question is saved while
 		// that reply is still streaming, and deleting a chat should keep its questions
 		chatMessageId: uuid('chat_message_id'),
+		// its place in the set it was made in; a set is saved at once, so the time
+		// alone cannot keep the order
+		position: integer('position').notNull().default(0),
 		...timestamps,
 	},
 	(t) => [
@@ -244,6 +252,7 @@ export const question = pgTable(
 			columns: [t.userId, t.topicId],
 			foreignColumns: [topic.userId, topic.id],
 		}).onDelete('cascade'),
+		unique('question_user_id_id_key').on(t.userId, t.id),
 		index('question_topic_id_idx').on(t.topicId, t.status),
 		index('question_user_id_idx').on(t.userId),
 		check('question_text_not_empty', sql`${t.text} ~ '\\S'`),
@@ -256,6 +265,34 @@ export const question = pgTable(
 			'question_ai_has_model',
 			sql`${t.source} <> 'ai' or (${t.aiProvider} is not null and ${t.aiModel} is not null)`
 		),
+	]
+);
+
+// every answer the student gives; study sessions (US-06) add one each time they ask
+export const answer = pgTable(
+	'answer',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		choice: integer('choice').notNull(),
+		correct: boolean('correct').notNull(),
+		context: answerContext('context').notNull(),
+		answeredAt: timestamp('answered_at', { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [
+		foreignKey({
+			name: 'answer_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// a question in the chat can be tried only once
+		uniqueIndex('answer_chat_once_idx')
+			.on(t.questionId)
+			.where(sql`${t.context} = 'chat'`),
+		index('answer_user_id_idx').on(t.userId, t.answeredAt),
 	]
 );
 

@@ -43,6 +43,20 @@
       "when": 1793486084500,
       "tag": "0005_chat-per-topic",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793542216099,
+      "tag": "0006_question-position",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793543411162,
+      "tag": "0007_answers",
+      "breakpoints": true
     }
   ]
 }

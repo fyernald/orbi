@@ -10,6 +10,8 @@ import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
+import { createQuestionRepository } from './modules/questions/repository';
+import { createQuestionService } from './modules/questions/service';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
 import { createTutorRepository } from './modules/tutor/repository';
 import { createTutorService } from './modules/tutor/service';
@@ -21,7 +23,11 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
+	// pass one to put rows in place that no route can make, like the tutor's questions
+	db?: TestDb;
 };
+
+type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 // the whole app on an in-memory database, for tests with app.inject();
 // pass a memory mailer to read the emails it sends
@@ -31,9 +37,10 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
+		db: givenDb,
 	}: TestAppOptions = {}
 ) {
-	const db = await createTestDb();
+	const db = givenDb ?? (await createTestDb());
 	const auth = createAuth({
 		db,
 		secret: 'test-secret-that-is-at-least-32-characters',
@@ -44,13 +51,19 @@ export async function createTestApp(
 	const courses = createCourseService({ repo: createCourseRepository(db) });
 	const notes = createNoteService({ repo: createNoteRepository(db) });
 	const profiles = createProfileService({ repo: createProfileRepository(db) });
+	const questions = createQuestionService({
+		repo: createQuestionRepository(db),
+	});
 	const tutor = createTutorService({
 		repo: createTutorRepository(db),
 		models,
 		limiter,
 		logError: () => {},
 	});
-	return buildApp({ auth, services: { courses, notes, profiles, tutor } });
+	return buildApp({
+		auth,
+		services: { courses, notes, profiles, questions, tutor },
+	});
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;

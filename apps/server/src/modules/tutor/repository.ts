@@ -333,8 +333,9 @@ export function createTutorRepository(db: Db): TutorRepository {
 			const rows = await db
 				.insert(question)
 				.values(
-					questions.map((item) => ({
+					questions.map((item, position) => ({
 						userId,
+						position,
 						topicId,
 						text: item.text,
 						choices: item.choices,
