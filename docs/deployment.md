@@ -120,4 +120,6 @@ docker compose ps
 docker compose logs -f server
 ```
 
+Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), so older lines are deleted. Errors are logged without the student's notes or chat: AI errors keep the error name, status code, and the provider's message, and failed queries keep the query without its values (see `apps/server/src/log.ts`).
+
 **Stop deploys for a while:** set the `DEPLOY_ENABLED` variable to `false`.
