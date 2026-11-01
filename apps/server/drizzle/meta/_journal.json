@@ -57,6 +57,13 @@
       "when": 1793543411162,
       "tag": "0007_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793569804346,
+      "tag": "0008_deepseek-provider",
+      "breakpoints": true
     }
   ]
 }
