@@ -9,6 +9,7 @@ import { SubmitButton } from '@/components/form/submit-button';
 import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { authErrorMessage } from '../errors';
+import { authInput } from '../styles';
 import { useRequestPasswordReset } from '../hooks';
 import { AuthNotice } from './auth-notice';
 
@@ -34,6 +35,8 @@ export function ForgotPasswordForm() {
 
 	return (
 		<form
+			// if it is sent before the page script runs, the password goes in the body, not the address
+			method="post"
 			onSubmit={form.handleSubmit((values) => requestReset.mutate(values))}
 			noValidate
 		>
@@ -41,6 +44,7 @@ export function ForgotPasswordForm() {
 				<FormError message={authErrorMessage(requestReset.error)} />
 				<TextField
 					control={form.control}
+					className={authInput}
 					name="email"
 					label="Email"
 					autoFocus

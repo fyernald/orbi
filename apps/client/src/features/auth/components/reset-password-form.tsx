@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { FieldGroup } from '@/components/ui/field';
 import { routes } from '@/lib/routes';
 import { authErrorMessage } from '../errors';
+import { authButton, authInput } from '../styles';
 import { useResetPassword } from '../hooks';
 import { AuthNotice } from './auth-notice';
 
@@ -32,7 +33,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 				icon={CircleCheckIcon}
 				title="Your password is changed"
 				action={
-					<Button asChild className="w-full">
+					<Button asChild className={authButton}>
 						<Link href={routes.login}>Log in</Link>
 					</Button>
 				}
@@ -45,6 +46,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
 	return (
 		<form
+			// if it is sent before the page script runs, the password goes in the body, not the address
+			method="post"
 			onSubmit={form.handleSubmit((values) => resetPassword.mutate(values))}
 			noValidate
 		>
@@ -52,6 +55,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 				<FormError message={authErrorMessage(resetPassword.error)} />
 				<PasswordField
 					control={form.control}
+					className={authInput}
 					name="newPassword"
 					label="New password"
 					autoFocus

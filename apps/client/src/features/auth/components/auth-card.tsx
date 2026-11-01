@@ -1,12 +1,4 @@
-import type { ReactNode } from 'react';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import type { CSSProperties, ReactNode } from 'react';
 
 type AuthCardProps = {
 	title: string;
@@ -15,7 +7,10 @@ type AuthCardProps = {
 	children: ReactNode;
 };
 
-// the frame around the login and sign-up forms; restyle it here when the designs are ready
+const stagger = (order: number) => ({ '--stagger': order }) as CSSProperties;
+
+// the heading, form, and footer of the login and sign-up pages; they come in one
+// after another when the page opens
 export function AuthCard({
 	title,
 	description,
@@ -23,13 +18,27 @@ export function AuthCard({
 	children,
 }: AuthCardProps) {
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{title}</CardTitle>
-				<CardDescription>{description}</CardDescription>
-			</CardHeader>
-			<CardContent>{children}</CardContent>
-			<CardFooter>{footer}</CardFooter>
-		</Card>
+		<div className="flex flex-col gap-8">
+			<header className="flex flex-col gap-2">
+				<h1
+					style={stagger(0)}
+					className="stagger-in text-3xl font-semibold tracking-tight text-balance"
+				>
+					{title}
+				</h1>
+				<p
+					style={stagger(1)}
+					className="stagger-in text-pretty text-muted-foreground"
+				>
+					{description}
+				</p>
+			</header>
+			<div style={stagger(2)} className="stagger-in">
+				{children}
+			</div>
+			<div style={stagger(3)} className="stagger-in">
+				{footer}
+			</div>
+		</div>
 	);
 }

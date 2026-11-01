@@ -13,6 +13,7 @@ import { PasswordField } from '@/components/form/password-field';
 import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { authErrorMessage } from '../errors';
+import { authInput } from '../styles';
 import { useSignUp } from '../hooks';
 import { CheckInbox } from './check-inbox';
 
@@ -29,6 +30,8 @@ export function SignUpForm() {
 
 	return (
 		<form
+			// if it is sent before the page script runs, the password goes in the body, not the address
+			method="post"
 			onSubmit={form.handleSubmit((values) => signUp.mutate(values))}
 			noValidate
 		>
@@ -36,6 +39,7 @@ export function SignUpForm() {
 				<FormError message={authErrorMessage(signUp.error)} />
 				<TextField
 					control={form.control}
+					className={authInput}
 					name="name"
 					label="Name"
 					autoFocus
@@ -43,6 +47,7 @@ export function SignUpForm() {
 				/>
 				<TextField
 					control={form.control}
+					className={authInput}
 					name="email"
 					label="Email"
 					type="email"
@@ -50,6 +55,7 @@ export function SignUpForm() {
 				/>
 				<PasswordField
 					control={form.control}
+					className={authInput}
 					name="password"
 					label="Password"
 					autoComplete="new-password"

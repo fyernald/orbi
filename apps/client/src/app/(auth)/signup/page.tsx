@@ -10,7 +10,7 @@ export default function SignUpPage() {
 	return (
 		<AuthCard
 			title="Create your account"
-			description="Save your courses, notes, and progress."
+			description="It takes a minute. Then add your first course and its notes."
 			footer={
 				<AuthSwitch
 					prompt="Already have an account?"

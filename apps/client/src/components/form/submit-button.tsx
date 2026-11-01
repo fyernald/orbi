@@ -10,7 +10,11 @@ type SubmitButtonProps = {
 // disabled with a spinner while the form is being sent, so it cannot be sent twice
 export function SubmitButton({ pending, children }: SubmitButtonProps) {
 	return (
-		<Button type="submit" className="w-full" disabled={pending}>
+		<Button
+			type="submit"
+			className="h-11 w-full rounded-full text-[15px]"
+			disabled={pending}
+		>
 			{pending && <Spinner />}
 			{children}
 		</Button>

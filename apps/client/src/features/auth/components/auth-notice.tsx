@@ -16,10 +16,14 @@ export function AuthNotice({
 	action,
 }: AuthNoticeProps) {
 	return (
-		<div role="status" className="flex flex-col items-center gap-3 text-center">
-			<Icon className="size-8 text-muted-foreground" aria-hidden />
-			<h2 className="font-medium">{title}</h2>
-			<div className="text-sm text-muted-foreground">{children}</div>
+		<div role="status" className="flex flex-col items-start gap-4">
+			<span className="pop-in flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+				<Icon className="size-6" />
+			</span>
+			<div className="flex flex-col gap-1.5">
+				<h2 className="text-lg font-semibold">{title}</h2>
+				<div className="text-pretty text-muted-foreground">{children}</div>
+			</div>
 			{action}
 		</div>
 	);

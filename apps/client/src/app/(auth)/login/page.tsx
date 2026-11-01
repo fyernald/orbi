@@ -17,8 +17,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 	return (
 		<AuthCard
-			title="Log in"
-			description="Welcome back. Log in to continue studying."
+			title="Welcome back"
+			description="Log in to pick up where you left off."
 			footer={
 				<AuthSwitch
 					prompt="No account yet?"

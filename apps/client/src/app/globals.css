@@ -323,6 +323,43 @@
 	}
 }
 
+/* the night sky next to the login and sign-up forms; darker at the bottom, where the caption is */
+@layer components {
+	.auth-sky {
+		background:
+			linear-gradient(to top, var(--background) 8%, transparent 45%),
+			radial-gradient(
+				70% 55% at 75% 0%,
+				color-mix(in srgb, var(--primary) 32%, transparent),
+				transparent 70%
+			),
+			radial-gradient(
+				55% 45% at 0% 70%,
+				color-mix(in srgb, var(--tone-blue-foreground) 14%, transparent),
+				transparent 70%
+			),
+			var(--background);
+	}
+
+	/* the sample cards drift slowly up and down; --float-delay keeps them out of step */
+	.float-card {
+		animation: float-card 7s ease-in-out infinite;
+		animation-delay: var(--float-delay, 0s);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.float-card {
+			animation: none;
+		}
+	}
+}
+
+@keyframes float-card {
+	50% {
+		translate: 0 -10px;
+	}
+}
+
 /* one full turn of a ring on the courses orbit */
 @keyframes orbit {
 	to {
