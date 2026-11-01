@@ -4,10 +4,19 @@
 
 name: orbi
 
+# Docker keeps container logs until the container is removed. The VPS is shared, so each
+# service keeps at most 3 files of 10 MB, and the oldest one is deleted.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
   client:
     image: ghcr.io/fyernald/orbi-client:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logging
     init: true
     environment:
       # the Next.js server checks the session with the API before it renders a page
@@ -26,6 +35,7 @@ services:
   server:
     image: ghcr.io/fyernald/orbi-server:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logging
     init: true
     env_file: .env
     environment:
@@ -47,6 +57,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
