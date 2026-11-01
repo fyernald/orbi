@@ -5,6 +5,8 @@ import {
 	createTopicInput,
 	topic,
 	topicParams,
+	updateCourseInput,
+	updateTopicInput,
 } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -68,6 +70,39 @@ export function createCourseRoutes({
 					request.body
 				);
 				return reply.status(201).send(created);
+			}
+		);
+
+		api.patch(
+			'/courses/:courseId',
+			{
+				schema: {
+					params: courseParams,
+					body: updateCourseInput,
+					response: { 200: course },
+				},
+			},
+			async (request) =>
+				courses.renameCourse(
+					await requireUser(request),
+					request.params.courseId,
+					request.body
+				)
+		);
+
+		api.patch(
+			'/courses/:courseId/topics/:topicId',
+			{
+				schema: {
+					params: topicParams,
+					body: updateTopicInput,
+					response: { 200: topic },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				return courses.renameTopic(userId, courseId, topicId, request.body);
 			}
 		);
 

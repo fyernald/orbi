@@ -20,6 +20,8 @@ type ConfirmDeleteDialogProps = {
 	onOpenChange: (open: boolean) => void;
 	title: string;
 	description: ReactNode;
+	// what else is deleted with it, listed under the description
+	consequences?: string[];
 	confirmLabel: string;
 	pending: boolean;
 	error?: string;
@@ -32,6 +34,7 @@ export function ConfirmDeleteDialog({
 	onOpenChange,
 	title,
 	description,
+	consequences = [],
 	confirmLabel,
 	pending,
 	error,
@@ -50,6 +53,22 @@ export function ConfirmDeleteDialog({
 					<div className="flex flex-col gap-1.5">
 						<AlertDialogTitle>{title}</AlertDialogTitle>
 						<AlertDialogDescription>{description}</AlertDialogDescription>
+						{consequences.length > 0 && (
+							<ul
+								aria-label="Also deleted"
+								className="mt-1 flex flex-col gap-1 text-sm"
+							>
+								{consequences.map((item) => (
+									<li key={item} className="flex items-center gap-2">
+										<span
+											aria-hidden
+											className="size-1.5 shrink-0 rounded-full bg-destructive/70"
+										/>
+										{item}
+									</li>
+								))}
+							</ul>
+						)}
 					</div>
 				</AlertDialogHeader>
 				<FormError message={error} />

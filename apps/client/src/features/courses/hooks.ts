@@ -7,6 +7,8 @@ import {
 	type CreateCourseInput,
 	type CreateTopicInput,
 	type Topic,
+	type UpdateCourseInput,
+	type UpdateTopicInput,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -92,6 +94,39 @@ export function useCreateTopic(courseId: string) {
 				topics ? [...topics, created] : topics
 			);
 			topicsChanged(1);
+		},
+	});
+}
+
+// the course list and the open course show the new name at once
+export function useRenameCourse(courseId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: UpdateCourseInput) =>
+			api.patch(`/courses/${courseId}`, course, input),
+		onSuccess: (renamed) => {
+			queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
+				courses?.map((item) => (item.id === renamed.id ? renamed : item))
+			);
+			queryClient.setQueryData(courseKey(renamed.id), renamed);
+		},
+	});
+}
+
+export function useRenameTopic(courseId: string) {
+	const queryClient = useQueryClient();
+	const topicsChanged = useTopicsChanged(courseId);
+	return useMutation({
+		mutationFn: ({
+			topicId,
+			...input
+		}: UpdateTopicInput & { topicId: string }) =>
+			api.patch(`/courses/${courseId}/topics/${topicId}`, topic, input),
+		onSuccess: (renamed) => {
+			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
+				topics?.map((item) => (item.id === renamed.id ? renamed : item))
+			);
+			topicsChanged(0);
 		},
 	});
 }

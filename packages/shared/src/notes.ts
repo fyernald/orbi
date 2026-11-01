@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { topicParams } from './courses';
 
 export const NOTE_TITLE_MAX_LENGTH = 120;
 // about 25 pages of text; longer notes can be split into a few
@@ -24,6 +25,13 @@ export const createNoteInput = z.object({
 		),
 });
 
+// an edit saves the whole note again, with the same rules as a new one
+export const updateNoteInput = createNoteInput;
+
+export const noteParams = topicParams.extend({
+	noteId: z.uuid('Note not found.'),
+});
+
 // what the API sends back
 export const note = z.object({
 	id: z.uuid(),
@@ -35,4 +43,5 @@ export const note = z.object({
 });
 
 export type CreateNoteInput = z.infer<typeof createNoteInput>;
+export type UpdateNoteInput = z.infer<typeof updateNoteInput>;
 export type Note = z.infer<typeof note>;

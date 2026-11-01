@@ -1,4 +1,4 @@
-import type { CreateNoteInput, Note } from '@orbi/shared';
+import type { CreateNoteInput, Note, UpdateNoteInput } from '@orbi/shared';
 import { NotFoundError } from '../../errors';
 import type { NoteRepository } from './repository';
 import { noteTitle } from './title';
@@ -11,6 +11,19 @@ export interface NoteService {
 		topicId: string,
 		input: CreateNoteInput
 	): Promise<Note>;
+	updateNote(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		noteId: string,
+		input: UpdateNoteInput
+	): Promise<Note>;
+	deleteNote(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		noteId: string
+	): Promise<void>;
 }
 
 export function createNoteService({
@@ -41,6 +54,25 @@ export function createNoteService({
 				title: noteTitle(title, content),
 				content,
 			});
+		},
+
+		// a title cleared while editing is named after the first line again
+		async updateNote(userId, courseId, topicId, noteId, { title, content }) {
+			await requireTopic(userId, courseId, topicId);
+			const updated = await repo.updateNote(userId, topicId, noteId, {
+				title: noteTitle(title, content),
+				content,
+			});
+			if (!updated) throw new NotFoundError('Note not found.');
+			return updated;
+		},
+
+		// the questions made from it stay, since they belong to the topic
+		async deleteNote(userId, courseId, topicId, noteId) {
+			await requireTopic(userId, courseId, topicId);
+			if (!(await repo.deleteNote(userId, topicId, noteId))) {
+				throw new NotFoundError('Note not found.');
+			}
 		},
 	};
 }

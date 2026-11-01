@@ -40,6 +40,10 @@ export const createCourseInput = z.object({
 
 export const createTopicInput = z.object({ name: topicName });
 
+// a rename; more course details can join it later
+export const updateCourseInput = z.object({ name: name('course') });
+export const updateTopicInput = createTopicInput;
+
 export const courseParams = z.object({ courseId: z.uuid('Course not found.') });
 
 export const topicParams = courseParams.extend({
@@ -72,5 +76,7 @@ export type CourseColor = (typeof COURSE_COLORS)[number];
 export type CourseGoal = (typeof COURSE_GOALS)[number];
 export type CreateCourseInput = z.infer<typeof createCourseInput>;
 export type CreateTopicInput = z.infer<typeof createTopicInput>;
+export type UpdateCourseInput = z.infer<typeof updateCourseInput>;
+export type UpdateTopicInput = z.infer<typeof updateTopicInput>;
 export type Course = z.infer<typeof course>;
 export type Topic = z.infer<typeof topic>;
