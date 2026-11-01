@@ -11,6 +11,7 @@ import { TextField } from '@/components/form/text-field';
 import { FieldGroup } from '@/components/ui/field';
 import { routes } from '@/lib/routes';
 import { authErrorMessage } from '../errors';
+import { authInput } from '../styles';
 import { useSignIn } from '../hooks';
 
 export function SignInForm({ notice }: { notice?: string }) {
@@ -22,6 +23,8 @@ export function SignInForm({ notice }: { notice?: string }) {
 
 	return (
 		<form
+			// if it is sent before the page script runs, the password goes in the body, not the address
+			method="post"
 			onSubmit={form.handleSubmit((values) => signIn.mutate(values))}
 			noValidate
 		>
@@ -29,6 +32,7 @@ export function SignInForm({ notice }: { notice?: string }) {
 				<FormError message={authErrorMessage(signIn.error) ?? notice} />
 				<TextField
 					control={form.control}
+					className={authInput}
 					name="email"
 					label="Email"
 					autoFocus
@@ -37,6 +41,7 @@ export function SignInForm({ notice }: { notice?: string }) {
 				/>
 				<PasswordField
 					control={form.control}
+					className={authInput}
 					name="password"
 					label="Password"
 					autoComplete="current-password"

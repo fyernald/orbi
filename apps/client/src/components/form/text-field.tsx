@@ -43,7 +43,7 @@ export function TextField<TValues extends FieldValues>({
 					id={id}
 					aria-invalid={invalid}
 					aria-describedby={invalid ? errorId : undefined}
-					className={cn(action && 'pr-9', className)}
+					className={cn(className, action && 'pr-10')}
 				/>
 				{action && (
 					<div className="absolute inset-y-0 right-0 flex items-center pr-0.5">
