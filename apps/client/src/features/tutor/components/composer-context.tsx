@@ -14,6 +14,8 @@ type ComposerContextProps = {
 	wholeCourse?: string;
 	// set when picking a topic does more than fill the field (it opens that topic's chat)
 	onTopicChange?: (topicId: string) => void;
+	// inside a course, the topic menu adds a topic right there
+	onAddTopic?: () => void;
 };
 
 // the action and topic fields, read as a sentence: "Ask Orbi about Biology 101 › Meiosis"
@@ -22,6 +24,7 @@ export function ComposerContext({
 	topics,
 	wholeCourse,
 	onTopicChange,
+	onAddTopic,
 }: ComposerContextProps) {
 	const { field: actionField } = useController({ control, name: 'action' });
 	const { field: topicField } = useController({ control, name: 'topicId' });
@@ -40,6 +43,7 @@ export function ComposerContext({
 				selected={topics.find(({ id }) => id === topicField.value)}
 				onSelect={onTopicChange ?? topicField.onChange}
 				wholeCourse={wholeCourse}
+				onAddTopic={onAddTopic}
 			/>
 		</div>
 	);

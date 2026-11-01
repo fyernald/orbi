@@ -40,6 +40,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	// the topic stays set while the sheet closes, so it can slide out with its content
 	const [notesTopicId, setNotesTopicId] = useState<string | null>(null);
 	const [notesOpen, setNotesOpen] = useState(false);
+	// counts the requests to add a topic from outside the topics pane
+	const [addTopicRequest, setAddTopicRequest] = useState(0);
 	const [preset, setPreset] = useState<ScopedPreset | undefined>(() =>
 		start.action || start.message
 			? { version: 1, scope: COURSE_SCOPE, ...start }
@@ -92,6 +94,13 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 		}));
 	};
 
+	// the topics pane comes into view (on phones too) with its new topic field ready
+	const addTopic = () => {
+		setTopicsOpen(true);
+		setMobilePane('topics');
+		setAddTopicRequest((count) => count + 1);
+	};
+
 	const openNotes = (topicId: string) => {
 		setNotesTopicId(topicId);
 		setNotesOpen(true);
@@ -132,6 +141,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
 					onOpenNotes={openNotes}
+					addTopicRequest={addTopicRequest}
 					busyScopes={busyScopes}
 					className={paneClass('topics', topicsOpen)}
 				/>
@@ -146,6 +156,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					busyScopes={busyScopes}
 					onBusyChange={setScopeBusy}
 					onSwitchTopic={switchTopic}
+					onAddTopic={addTopic}
 					topicsOpen={topicsOpen}
 					onToggleTopics={() => setTopicsOpen((value) => !value)}
 					studyOpen={studyOpen}

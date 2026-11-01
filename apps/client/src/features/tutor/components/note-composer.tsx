@@ -44,6 +44,8 @@ type NoteComposerProps = {
 	wholeCourse?: string;
 	// picking a topic opens that topic's chat, with the draft; '' is the whole course
 	onTopicChange?: (topicId: string, draft: ComposerDraft) => void;
+	// inside a course, the topic menu adds a topic right there
+	onAddTopic?: () => void;
 	preset?: ComposerPreset;
 	// without it the composer is only a preview (Home, until it has real topics)
 	onSend?: (request: TutorRequestInput) => void;
@@ -59,6 +61,7 @@ export function NoteComposer({
 	topicId,
 	wholeCourse,
 	onTopicChange,
+	onAddTopic,
 	preset,
 	onSend,
 	busy = false,
@@ -149,6 +152,7 @@ export function NoteComposer({
 								onTopicChange(next, { message, action, modelId });
 							})
 						}
+						onAddTopic={onAddTopic}
 					/>
 					<AttachmentList
 						attachments={attachments}

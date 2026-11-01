@@ -34,6 +34,7 @@ type ScopeChatProps = {
 	onHasMessages: (scope: string, hasMessages: boolean) => void;
 	onBusyChange: (scope: string, busy: boolean) => void;
 	onSwitchTopic: (topicId: string | null, draft: ComposerDraft) => void;
+	onAddTopic: () => void;
 };
 
 // the chat of one topic, or of the whole course
@@ -51,6 +52,7 @@ export function ScopeChat({
 	onHasMessages,
 	onBusyChange,
 	onSwitchTopic,
+	onAddTopic,
 }: ScopeChatProps) {
 	const topicId = scopeTopicId(scope);
 	const topic = topics.find(({ id }) => id === topicId);
@@ -136,6 +138,7 @@ export function ScopeChat({
 					key={session.chatId}
 					chatId={session.chatId}
 					courseId={course.id}
+					courseName={course.name}
 					chatTopicId={topicId}
 					initialMessages={session.messages}
 					initialHasEarlier={session.hasEarlier}
@@ -146,6 +149,7 @@ export function ScopeChat({
 					onHasMessages={hasMessages}
 					onBusyChange={busy}
 					onSwitchTopic={onSwitchTopic}
+					onAddTopic={onAddTopic}
 				/>
 			)}
 		</div>

@@ -30,6 +30,8 @@ type TutorPaneProps = {
 	busyScopes: ReadonlySet<string>;
 	onBusyChange: (scope: string, busy: boolean) => void;
 	onSwitchTopic: (topicId: string | null, draft: ComposerDraft) => void;
+	// the message box's topic menu opens the new topic field in the topics pane
+	onAddTopic: () => void;
 	topicsOpen: boolean;
 	onToggleTopics: () => void;
 	studyOpen: boolean;
@@ -50,6 +52,7 @@ export function TutorPane({
 	busyScopes,
 	onBusyChange,
 	onSwitchTopic,
+	onAddTopic,
 	topicsOpen,
 	onToggleTopics,
 	studyOpen,
@@ -177,6 +180,7 @@ export function TutorPane({
 						onHasMessages={markMessages}
 						onBusyChange={onBusyChange}
 						onSwitchTopic={onSwitchTopic}
+						onAddTopic={onAddTopic}
 					/>
 				))
 			) : (
