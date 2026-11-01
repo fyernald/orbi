@@ -1,7 +1,7 @@
 'use client';
 
 import type { Topic } from '@orbi/shared';
-import { Ellipsis, NotebookPen, Trash2 } from 'lucide-react';
+import { Ellipsis, NotebookPen, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,10 +11,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { apiErrorMessage } from '@/lib/api';
-import { useDeleteTopic } from '../hooks';
-import { noteCountLabel } from '../note-count';
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
+import { DeleteTopicDialog } from './delete-topic-dialog';
+import { RenameTopicDialog } from './rename-topic-dialog';
 
 type TopicActionsProps = {
 	topic: Topic;
@@ -23,12 +21,8 @@ type TopicActionsProps = {
 
 // the menu button shows on hover and focus, and always on touch screens
 export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
-	const remove = useDeleteTopic(topic.courseId);
-	const [confirming, setConfirming] = useState(false);
-	const notes =
-		topic.noteCount === 0
-			? ''
-			: ` Its ${noteCountLabel(topic.noteCount).toLowerCase()} go with it.`;
+	const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
+	const closeOn = (open: boolean) => !open && setDialog(null);
 
 	return (
 		<>
@@ -48,30 +42,29 @@ export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 						<NotebookPen />
 						Notes
 					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => setDialog('rename')}>
+						<Pencil />
+						Rename topic
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
-						onSelect={() => setConfirming(true)}
+						onSelect={() => setDialog('delete')}
 					>
 						<Trash2 />
 						Delete topic
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<ConfirmDeleteDialog
-				open={confirming}
-				onOpenChange={(open) => {
-					setConfirming(open);
-					if (!open) remove.reset();
-				}}
-				title={`Delete ${topic.name}?`}
-				description={`The topic is removed from this course.${notes} This cannot be undone.`}
-				confirmLabel="Delete topic"
-				pending={remove.isPending}
-				error={apiErrorMessage(remove.error)}
-				onConfirm={() =>
-					remove.mutate(topic.id, { onSuccess: () => setConfirming(false) })
-				}
+			<RenameTopicDialog
+				topic={topic}
+				open={dialog === 'rename'}
+				onOpenChange={closeOn}
+			/>
+			<DeleteTopicDialog
+				topic={topic}
+				open={dialog === 'delete'}
+				onOpenChange={closeOn}
 			/>
 		</>
 	);
