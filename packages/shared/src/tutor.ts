@@ -35,6 +35,8 @@ export const tutorMessageMetadata = z.object({
 	modelId: z.string().optional(),
 	// how many of the topic's notes the tutor read for this reply
 	notesUsed: z.int().optional(),
+	// how long each of the reply's thinking parts took, in the order they appear
+	thinkingMs: z.array(z.int().nonnegative()).optional(),
 	createdAt: z.iso.datetime(),
 });
 

@@ -1,10 +1,11 @@
 import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
 import type { LanguageModelV4ToolChoice } from '@ai-sdk/provider';
+import type { AiProvider } from '@orbi/shared';
 import {
 	createModelRegistry,
 	createProviderFactories,
-	deepseekForcedToolMiddleware,
+	PROVIDER_THINKING,
 } from './models';
 
 const mockFactory = () => new MockLanguageModelV4();
@@ -60,21 +61,37 @@ describe('createProviderFactories', () => {
 	});
 });
 
-describe('deepseekForcedToolMiddleware', () => {
-	const send = (toolChoice?: LanguageModelV4ToolChoice) =>
-		deepseekForcedToolMiddleware.transformParams!({
+describe('provider thinking', () => {
+	const send = (provider: AiProvider, toolChoice?: LanguageModelV4ToolChoice) =>
+		PROVIDER_THINKING[provider].transformParams!({
 			type: 'stream',
 			params: { prompt: [], toolChoice },
 			model: new MockLanguageModelV4(),
 		});
+	const forced = { type: 'tool', toolName: 'createQuestions' } as const;
 
-	it('turns thinking off only when a tool is forced', async () => {
-		const forced = await send({ type: 'tool', toolName: 'createQuestions' });
-		expect(forced.providerOptions).toEqual({
+	it('asks every provider for its thinking', async () => {
+		expect((await send('google')).providerOptions).toEqual({
+			google: { thinkingConfig: { includeThoughts: true } },
+		});
+		expect((await send('anthropic', { type: 'auto' })).providerOptions).toEqual(
+			{ anthropic: { thinking: { type: 'adaptive', display: 'summarized' } } }
+		);
+		expect((await send('deepseek')).providerOptions).toEqual({
+			deepseek: { thinking: { type: 'enabled' } },
+		});
+	});
+
+	it('turns thinking off for a forced tool where the provider refuses both', async () => {
+		expect((await send('anthropic', forced)).providerOptions).toEqual({
+			anthropic: { thinking: { type: 'disabled' } },
+		});
+		expect((await send('deepseek', forced)).providerOptions).toEqual({
 			deepseek: { thinking: { type: 'disabled' } },
 		});
-
-		expect((await send({ type: 'auto' })).providerOptions).toBeUndefined();
-		expect((await send()).providerOptions).toBeUndefined();
+		// Gemini already thinks while it calls a forced tool; it only sends the thoughts back
+		expect((await send('google', forced)).providerOptions).toEqual({
+			google: { thinkingConfig: { includeThoughts: true } },
+		});
 	});
 });

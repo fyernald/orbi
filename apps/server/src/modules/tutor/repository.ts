@@ -68,6 +68,7 @@ export type StoredMessage = {
 	action: TutorAction | null;
 	modelId: string | null;
 	notesUsed: number | null;
+	thinkingMs: number[] | null;
 	createdAt: Date;
 };
 
@@ -143,6 +144,7 @@ const messageColumns = {
 	action: chatMessage.action,
 	modelId: chatMessage.modelId,
 	notesUsed: chatMessage.notesUsed,
+	thinkingMs: chatMessage.thinkingMs,
 	createdAt: chatMessage.createdAt,
 };
 
@@ -303,7 +305,11 @@ export function createTutorRepository(db: Db): TutorRepository {
 					.values({ userId, chatId, ...message })
 					.onConflictDoUpdate({
 						target: chatMessage.id,
-						set: { parts: message.parts, updatedAt: new Date() },
+						set: {
+							parts: message.parts,
+							thinkingMs: message.thinkingMs,
+							updatedAt: new Date(),
+						},
 						setWhere: and(
 							eq(chatMessage.userId, userId),
 							eq(chatMessage.chatId, chatId)

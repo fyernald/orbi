@@ -64,6 +64,13 @@
       "when": 1793569804346,
       "tag": "0008_deepseek-provider",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793572224070,
+      "tag": "0009_thinking-time",
+      "breakpoints": true
     }
   ]
 }

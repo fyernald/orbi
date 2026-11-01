@@ -78,14 +78,15 @@ export function chatErrorMessage(error: unknown): string {
 
 export const isToolPart = (part: TutorPart) => part.type.startsWith('tool-');
 
-// a reply has started to show once it has text or a tool card
+// a reply has started to show once it has thinking, text, or a tool card
 export function hasVisibleContent(
 	message: TutorUIMessage | undefined
 ): boolean {
 	return (
 		message?.parts.some(
 			(part) =>
-				(part.type === 'text' && part.text.trim().length > 0) ||
+				((part.type === 'text' || part.type === 'reasoning') &&
+					part.text.trim().length > 0) ||
 				isToolPart(part)
 		) ?? false
 	);

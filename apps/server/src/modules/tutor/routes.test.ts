@@ -152,6 +152,32 @@ describe('tutor chat', () => {
 		expect(chats.map((chat: { id: string }) => chat.id)).toEqual([chatId]);
 	});
 
+	it("streams the model's thinking and saves how long it took", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({
+			reasoning: 'The notes say the chromatids separate in anaphase.',
+			text: 'In anaphase the chromatids separate.',
+		});
+
+		const response = await ask(ada, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+
+		const thinking = chunksOf(response.body)
+			.filter((chunk) => chunk.type === 'reasoning-delta')
+			.map((chunk) => chunk.delta)
+			.join('');
+		expect(thinking).toBe('The notes say the chromatids separate in anaphase.');
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const reply = thread.messages[1];
+		expect(reply.parts.map((part: { type: string }) => part.type)).toContain(
+			'reasoning'
+		);
+		expect(reply.metadata.thinkingMs).toHaveLength(1);
+	});
+
 	it('makes questions with the Questions action and saves them', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();
