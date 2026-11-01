@@ -1,7 +1,10 @@
 'use client';
 
 import { CHOICES_PER_QUESTION, type GeneratedQuestion } from '@orbi/shared';
-import { CircleHelp } from 'lucide-react';
+import { ArrowRight, CircleHelp } from 'lucide-react';
+import Link from 'next/link';
+import { useAnswerInChat, useChatAnswers } from '@/features/questions/hooks';
+import { routes } from '@/lib/routes';
 import type { ToolViewProps } from './tool-views';
 import { QuizQuestion } from './quiz-question';
 
@@ -23,6 +26,11 @@ function writtenQuestions(input: unknown): GeneratedQuestion[] {
 
 // the createQuestions tool: cards fill in one by one while the AI writes them
 export function QuestionSetCard({ part }: ToolViewProps<'createQuestions'>) {
+	// the ids arrive once the set is saved, in the same order as the questions
+	const ids = part.state === 'output-available' ? part.output.questionIds : [];
+	const answers = useChatAnswers(ids);
+	const answerInChat = useAnswerInChat(ids);
+
 	if (part.state === 'output-error') {
 		return (
 			<p className="text-sm text-muted-foreground">
@@ -58,15 +66,23 @@ export function QuestionSetCard({ part }: ToolViewProps<'createQuestions'>) {
 				)}
 			</header>
 			<ol className="divide-y divide-divider">
-				{questions.map((question, index) => (
-					<QuizQuestion
-						key={index}
-						question={question}
-						number={index + 1}
-						total={total}
-						answerable={saved}
-					/>
-				))}
+				{questions.map((question, index) => {
+					const id = ids[index];
+					return (
+						<QuizQuestion
+							key={index}
+							question={question}
+							number={index + 1}
+							total={total}
+							// the saved answers have loaded, so a question is never tried twice
+							answerable={saved && id !== undefined && answers.isSuccess}
+							saved={answers.data?.find(({ questionId }) => questionId === id)}
+							onAnswer={async (choice) => {
+								if (id) await answerInChat.mutateAsync({ id, choice });
+							}}
+						/>
+					);
+				})}
 				{writing && (
 					<li aria-hidden className="flex flex-col gap-2.5 px-4 py-3.5">
 						<span className="shimmer-text text-xs font-medium">
@@ -78,9 +94,18 @@ export function QuestionSetCard({ part }: ToolViewProps<'createQuestions'>) {
 				)}
 			</ol>
 			{saved && (
-				<p className="border-t border-divider px-4 py-2.5 text-xs text-muted-foreground">
-					Try each one first. The questions are saved to this topic, and you
-					approve them before they go into your practice.
+				<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-divider px-4 py-2.5 text-xs text-muted-foreground">
+					<span>
+						Try each one first. Only the ones you approve go into your study
+						sessions.
+					</span>
+					<Link
+						href={routes.review}
+						className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+					>
+						Review them
+						<ArrowRight className="size-3" />
+					</Link>
 				</p>
 			)}
 		</section>

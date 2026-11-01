@@ -1,5 +1,4 @@
 import { routes } from '@/lib/routes';
-import type { TodaySummary } from './mock-data';
 
 export type SuggestionTone = 'primary' | 'warning';
 
@@ -13,7 +12,10 @@ export type Suggestion = {
 export function suggestionsFor({
 	dueCount,
 	pendingApproval,
-}: TodaySummary): Suggestion[] {
+}: {
+	dueCount: number;
+	pendingApproval: number;
+}): Suggestion[] {
 	const suggestions: Suggestion[] = [];
 	if (dueCount > 0) {
 		suggestions.push({

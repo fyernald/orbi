@@ -95,6 +95,7 @@ erDiagram
         ai_provider ai_provider
         varchar ai_model
         uuid chat_message_id
+        integer position
     }
 ```
 
@@ -109,7 +110,7 @@ Every table also has `created_at` and `updated_at`.
 | `note`                                       | Study notes pasted into a topic. The tutor reads them and makes questions from them.                                                                                                                                                                                                                                                            |
 | `chat`                                       | A tutor chat of one topic, or of the whole course when `topic_id` is null. It is named after its first message. The browser makes the id, so the first message needs no extra request.                                                                                                                                                          |
 | `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, and how many notes the tutor read. See [decision 0003](decisions/03-tutor-chat.md).                                                      |
-| `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them.                                                                                             |
+| `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                           |
 
 ## Rules the database enforces
 

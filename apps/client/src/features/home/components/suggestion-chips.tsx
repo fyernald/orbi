@@ -1,11 +1,12 @@
-import type { Suggestion } from '../suggestions';
+'use client';
+
+import { usePendingQuestionCount } from '@/features/questions/hooks';
+import { suggestionsFor } from '../suggestions';
 import { SuggestionChip } from './suggestion-chip';
 
-export function SuggestionChips({
-	suggestions,
-}: {
-	suggestions: Suggestion[];
-}) {
+export function SuggestionChips({ dueCount }: { dueCount: number }) {
+	const pendingApproval = usePendingQuestionCount() ?? 0;
+	const suggestions = suggestionsFor({ dueCount, pendingApproval });
 	if (suggestions.length === 0) return null;
 
 	return (

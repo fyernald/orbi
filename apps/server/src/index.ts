@@ -13,6 +13,8 @@ import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
+import { createQuestionRepository } from './modules/questions/repository';
+import { createQuestionService } from './modules/questions/service';
 import { createTutorRepository } from './modules/tutor/repository';
 import { createTutorService } from './modules/tutor/service';
 
@@ -37,6 +39,9 @@ await migrate(db, {
 const courses = createCourseService({ repo: createCourseRepository(db) });
 const notes = createNoteService({ repo: createNoteRepository(db) });
 const profiles = createProfileService({ repo: createProfileRepository(db) });
+const questions = createQuestionService({
+	repo: createQuestionRepository(db),
+});
 const tutor = createTutorService({
 	repo: createTutorRepository(db),
 	models: createModelRegistry({
@@ -47,7 +52,7 @@ const tutor = createTutorService({
 
 const app: ReturnType<typeof buildApp> = buildApp({
 	auth,
-	services: { courses, notes, profiles, tutor },
+	services: { courses, notes, profiles, questions, tutor },
 });
 app.addHook('onClose', () => db.$client.end());
 
