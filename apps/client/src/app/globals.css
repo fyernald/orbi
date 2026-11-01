@@ -55,6 +55,7 @@
 	--color-tone-amber-foreground: var(--tone-amber-foreground);
 	--color-brand-gemini: var(--brand-gemini);
 	--color-brand-claude: var(--brand-claude);
+	--color-brand-deepseek: var(--brand-deepseek);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
 	--color-muted-foreground: var(--muted-foreground);
@@ -113,6 +114,7 @@
 	/* brand colours of the AI models, from Simple Icons */
 	--brand-gemini: #8e75b2;
 	--brand-claude: #d97757;
+	--brand-deepseek: #5786fe;
 	/* the moving border of a 30+ day streak */
 	--flame-yellow: #f5b83d;
 	--flame-orange: #f97316;

@@ -1,6 +1,11 @@
 import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
-import { createModelRegistry, createProviderFactories } from './models';
+import type { LanguageModelV4ToolChoice } from '@ai-sdk/provider';
+import {
+	createModelRegistry,
+	createProviderFactories,
+	deepseekForcedToolMiddleware,
+} from './models';
 
 const mockFactory = () => new MockLanguageModelV4();
 
@@ -48,6 +53,28 @@ describe('createProviderFactories', () => {
 		expect(Object.keys(createProviderFactories({ google: 'key' }))).toEqual([
 			'google',
 		]);
+		expect(Object.keys(createProviderFactories({ deepseek: 'key' }))).toEqual([
+			'deepseek',
+		]);
 		expect(createProviderFactories({})).toEqual({});
+	});
+});
+
+describe('deepseekForcedToolMiddleware', () => {
+	const send = (toolChoice?: LanguageModelV4ToolChoice) =>
+		deepseekForcedToolMiddleware.transformParams!({
+			type: 'stream',
+			params: { prompt: [], toolChoice },
+			model: new MockLanguageModelV4(),
+		});
+
+	it('turns thinking off only when a tool is forced', async () => {
+		const forced = await send({ type: 'tool', toolName: 'createQuestions' });
+		expect(forced.providerOptions).toEqual({
+			deepseek: { thinking: { type: 'disabled' } },
+		});
+
+		expect((await send({ type: 'auto' })).providerOptions).toBeUndefined();
+		expect((await send()).providerOptions).toBeUndefined();
 	});
 });

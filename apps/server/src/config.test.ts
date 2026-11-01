@@ -47,11 +47,13 @@ describe('loadConfig', () => {
 			APP_ENV: 'local',
 			GEMINI_API_KEY: 'gemini-key',
 			ANTHROPIC_API_KEY: '',
+			DEEPSEEK_API_KEY: 'deepseek-key',
 		});
 
 		expect(config.aiKeys).toEqual({
 			google: 'gemini-key',
 			anthropic: undefined,
+			deepseek: 'deepseek-key',
 		});
 	});
 });
