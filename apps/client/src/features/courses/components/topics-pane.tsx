@@ -27,6 +27,8 @@ type TopicsPaneProps = {
 	selectedTopicId: string | null;
 	onSelect: (topicId: string | null) => void;
 	onOpenNotes: (topicId: string) => void;
+	// goes up each time another pane asks to add a topic; it opens the new topic field
+	addTopicRequest: number;
 	// the chats with a reply running: topic ids, or the whole-course scope
 	busyScopes: ReadonlySet<string>;
 	className?: string;
@@ -40,12 +42,18 @@ export function TopicsPane({
 	selectedTopicId,
 	onSelect,
 	onOpenNotes,
+	addTopicRequest,
 	busyScopes,
 	className,
 }: TopicsPaneProps) {
 	const router = useRouter();
 	const [query, setQuery] = useState('');
 	const [adding, setAdding] = useState(false);
+	const [seenRequest, setSeenRequest] = useState(addTopicRequest);
+	if (seenRequest !== addTopicRequest) {
+		setSeenRequest(addTopicRequest);
+		setAdding(true);
+	}
 	const shown = topics?.filter((topic) =>
 		topic.name.toLowerCase().includes(query.trim().toLowerCase())
 	);
@@ -163,6 +171,7 @@ export function TopicsPane({
 				{adding ? (
 					<AddTopicInline
 						courseId={course.id}
+						focusRequest={addTopicRequest}
 						onClose={() => setAdding(false)}
 					/>
 				) : (

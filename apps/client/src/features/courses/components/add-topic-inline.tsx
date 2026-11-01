@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTopicInput, type CreateTopicInput } from '@orbi/shared';
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { KeyHint } from '@/components/key-hint';
 import { Spinner } from '@/components/ui/spinner';
@@ -11,17 +11,27 @@ import { useCreateTopic } from '../hooks';
 
 type AddTopicInlineProps = {
 	courseId: string;
+	// a new value moves focus to the name again, when another pane asks to add a
+	// topic while this field is already open
+	focusRequest?: number;
 	onClose: () => void;
 };
 
 // stays open after each topic, so several can be added in a row; Esc closes it
-export function AddTopicInline({ courseId, onClose }: AddTopicInlineProps) {
+export function AddTopicInline({
+	courseId,
+	focusRequest,
+	onClose,
+}: AddTopicInlineProps) {
 	const create = useCreateTopic(courseId);
 	const hintId = useId();
 	const form = useForm<CreateTopicInput>({
 		resolver: zodResolver(createTopicInput),
 		defaultValues: { name: '' },
 	});
+	useEffect(() => {
+		form.setFocus('name');
+	}, [focusRequest, form]);
 	const message =
 		form.formState.errors.name?.message ?? apiErrorMessage(create.error);
 

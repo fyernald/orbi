@@ -35,6 +35,8 @@ import { Thinking } from './thinking';
 type TutorChatProps = {
 	chatId: string;
 	courseId: string;
+	// given on its own, since a course with no topics yet still has its whole-course chat
+	courseName: string;
 	// the topic this chat belongs to, or null for the whole-course chat
 	chatTopicId: string | null;
 	initialMessages: TutorUIMessage[];
@@ -51,11 +53,14 @@ type TutorChatProps = {
 	onBusyChange?: (busy: boolean) => void;
 	// picking another topic in the composer opens its chat; null is the whole course
 	onSwitchTopic?: (topicId: string | null, draft: ComposerDraft) => void;
+	// the composer's topic menu adds a topic to the course
+	onAddTopic?: () => void;
 };
 
 export function TutorChat({
 	chatId,
 	courseId,
+	courseName,
 	chatTopicId,
 	initialMessages,
 	initialHasEarlier,
@@ -66,6 +71,7 @@ export function TutorChat({
 	onHasMessages,
 	onBusyChange,
 	onSwitchTopic,
+	onAddTopic,
 }: TutorChatProps) {
 	const models = useModels();
 	const [notice, setNotice] = useState<string | null>(null);
@@ -130,7 +136,6 @@ export function TutorChat({
 	}, [busy, onBusyChange]);
 	// a chat that stops showing (it unmounts) is no longer running a reply
 	useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
-	const courseName = topics[0]?.course;
 	// a whole-course message is about the course itself
 	const topicName = (topicId: string | null | undefined) =>
 		topicId === null
@@ -268,6 +273,7 @@ export function TutorChat({
 							onSwitchTopic &&
 							((next, draft) => onSwitchTopic(next || null, draft))
 						}
+						onAddTopic={onAddTopic}
 						preset={composerPreset}
 						onSend={send}
 						limitReason={limitReason}

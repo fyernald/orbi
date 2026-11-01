@@ -26,21 +26,29 @@ type TopicPickerProps = {
 	onSelect: (topicId: string) => void;
 	// the course's name, to offer the whole course as a choice
 	wholeCourse?: string;
+	// set inside a course: adding a topic happens right there, instead of on the
+	// courses page
+	onAddTopic?: () => void;
 };
 
 // a radio value cannot be empty, so the whole course has its own
 const WHOLE_COURSE = 'whole-course';
+
+// what the student chose in the menu: a topic ('' is the whole course), or adding one
+type MenuChoice = { topicId: string } | 'add-topic';
 
 export function TopicPicker({
 	topics,
 	selected,
 	onSelect,
 	wholeCourse,
+	onAddTopic,
 }: TopicPickerProps) {
 	// Picking a topic can open another chat, which hides this one and the button the
 	// menu hangs from. The menu would then jump to the page's corner while it closes,
 	// so the choice is passed on only once the menu is gone.
-	const picked = useRef<string | null>(null);
+	const picked = useRef<MenuChoice | null>(null);
+	const hasChoices = topics.length > 0 || wholeCourse !== undefined;
 
 	return (
 		<DropdownMenu>
@@ -67,23 +75,33 @@ export function TopicPicker({
 				align="start"
 				sideOffset={6}
 				className="w-72 rounded-xl p-1.5 shadow-sm"
-				onCloseAutoFocus={() => {
-					const topicId = picked.current;
-					if (topicId === null) return;
+				onCloseAutoFocus={(event) => {
+					const choice = picked.current;
+					if (choice === null) return;
 					picked.current = null;
-					onSelect(topicId);
+					if (choice === 'add-topic') {
+						// focus goes to the new topic's name, not back to this button
+						event.preventDefault();
+						onAddTopic?.();
+					} else {
+						onSelect(choice.topicId);
+					}
 				}}
 			>
-				{topics.length > 0 && (
+				{hasChoices && (
 					<>
-						<DropdownMenuLabel className="px-2 py-1.5 text-[13px] font-normal text-muted-foreground">
-							Recent topics
-						</DropdownMenuLabel>
+						{topics.length > 0 && (
+							<DropdownMenuLabel className="px-2 py-1.5 text-[13px] font-normal text-muted-foreground">
+								Recent topics
+							</DropdownMenuLabel>
+						)}
 						<MenuScrollArea>
 							<DropdownMenuRadioGroup
 								value={selected?.id ?? (wholeCourse ? WHOLE_COURSE : undefined)}
 								onValueChange={(value) => {
-									picked.current = value === WHOLE_COURSE ? '' : value;
+									picked.current = {
+										topicId: value === WHOLE_COURSE ? '' : value,
+									};
 								}}
 							>
 								{wholeCourse && (
@@ -116,15 +134,32 @@ export function TopicPicker({
 								))}
 							</DropdownMenuRadioGroup>
 						</MenuScrollArea>
+						{topics.length === 0 && (
+							<p className="px-2 pt-1 pb-1.5 text-[13px] text-muted-foreground">
+								No topics yet. Add one for each chapter or lecture.
+							</p>
+						)}
 						<DropdownMenuSeparator />
 					</>
 				)}
-				<DropdownMenuItem asChild className="h-9 gap-2.5 rounded-lg px-2">
-					<Link href={routes.courses}>
+				{onAddTopic ? (
+					<DropdownMenuItem
+						onSelect={() => {
+							picked.current = 'add-topic';
+						}}
+						className="h-9 gap-2.5 rounded-lg px-2"
+					>
 						<Plus />
-						Add a course or topic
-					</Link>
-				</DropdownMenuItem>
+						Add a topic
+					</DropdownMenuItem>
+				) : (
+					<DropdownMenuItem asChild className="h-9 gap-2.5 rounded-lg px-2">
+						<Link href={routes.courses}>
+							<Plus />
+							Add a course or topic
+						</Link>
+					</DropdownMenuItem>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
