@@ -312,3 +312,111 @@ describe('answering in the chat', () => {
 		expect(await answersOf(ada, [id])).toEqual([]);
 	});
 });
+
+describe('study sessions', () => {
+	const study = (cookie: string, courseId: string, topicId: string) =>
+		send(cookie, 'GET', `/api/courses/${courseId}/topics/${topicId}/study`);
+	const answerIn = (cookie: string, id: string, choice: number) =>
+		send(cookie, 'POST', `/api/questions/${id}/session-answer`, { choice });
+	const approve = (cookie: string, id: string) =>
+		send(cookie, 'PATCH', `/api/questions/${id}`, { status: 'approved' });
+
+	it('lists only the approved questions, without their answers', async () => {
+		const { courseId, topicIds } = await createCourse(ada, ['Cells']);
+		const [first, second, pending] = (await addQuestions(ada, topicIds[0]!, [
+			'Q1',
+			'Q2',
+			'Q3',
+		])) as [string, string, string];
+		await approve(ada, first);
+		await approve(ada, second);
+
+		const response = await study(ada, courseId, topicIds[0]!);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			courseName: 'Biology 101',
+			topicName: 'Cells',
+			questions: [
+				{ id: first, text: 'Q1', choices: expect.any(Array) },
+				{ id: second, text: 'Q2', choices: expect.any(Array) },
+			],
+			pendingCount: 1,
+		});
+		expect(JSON.stringify(response.json())).not.toContain(pending);
+	});
+
+	it('gives an empty session for a topic with no approved questions', async () => {
+		const { courseId, topicIds } = await createCourse(ada, ['Cells']);
+
+		expect((await study(ada, courseId, topicIds[0]!)).json()).toMatchObject({
+			questions: [],
+			pendingCount: 0,
+		});
+	});
+
+	it('checks each answer and saves every try', async () => {
+		const { topicIds } = await createCourse(ada, ['Cells']);
+		const [id] = (await addQuestions(ada, topicIds[0]!, ['Q'])) as [string];
+		await approve(ada, id);
+
+		const wrong = await answerIn(ada, id, 0);
+		expect(wrong.statusCode).toBe(201);
+		expect(wrong.json()).toEqual({
+			questionId: id,
+			choice: 0,
+			correct: false,
+			correctChoice: 1,
+			explanation: 'The chromosomes line up in metaphase.',
+		});
+		const right = await answerIn(ada, id, 1);
+		expect(right.statusCode).toBe(201);
+		expect(right.json()).toMatchObject({ correct: true });
+	});
+
+	it('does not count a session answer as the chat answer', async () => {
+		const { topicIds } = await createCourse(ada, ['Cells']);
+		const [id] = (await addQuestions(ada, topicIds[0]!, ['Q'])) as [string];
+		await approve(ada, id);
+		await answerIn(ada, id, 1);
+
+		const chat = await send(ada, 'POST', `/api/questions/${id}/chat-answer`, {
+			choice: 0,
+		});
+
+		expect(chat.statusCode).toBe(201);
+	});
+
+	it('answers 409 for a question that is not approved', async () => {
+		const { topicIds } = await createCourse(ada, ['Cells']);
+		const [id] = (await addQuestions(ada, topicIds[0]!, ['Q'])) as [string];
+
+		expect((await answerIn(ada, id, 1)).statusCode).toBe(409);
+	});
+
+	it('answers 400 for a choice that does not exist', async () => {
+		const { topicIds } = await createCourse(ada, ['Cells']);
+		const [id] = (await addQuestions(ada, topicIds[0]!, ['Q'])) as [string];
+		await approve(ada, id);
+
+		expect((await answerIn(ada, id, 4)).statusCode).toBe(400);
+	});
+
+	it("cannot study or answer another user's topic", async () => {
+		const { courseId, topicIds } = await createCourse(grace, ['Cells']);
+		const [id] = (await addQuestions(grace, topicIds[0]!, ['Q'])) as [string];
+		await approve(grace, id);
+
+		expect((await study(ada, courseId, topicIds[0]!)).statusCode).toBe(404);
+		expect((await answerIn(ada, id, 1)).statusCode).toBe(404);
+	});
+
+	it('answers 404 for a topic of another course', async () => {
+		const { topicIds } = await createCourse(ada, ['Cells']);
+		const other = await createCourse(ada, ['Genes']);
+
+		expect((await study(ada, other.courseId, topicIds[0]!)).statusCode).toBe(
+			404
+		);
+	});
+});
