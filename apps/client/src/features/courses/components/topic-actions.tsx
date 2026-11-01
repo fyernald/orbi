@@ -1,7 +1,8 @@
 'use client';
 
 import type { Topic } from '@orbi/shared';
-import { Ellipsis, NotebookPen, Trash2 } from 'lucide-react';
+import { Ellipsis, GraduationCap, NotebookPen, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +13,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiErrorMessage } from '@/lib/api';
+import { topicStudyRoute } from '@/lib/routes';
 import { useDeleteTopic } from '../hooks';
 import { noteCountLabel } from '../note-count';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
@@ -47,6 +49,12 @@ export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 					<DropdownMenuItem onSelect={onOpenNotes}>
 						<NotebookPen />
 						Notes
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<Link href={topicStudyRoute(topic.courseId, topic.id)}>
+							<GraduationCap />
+							Study session
+						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem

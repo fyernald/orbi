@@ -30,3 +30,8 @@ export function courseRoute(
 	const search = query.toString();
 	return `${routes.courses}/${courseId}${search ? `?${search}` : ''}`;
 }
+
+// a study session with the approved questions of one topic
+export function topicStudyRoute(courseId: string, topicId: string): string {
+	return `${routes.courses}/${courseId}/topics/${topicId}/study`;
+}
