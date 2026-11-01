@@ -52,6 +52,7 @@ import type {
 	TopicContext,
 	TutorRepository,
 } from './repository';
+import { createThinkingClock, thinkingTimesOf } from './thinking-clock';
 import { createTutorTools } from './tools';
 
 export type TutorStream = ReadableStream<InferUIMessageChunk<TutorUIMessage>>;
@@ -475,6 +476,14 @@ export function createTutorService({
 				? (messages.at(-1)!.metadata?.createdAt ?? replyAt)
 				: replyAt,
 		};
+		const thinking = createThinkingClock(
+			now,
+			continuing ? thinkingTimesOf(messages.at(-1)!) : []
+		);
+		const currentMetadata = (): TutorMessageMetadata => ({
+			...replyMetadata,
+			thinkingMs: thinking.times(),
+		});
 
 		// a reply ends by finishing, failing, or being stopped; each frees its place
 		abortSignal.addEventListener('abort', release, { once: true });
@@ -483,8 +492,13 @@ export function createTutorService({
 			tools,
 			originalMessages: validated,
 			generateMessageId: () => responseId,
-			messageMetadata: ({ part }) =>
-				part.type === 'start' ? replyMetadata : undefined,
+			// sent again after each thinking part, so the student sees how long it took
+			messageMetadata: ({ part }) => {
+				thinking.track(part);
+				return part.type === 'start' || part.type === 'reasoning-end'
+					? currentMetadata()
+					: undefined;
+			},
 			onError: (error) => {
 				logError(error);
 				return replyErrorMessage(error);
@@ -494,7 +508,7 @@ export function createTutorService({
 				release();
 				const reply = withoutUnfinishedTools({
 					...responseMessage,
-					metadata: replyMetadata,
+					metadata: currentMetadata(),
 				});
 				if (!hasContent(reply)) return;
 				try {

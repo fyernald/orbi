@@ -18,6 +18,7 @@ export function toUIMessage(stored: StoredMessage): TutorUIMessage {
 			action: stored.action ?? undefined,
 			modelId: stored.modelId ?? undefined,
 			notesUsed: stored.notesUsed ?? undefined,
+			thinkingMs: stored.thinkingMs ?? undefined,
 			createdAt: stored.createdAt.toISOString(),
 		},
 	};
@@ -36,6 +37,7 @@ export function toStoredMessage(
 		action: metadata?.action ?? null,
 		modelId: metadata?.modelId ?? null,
 		notesUsed: metadata?.notesUsed ?? null,
+		thinkingMs: metadata?.thinkingMs ?? null,
 		createdAt: metadata ? new Date(metadata.createdAt) : fallbackDate,
 	};
 }
