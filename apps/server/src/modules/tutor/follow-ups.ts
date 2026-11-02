@@ -3,8 +3,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { notesBlock, type NotesSelection } from './prompt';
 
-// fewer notes than a reply reads: the questions only need the gist
-export const FOLLOW_UP_NOTES_MAX_LENGTH = 20_000;
+// far fewer notes than a reply reads: the questions follow the answer and only need
+// the gist, and this part of the request is never cached
+export const FOLLOW_UP_NOTES_MAX_LENGTH = 4_000;
 
 const suggestFollowUpsInput = z.object({
 	questions: z

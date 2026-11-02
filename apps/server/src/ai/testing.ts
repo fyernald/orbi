@@ -101,6 +101,8 @@ function resultFor(step: ScriptedStep, call: number) {
 export function createScriptedModels() {
 	const steps: ScriptedStep[] = [];
 	const calls: LanguageModelV4CallOptions[] = [];
+	// the Think choice of each request
+	const thinking: boolean[] = [];
 	const nextStep = (options: LanguageModelV4CallOptions) => {
 		calls.push(options);
 		const step = steps.shift();
@@ -113,12 +115,21 @@ export function createScriptedModels() {
 	});
 
 	return {
-		registry: createModelRegistry({ providers: { google: () => model } }),
+		registry: createModelRegistry({
+			providers: {
+				google: (_id, options) => {
+					thinking.push(options.thinking);
+					return model;
+				},
+			},
+		}),
 		script: (...next: ScriptedStep[]) => {
 			steps.length = 0;
 			calls.length = 0;
+			thinking.length = 0;
 			steps.push(...next);
 		},
 		calls,
+		thinking,
 	};
 }

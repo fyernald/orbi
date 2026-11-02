@@ -119,8 +119,10 @@ export function buildInstructions({
 				'- Practice questions belong to one topic. When they want questions, tell them to pick a topic in the message box first.',
 			];
 
+	// DeepSeek caches the start of a request it has seen before, so what changes
+	// (the date, the action) comes after the notes
 	const sections = [
-		`You are Orbi, a friendly and patient study tutor. You are helping a student study ${studying}.${exam} Today is ${today.toISOString().slice(0, 10)}.`,
+		`You are Orbi, a friendly and patient study tutor. You are helping a student study ${studying}.${exam}`,
 		aboutStudent(student).join(' '),
 		[
 			'How to answer:',
@@ -133,6 +135,7 @@ export function buildInstructions({
 			'- If they ask for something unrelated to studying, answer briefly and steer back to the course.',
 		].join('\n'),
 		notesBlock(topic?.name ?? course.name, notes),
+		`Today is ${today.toISOString().slice(0, 10)}.`,
 	];
 
 	if (action === 'questions' && topic) {

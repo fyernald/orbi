@@ -92,6 +92,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 			message: draft.message,
 			action: draft.action,
 			modelId: draft.modelId,
+			thinking: draft.thinking,
 		}));
 	};
 

@@ -102,6 +102,7 @@ export function TutorChat({
 					topicId: lastStudentMetadata?.topicId ?? chatTopicId,
 					action: lastStudentMetadata?.action ?? 'ask',
 					modelId: defaultModelId,
+					thinking: false,
 				}
 			: null,
 		onRejected: (typed, error) => {
@@ -174,6 +175,7 @@ export function TutorChat({
 				chatTopicId,
 				topicId: request.topicId || null,
 				modelId: request.modelId,
+				thinking: request.thinking,
 				action: request.action,
 			},
 			request.message
@@ -229,6 +231,7 @@ export function TutorChat({
 									action: 'ask',
 									topicId: followUpReply.metadata?.topicId ?? '',
 									modelId: followUpReply.metadata?.modelId ?? '',
+									thinking: chat.context?.thinking ?? false,
 									message: question,
 								})
 							}

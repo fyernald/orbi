@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { chatTitle } from './chat-title';
 import {
 	hasContent,
+	recentMessages,
 	skipUnansweredQuestions,
+	withoutEarlierThinking,
 	withoutUnfinishedTools,
 	type TutorUIMessage,
 } from './messages';
@@ -126,5 +128,73 @@ describe('replyErrorMessage', () => {
 		expect(replyErrorMessage(new Error('secret stack details'))).toBe(
 			'Orbi could not answer. Try again.'
 		);
+	});
+});
+
+// a chat that takes turns, starting on the student
+const turns = (count: number): TutorUIMessage[] =>
+	Array.from({ length: count }, (_, index) => ({
+		id: `message-${index}`,
+		role: index % 2 === 0 ? 'user' : 'assistant',
+		parts: [{ type: 'text', text: `Message ${index}` }],
+	}));
+
+describe('recentMessages', () => {
+	it('keeps the newest 20 messages', () => {
+		const recent = recentMessages(turns(26));
+
+		expect(recent).toHaveLength(20);
+		expect(recent.at(-1)!.id).toBe('message-25');
+		expect(recent[0]!.role).toBe('user');
+	});
+
+	it("starts on the student's message, never on a reply", () => {
+		const recent = recentMessages(turns(25));
+
+		expect(recent[0]!.id).toBe('message-6');
+		expect(recent).toHaveLength(19);
+	});
+
+	it('keeps a short chat as it is', () => {
+		expect(recentMessages(turns(3))).toEqual(turns(3));
+	});
+});
+
+describe('withoutEarlierThinking', () => {
+	const thinkingReply = (id: string): TutorUIMessage => ({
+		id,
+		role: 'assistant',
+		parts: [
+			{ type: 'reasoning', text: 'Let me think.' },
+			{ type: 'text', text: 'The answer.' },
+		],
+	});
+
+	it("drops the thinking of earlier replies, not the student's text", () => {
+		const [question] = turns(1);
+		const cleaned = withoutEarlierThinking([
+			question!,
+			thinkingReply('reply-1'),
+			{ ...question!, id: 'question-2' },
+		]);
+
+		expect(cleaned[1]!.parts).toEqual([{ type: 'text', text: 'The answer.' }]);
+		expect(cleaned[0]).toEqual(question);
+	});
+
+	it('keeps the thinking of a reply that goes on after an answer', () => {
+		const [question] = turns(1);
+		const cleaned = withoutEarlierThinking([
+			question!,
+			thinkingReply('reply-1'),
+			{ ...question!, id: 'question-2' },
+			thinkingReply('reply-2'),
+		]);
+
+		expect(cleaned[1]!.parts.map(({ type }) => type)).toEqual(['text']);
+		expect(cleaned[3]!.parts.map(({ type }) => type)).toEqual([
+			'reasoning',
+			'text',
+		]);
 	});
 });

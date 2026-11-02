@@ -59,6 +59,18 @@ describe('buildInstructions', () => {
 		expect(instructions).toContain('Anaphase: chromatids separate.');
 	});
 
+	it('starts the same on every day, so the provider can cache it', () => {
+		const monday = buildInstructions(base);
+		const tuesday = buildInstructions({
+			...base,
+			today: new Date('2026-11-02T09:00:00Z'),
+		});
+		const notesEnd = monday.indexOf('</notes>');
+
+		expect(monday.indexOf('Today is 2026-11-01')).toBeGreaterThan(notesEnd);
+		expect(tuesday.slice(0, notesEnd)).toBe(monday.slice(0, notesEnd));
+	});
+
 	it('asks for maths the chat can draw', () => {
 		// the chat only reads $$...$$, so prices like $5 are never taken for maths
 		expect(buildInstructions(base)).toContain('double dollar signs');

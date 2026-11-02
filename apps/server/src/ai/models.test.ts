@@ -6,9 +6,11 @@ import {
 	createModelRegistry,
 	createProviderFactories,
 	PROVIDER_THINKING,
+	thinkingFor,
 } from './models';
 
 const mockFactory = () => new MockLanguageModelV4();
+const off = { thinking: false };
 
 describe('createModelRegistry', () => {
 	it('lists only the models of providers with a key', () => {
@@ -37,9 +39,36 @@ describe('createModelRegistry', () => {
 			providers: { google: mockFactory },
 		});
 
-		expect(registry.resolve('gemini-flash')?.entry.provider).toBe('google');
-		expect(registry.resolve('claude-sonnet')).toBeUndefined();
-		expect(registry.resolve('made-up')).toBeUndefined();
+		expect(registry.resolve('gemini-flash', off)?.entry.provider).toBe(
+			'google'
+		);
+		expect(registry.resolve('claude-sonnet', off)).toBeUndefined();
+		expect(registry.resolve('made-up', off)).toBeUndefined();
+	});
+
+	it('starts on DeepSeek Flash when there is no Gemini key', () => {
+		const registry = createModelRegistry({
+			providers: { anthropic: mockFactory, deepseek: mockFactory },
+		});
+
+		expect(registry.list().defaultModelId).toBe('deepseek-flash');
+	});
+
+	it("passes the student's Think choice to the provider", () => {
+		const options: unknown[] = [];
+		const registry = createModelRegistry({
+			providers: {
+				google: (_id, choice) => {
+					options.push(choice);
+					return new MockLanguageModelV4();
+				},
+			},
+		});
+
+		registry.resolve('gemini-flash', { thinking: true });
+		registry.resolve('gemini-flash', off);
+
+		expect(options).toEqual([{ thinking: true }, { thinking: false }]);
 	});
 
 	it('has no default when no provider is set up', () => {
@@ -93,5 +122,26 @@ describe('provider thinking', () => {
 		expect((await send('google', forced)).providerOptions).toEqual({
 			google: { thinkingConfig: { includeThoughts: true } },
 		});
+	});
+});
+
+describe('Think off', () => {
+	it('asks every provider to think as little as it can', async () => {
+		for (const provider of ['google', 'anthropic', 'deepseek'] as const) {
+			const params = await thinkingFor(provider, off).transformParams!({
+				type: 'stream',
+				params: { prompt: [] },
+				model: new MockLanguageModelV4(),
+			});
+
+			expect(params.reasoning).toBe('none');
+			expect(params.providerOptions).toBeUndefined();
+		}
+	});
+
+	it('keeps the readable thinking with Think on', () => {
+		expect(thinkingFor('deepseek', { thinking: true })).toBe(
+			PROVIDER_THINKING.deepseek
+		);
 	});
 });
