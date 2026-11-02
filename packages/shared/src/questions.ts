@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { COURSE_COLORS } from './courses';
+import { COURSE_COLORS, topicParams } from './courses';
 
 // only multiple choice for now; true/false and short answer come later
 export const QUESTION_TYPES = ['multiple_choice'] as const;
@@ -7,13 +7,18 @@ export const QUESTION_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export const QUESTION_SOURCES = ['ai', 'manual'] as const;
 
 export const CHOICES_PER_QUESTION = 4;
+// a question the student writes needs a wrong option besides the right one
+export const MIN_CHOICES = 2;
 export const QUESTION_TEXT_MAX_LENGTH = 1000;
 export const CHOICE_MAX_LENGTH = 300;
 export const EXPLANATION_MAX_LENGTH = 1000;
 
-const hasUniqueChoices = (choices: string[]) =>
-	new Set(choices.map((choice) => choice.trim().toLowerCase())).size ===
-	choices.length;
+// Blank options already get their own message, so they are compared only once
+// all are filled in. Zod runs this check even when an option has an issue
+const hasUniqueChoices = (choices: string[]) => {
+	const filled = choices.map((choice) => choice.trim().toLowerCase());
+	return filled.includes('') || new Set(filled).size === filled.length;
+};
 
 // one multiple-choice question as the AI writes it; the server checks it before saving
 export const generatedQuestion = z.object({
@@ -89,6 +94,53 @@ export const approveTopicQuestionsOutput = z.object({
 export type Question = z.infer<typeof question>;
 export type ReviewTopic = z.infer<typeof reviewTopic>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionInput>;
+
+// a question the student writes by hand (US-16): 2 to 4 options, one of them correct
+export const questionInput = z
+	.object({
+		text: z
+			.string()
+			.trim()
+			.min(1, 'Write the question.')
+			.max(
+				QUESTION_TEXT_MAX_LENGTH,
+				`Use at most ${QUESTION_TEXT_MAX_LENGTH.toLocaleString('en')} characters.`
+			),
+		choices: z
+			.array(
+				z
+					.string()
+					.trim()
+					.min(1, 'Fill in this option.')
+					.max(
+						CHOICE_MAX_LENGTH,
+						`Use at most ${CHOICE_MAX_LENGTH} characters.`
+					)
+			)
+			.min(MIN_CHOICES, `Add at least ${MIN_CHOICES} options.`)
+			.max(CHOICES_PER_QUESTION, `Use at most ${CHOICES_PER_QUESTION} options.`)
+			.refine(hasUniqueChoices, 'Each option must be different.'),
+		correctChoice: z.int({ error: 'Mark the correct option.' }).min(0),
+		// optional; an empty one is saved as no explanation
+		explanation: z
+			.string()
+			.trim()
+			.max(
+				EXPLANATION_MAX_LENGTH,
+				`Use at most ${EXPLANATION_MAX_LENGTH.toLocaleString('en')} characters.`
+			)
+			.optional(),
+	})
+	.refine(({ choices, correctChoice }) => correctChoice < choices.length, {
+		path: ['correctChoice'],
+		message: 'Mark the correct option.',
+	});
+
+export const topicQuestionParams = topicParams.extend({
+	questionId: z.uuid('Question not found.'),
+});
+
+export type QuestionInput = z.infer<typeof questionInput>;
 
 // where a question was answered: as practice in the tutor chat, or in a study session
 export const ANSWER_CONTEXTS = ['chat', 'session'] as const;

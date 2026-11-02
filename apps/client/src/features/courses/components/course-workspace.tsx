@@ -3,6 +3,7 @@
 import type { Course, TutorAction } from '@orbi/shared';
 import { useCallback, useState } from 'react';
 import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
+import { TopicQuestionsSheet } from '@/features/questions/components/topic-questions-sheet';
 import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
 import type {
 	ComposerDraft,
@@ -11,6 +12,7 @@ import type {
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTopics } from '../hooks';
+import { useTopicSheet } from '../use-topic-sheet';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';
 import { StudyPane } from './study-pane';
 import { TopicsPane } from './topics-pane';
@@ -37,9 +39,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	const [studyOpen, setStudyOpen] = useState(true);
 	const [mobilePane, setMobilePane] = useState<WorkspacePane>('tutor');
 	const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
-	// the topic stays set while the sheet closes, so it can slide out with its content
-	const [notesTopicId, setNotesTopicId] = useState<string | null>(null);
-	const [notesOpen, setNotesOpen] = useState(false);
+	const notesSheet = useTopicSheet();
+	const questionsSheet = useTopicSheet();
 	// counts the requests to add a topic from outside the topics pane
 	const [addTopicRequest, setAddTopicRequest] = useState(0);
 	const [preset, setPreset] = useState<ScopedPreset | undefined>(() =>
@@ -101,10 +102,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 		setAddTopicRequest((count) => count + 1);
 	};
 
-	const openNotes = (topicId: string) => {
-		setNotesTopicId(topicId);
-		setNotesOpen(true);
-	};
+	const topicById = (topicId: string | null) =>
+		topics.data?.find((topic) => topic.id === topicId);
 
 	const open =
 		topicsOpen && studyOpen
@@ -140,7 +139,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onRetry={() => topics.refetch()}
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
-					onOpenNotes={openNotes}
+					onOpenNotes={notesSheet.openFor}
+					onOpenQuestions={questionsSheet.openFor}
 					addTopicRequest={addTopicRequest}
 					busyScopes={busyScopes}
 					className={paneClass('topics', topicsOpen)}
@@ -150,7 +150,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					topics={topics.data}
 					selectedTopicId={selectedTopicId}
 					onClearTopic={() => setSelectedTopicId(null)}
-					onOpenNotes={openNotes}
+					onOpenNotes={notesSheet.openFor}
 					preset={preset}
 					onStart={sendToTutor}
 					busyScopes={busyScopes}
@@ -170,9 +170,15 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 			</div>
 			<TopicNotesSheet
 				courseId={course.id}
-				topic={topics.data?.find((topic) => topic.id === notesTopicId)}
-				open={notesOpen}
-				onOpenChange={setNotesOpen}
+				topic={topicById(notesSheet.topicId)}
+				open={notesSheet.open}
+				onOpenChange={notesSheet.setOpen}
+			/>
+			<TopicQuestionsSheet
+				courseId={course.id}
+				topic={topicById(questionsSheet.topicId)}
+				open={questionsSheet.open}
+				onOpenChange={questionsSheet.setOpen}
 			/>
 		</div>
 	);

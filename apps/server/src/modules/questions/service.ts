@@ -1,6 +1,7 @@
 import type {
 	ChatAnswer,
 	Question,
+	QuestionInput,
 	QuestionStatus,
 	ReportQuestionInput,
 	ReviewTopic,
@@ -11,6 +12,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../../errors';
 import type {
 	AnswerKey,
 	PendingQuestion,
+	QuestionContent,
 	QuestionRepository,
 } from './repository';
 
@@ -44,6 +46,32 @@ export interface QuestionService {
 		questionId: string,
 		choice: number
 	): Promise<SessionAnswer>;
+	listForTopic(
+		userId: string,
+		courseId: string,
+		topicId: string
+	): Promise<Question[]>;
+	// a question the student writes is approved at once, so it is studied right away
+	addQuestion(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		input: QuestionInput
+	): Promise<Question>;
+	// changes what the question says; whether it waits for review stays the same
+	updateQuestion(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		questionId: string,
+		input: QuestionInput
+	): Promise<Question>;
+	deleteQuestion(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		questionId: string
+	): Promise<void>;
 	// a reported question is rejected, so it leaves study sessions and the review list
 	reportQuestion(
 		userId: string,
@@ -51,6 +79,15 @@ export interface QuestionService {
 		report: ReportQuestionInput
 	): Promise<Question>;
 }
+
+// an empty explanation is saved as none
+const toContent = ({
+	explanation,
+	...content
+}: QuestionInput): QuestionContent => ({
+	...content,
+	explanation: explanation || null,
+});
 
 // another user's question answers the same as a missing one, so ids cannot be probed
 function checkChoice(key: AnswerKey | undefined, choice: number): AnswerKey {
@@ -96,6 +133,16 @@ export function createQuestionService({
 }: {
 	repo: QuestionRepository;
 }): QuestionService {
+	const requireTopic = async (
+		userId: string,
+		courseId: string,
+		topicId: string
+	) => {
+		if (!(await repo.topicExists(userId, courseId, topicId))) {
+			throw new NotFoundError('Topic not found.');
+		}
+	};
+
 	return {
 		async listForReview(userId) {
 			return groupByTopic(await repo.listPending(userId));
@@ -109,9 +156,7 @@ export function createQuestionService({
 		},
 
 		async approveTopic(userId, courseId, topicId) {
-			if (!(await repo.topicExists(userId, courseId, topicId))) {
-				throw new NotFoundError('Topic not found.');
-			}
+			await requireTopic(userId, courseId, topicId);
 			return { approved: await repo.approvePending(userId, topicId) };
 		},
 
@@ -167,6 +212,35 @@ export function createQuestionService({
 				correctChoice: key.correctChoice,
 				explanation: key.explanation,
 			};
+		},
+
+		async listForTopic(userId, courseId, topicId) {
+			await requireTopic(userId, courseId, topicId);
+			return repo.listForTopic(userId, topicId);
+		},
+
+		async addQuestion(userId, courseId, topicId, input) {
+			await requireTopic(userId, courseId, topicId);
+			return repo.insertManual(userId, topicId, toContent(input));
+		},
+
+		async updateQuestion(userId, courseId, topicId, questionId, input) {
+			await requireTopic(userId, courseId, topicId);
+			const updated = await repo.updateContent(
+				userId,
+				topicId,
+				questionId,
+				toContent(input)
+			);
+			if (!updated) throw new NotFoundError('Question not found.');
+			return updated;
+		},
+
+		async deleteQuestion(userId, courseId, topicId, questionId) {
+			await requireTopic(userId, courseId, topicId);
+			if (!(await repo.deleteQuestion(userId, topicId, questionId))) {
+				throw new NotFoundError('Question not found.');
+			}
 		},
 
 		async reportQuestion(userId, questionId, report) {

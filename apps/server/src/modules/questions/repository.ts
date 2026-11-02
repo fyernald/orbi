@@ -6,7 +6,7 @@ import type {
 	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne } from 'drizzle-orm';
 import type { Db } from '../../db';
 import {
 	answer,
@@ -60,6 +60,26 @@ export interface QuestionRepository {
 	countPending(userId: string, topicId: string): Promise<number>;
 	// a session saves every try, so a question can be answered again in a later one
 	insertSessionAnswer(userId: string, saved: ChatAnswer): Promise<void>;
+	// the topic's questions the student kept or still has to review
+	listForTopic(userId: string, topicId: string): Promise<Question[]>;
+	insertManual(
+		userId: string,
+		topicId: string,
+		content: QuestionContent
+	): Promise<Question>;
+	// undefined when the user has no such question in that topic
+	updateContent(
+		userId: string,
+		topicId: string,
+		questionId: string,
+		content: QuestionContent
+	): Promise<Question | undefined>;
+	// false when the user has no such question in that topic
+	deleteQuestion(
+		userId: string,
+		topicId: string,
+		questionId: string
+	): Promise<boolean>;
 	// saves the report and takes the question out (rejected); undefined when the user
 	// has no such question
 	reportQuestion(
@@ -68,6 +88,14 @@ export interface QuestionRepository {
 		report: ReportQuestionInput
 	): Promise<Question | 'already_reported' | undefined>;
 }
+
+// what the student writes; the status and who made it are set by the server
+export type QuestionContent = {
+	text: string;
+	choices: string[];
+	correctChoice: number;
+	explanation: string | null;
+};
 
 export type AnswerKey = {
 	choiceCount: number;
@@ -100,6 +128,13 @@ const toApi = ({ createdAt, ...saved }: QuestionRow): Question => ({
 	...saved,
 	createdAt: createdAt.toISOString(),
 });
+
+const ownQuestion = (userId: string, topicId: string, questionId: string) =>
+	and(
+		eq(question.userId, userId),
+		eq(question.topicId, topicId),
+		eq(question.id, questionId)
+	);
 
 export function createQuestionRepository(db: Db): QuestionRepository {
 	return {
@@ -264,6 +299,55 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 
 		async insertSessionAnswer(userId, saved) {
 			await db.insert(answer).values({ userId, context: 'session', ...saved });
+		},
+
+		// the newest set first, each in the order it was made
+		async listForTopic(userId, topicId) {
+			const rows = await db
+				.select(questionColumns)
+				.from(question)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(question.topicId, topicId),
+						ne(question.status, 'rejected')
+					)
+				)
+				.orderBy(desc(question.createdAt), asc(question.position));
+			return rows.map(toApi);
+		},
+
+		// the student wrote it, so it needs no review
+		async insertManual(userId, topicId, content) {
+			const [created] = await db
+				.insert(question)
+				.values({
+					userId,
+					topicId,
+					...content,
+					status: 'approved',
+					source: 'manual',
+				})
+				.returning(questionColumns);
+			return toApi(created!);
+		},
+
+		async updateContent(userId, topicId, questionId, content) {
+			const [updated] = await db
+				.update(question)
+				.set(content)
+				.where(ownQuestion(userId, topicId, questionId))
+				.returning(questionColumns);
+			return updated && toApi(updated);
+		},
+
+		// its answers go with it (ON DELETE CASCADE)
+		async deleteQuestion(userId, topicId, questionId) {
+			const deleted = await db
+				.delete(question)
+				.where(ownQuestion(userId, topicId, questionId))
+				.returning({ id: question.id });
+			return deleted.length > 0;
 		},
 
 		// two reports at once both get here; the unique index lets only one in
