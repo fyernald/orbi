@@ -770,6 +770,47 @@ describe('follow-up questions', () => {
 		expect(JSON.stringify(ai.calls[0]!.prompt)).toContain('already seen these');
 	});
 
+	it('saves the questions, so the next visit does not ask the model', async () => {
+		const { chatId, replyId } = await explained(ada);
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: { questions: ['Can you give me an example?'] },
+		});
+		await followUps(ada, chatId, replyId);
+		ai.script();
+
+		const again = await followUps(ada, chatId, replyId);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		expect(again.json().questions).toEqual(['Can you give me an example?']);
+		expect(ai.calls).toHaveLength(0);
+		expect(thread.messages[1].metadata.followUps).toEqual([
+			'Can you give me an example?',
+		]);
+	});
+
+	it('saves the new questions after a refresh', async () => {
+		const { chatId, replyId } = await explained(ada);
+		ai.script(
+			{
+				tool: 'suggestFollowUps',
+				input: { questions: ['Can you give me an example?'] },
+			},
+			{
+				tool: 'suggestFollowUps',
+				input: { questions: ['Why does it matter?'] },
+			}
+		);
+		await followUps(ada, chatId, replyId);
+		await followUps(ada, chatId, replyId, ['Can you give me an example?']);
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		expect(thread.messages[1].metadata.followUps).toEqual([
+			'Why does it matter?',
+		]);
+	});
+
 	it('suggests nothing under a question set', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();

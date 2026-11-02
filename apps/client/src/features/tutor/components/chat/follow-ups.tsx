@@ -11,6 +11,8 @@ type FollowUpsProps = {
 	chatId: string;
 	// Orbi's latest reply
 	messageId: string;
+	// the questions saved with the reply, if it had some before
+	saved: string[] | undefined;
 	// nothing new can be sent right now
 	disabled: boolean;
 	onAsk: (question: string) => void;
@@ -20,13 +22,15 @@ type FollowUpsProps = {
 export function FollowUps({
 	chatId,
 	messageId,
+	saved,
 	disabled,
 	onAsk,
 }: FollowUpsProps) {
 	const headingId = useId();
 	const { questions, isLoading, isRefreshing, error, refresh } = useFollowUps(
 		chatId,
-		messageId
+		messageId,
+		saved
 	);
 	// the model found nothing to go deeper into, for example after small talk
 	if (!isLoading && !error && questions.length === 0) return null;

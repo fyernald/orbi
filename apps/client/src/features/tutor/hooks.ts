@@ -221,9 +221,14 @@ export function useTutorChat({
 	};
 }
 
-// Up to 3 questions that go deeper into Orbi's latest reply. A refresh asks for new
-// ones, and leaves out every question shown so far.
-export function useFollowUps(chatId: string, messageId: string) {
+// Up to 3 questions that go deeper into Orbi's latest reply. Saved ones come with the
+// chat, so nothing is asked. A refresh asks for new ones, and leaves out every
+// question shown so far.
+export function useFollowUps(
+	chatId: string,
+	messageId: string,
+	saved: string[] | undefined
+) {
 	const queryClient = useQueryClient();
 	const key = followUpsKey(chatId, messageId);
 	const url = `/chats/${chatId}/messages/${messageId}/follow-ups`;
@@ -232,6 +237,7 @@ export function useFollowUps(chatId: string, messageId: string) {
 	const suggestions = useQuery({
 		queryKey: key,
 		queryFn: () => api.post(url, followUps, { exclude: [] }),
+		initialData: saved && { questions: saved },
 		staleTime: Infinity,
 		retry: false,
 	});
@@ -243,7 +249,11 @@ export function useFollowUps(chatId: string, messageId: string) {
 			].slice(-FOLLOW_UPS_MAX * 4);
 			return api.post(url, followUps, { exclude: shown.current });
 		},
-		onSuccess: (data) => queryClient.setQueryData(key, data),
+		onSuccess: (data) => {
+			queryClient.setQueryData(key, data);
+			// the chat has the new ones saved now
+			void queryClient.invalidateQueries({ queryKey: chatKey(chatId) });
+		},
 	});
 
 	return {

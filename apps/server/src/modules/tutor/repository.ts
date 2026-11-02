@@ -69,6 +69,7 @@ export type StoredMessage = {
 	modelId: string | null;
 	notesUsed: number | null;
 	thinkingMs: number[] | null;
+	followUps: string[] | null;
 	createdAt: Date;
 };
 
@@ -118,6 +119,12 @@ export interface TutorRepository {
 		message: StoredMessage
 	): Promise<void>;
 	deleteMessages(userId: string, chatId: string, ids: string[]): Promise<void>;
+	saveFollowUps(
+		userId: string,
+		chatId: string,
+		messageId: string,
+		questions: string[]
+	): Promise<void>;
 	insertQuestions(
 		userId: string,
 		topicId: string,
@@ -145,6 +152,7 @@ const messageColumns = {
 	modelId: chatMessage.modelId,
 	notesUsed: chatMessage.notesUsed,
 	thinkingMs: chatMessage.thinkingMs,
+	followUps: chatMessage.followUps,
 	createdAt: chatMessage.createdAt,
 };
 
@@ -320,6 +328,19 @@ export function createTutorRepository(db: Db): TutorRepository {
 					.set({ updatedAt: new Date() })
 					.where(and(eq(chat.userId, userId), eq(chat.id, chatId)));
 			});
+		},
+
+		async saveFollowUps(userId, chatId, messageId, questions) {
+			await db
+				.update(chatMessage)
+				.set({ followUps: questions })
+				.where(
+					and(
+						eq(chatMessage.userId, userId),
+						eq(chatMessage.chatId, chatId),
+						eq(chatMessage.id, messageId)
+					)
+				);
 		},
 
 		async deleteMessages(userId, chatId, ids) {

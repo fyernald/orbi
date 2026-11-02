@@ -216,6 +216,8 @@ export const chatMessage = pgTable(
 		notesUsed: integer('notes_used'),
 		// how long each thinking part took, for assistant messages
 		thinkingMs: integer('thinking_ms').array(),
+		// the follow-up questions shown under an explanation, so a visit does not ask again
+		followUps: text('follow_ups').array(),
 		...timestamps,
 	},
 	(t) => [
