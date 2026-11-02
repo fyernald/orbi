@@ -119,7 +119,8 @@ jobs:
           chmod 600 ~/.ssh/deploy_key ~/.ssh/config
 
       - name: Copy deploy files
-        run: scp deploy/compose.yml vps:orbi/
+        # the backup scripts go to orbi/backup/, where cron runs them (see docs/deployment.md)
+        run: scp -r deploy/compose.yml deploy/backup vps:orbi/
 
       - name: Start the new version
         env:
