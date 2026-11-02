@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { choiceLetter } from '../choices';
 import { useSetQuestionStatus } from '../hooks';
+import { AnswerKey } from './answer-key';
 
 type ReviewQuestionCardProps = {
 	question: Question;
@@ -90,38 +90,7 @@ export function ReviewQuestionCard({
 			<h3 className="text-[15px] leading-snug font-medium break-words">
 				{question.text}
 			</h3>
-			<ul className="flex flex-col gap-1.5">
-				{question.choices.map((choice, index) => {
-					const correct = index === question.correctChoice;
-					return (
-						<li
-							key={index}
-							className={cn(
-								'flex items-baseline gap-2.5 rounded-lg border px-3 py-2 text-sm',
-								correct
-									? 'border-tone-green-foreground/40 bg-tone-green text-tone-green-foreground'
-									: 'border-border'
-							)}
-						>
-							<span className="text-xs font-medium text-muted-foreground">
-								{choiceLetter(index)}
-							</span>
-							<span className="min-w-0 flex-1 break-words">{choice}</span>
-							{correct && (
-								<>
-									<Check className="size-4 shrink-0 self-center" />
-									<span className="sr-only">(correct answer)</span>
-								</>
-							)}
-						</li>
-					);
-				})}
-			</ul>
-			{question.explanation && (
-				<p className="rounded-lg bg-muted px-3 py-2 text-sm text-subtle-foreground">
-					{question.explanation}
-				</p>
-			)}
+			<AnswerKey {...question} />
 			<FormError message={error} />
 			<div className="flex flex-wrap justify-end gap-2">
 				<Button

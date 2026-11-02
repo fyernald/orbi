@@ -27,6 +27,7 @@ type TopicsPaneProps = {
 	selectedTopicId: string | null;
 	onSelect: (topicId: string | null) => void;
 	onOpenNotes: (topicId: string) => void;
+	onOpenQuestions: (topicId: string) => void;
 	// goes up each time another pane asks to add a topic; it opens the new topic field
 	addTopicRequest: number;
 	// the chats with a reply running: topic ids, or the whole-course scope
@@ -42,6 +43,7 @@ export function TopicsPane({
 	selectedTopicId,
 	onSelect,
 	onOpenNotes,
+	onOpenQuestions,
 	addTopicRequest,
 	busyScopes,
 	className,
@@ -149,6 +151,7 @@ export function TopicsPane({
 									selected={topic.id === selectedTopicId}
 									onSelect={() => onSelect(topic.id)}
 									onOpenNotes={() => onOpenNotes(topic.id)}
+									onOpenQuestions={() => onOpenQuestions(topic.id)}
 									replying={busyScopes.has(topic.id)}
 								/>
 							))}

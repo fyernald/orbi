@@ -4,11 +4,13 @@ import {
 	chatAnswer,
 	chatAnswersQuery,
 	question,
+	questionInput,
 	questionParams,
 	reviewTopic,
 	sessionAnswer,
 	studySession,
 	topicParams,
+	topicQuestionParams,
 	updateQuestionInput,
 } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
@@ -134,6 +136,72 @@ export function createQuestionRoutes({
 					request.body.choice
 				);
 				return reply.status(201).send(saved);
+			}
+		);
+
+		// the topic's questions, except the rejected ones
+		api.get(
+			'/courses/:courseId/topics/:topicId/questions',
+			{ schema: { params: topicParams, response: { 200: z.array(question) } } },
+			async (request) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				return questions.listForTopic(userId, courseId, topicId);
+			}
+		);
+
+		api.post(
+			'/courses/:courseId/topics/:topicId/questions',
+			{
+				schema: {
+					params: topicParams,
+					body: questionInput,
+					response: { 201: question },
+				},
+			},
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				const created = await questions.addQuestion(
+					userId,
+					courseId,
+					topicId,
+					request.body
+				);
+				return reply.status(201).send(created);
+			}
+		);
+
+		api.patch(
+			'/courses/:courseId/topics/:topicId/questions/:questionId',
+			{
+				schema: {
+					params: topicQuestionParams,
+					body: questionInput,
+					response: { 200: question },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId, questionId } = request.params;
+				return questions.updateQuestion(
+					userId,
+					courseId,
+					topicId,
+					questionId,
+					request.body
+				);
+			}
+		);
+
+		api.delete(
+			'/courses/:courseId/topics/:topicId/questions/:questionId',
+			{ schema: { params: topicQuestionParams } },
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId, questionId } = request.params;
+				await questions.deleteQuestion(userId, courseId, topicId, questionId);
+				return reply.status(204).send();
 			}
 		);
 	};
