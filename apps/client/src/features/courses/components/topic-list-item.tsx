@@ -11,6 +11,7 @@ type TopicListItemProps = {
 	selected: boolean;
 	onSelect: () => void;
 	onOpenNotes: () => void;
+	onOpenQuestions: () => void;
 	// Orbi is still answering in this topic's chat
 	replying: boolean;
 };
@@ -21,6 +22,7 @@ export function TopicListItem({
 	selected,
 	onSelect,
 	onOpenNotes,
+	onOpenQuestions,
 	replying,
 }: TopicListItemProps) {
 	return (
@@ -48,7 +50,11 @@ export function TopicListItem({
 				</span>
 				{replying && <ReplyingDot />}
 			</button>
-			<TopicActions topic={topic} onOpenNotes={onOpenNotes} />
+			<TopicActions
+				topic={topic}
+				onOpenNotes={onOpenNotes}
+				onOpenQuestions={onOpenQuestions}
+			/>
 		</li>
 	);
 }

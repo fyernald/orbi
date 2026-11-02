@@ -1,7 +1,13 @@
 'use client';
 
 import type { Topic } from '@orbi/shared';
-import { Ellipsis, GraduationCap, NotebookPen, Trash2 } from 'lucide-react';
+import {
+	Ellipsis,
+	GraduationCap,
+	ListChecks,
+	NotebookPen,
+	Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -21,10 +27,15 @@ import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 type TopicActionsProps = {
 	topic: Topic;
 	onOpenNotes: () => void;
+	onOpenQuestions: () => void;
 };
 
 // the menu button shows on hover and focus, and always on touch screens
-export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
+export function TopicActions({
+	topic,
+	onOpenNotes,
+	onOpenQuestions,
+}: TopicActionsProps) {
 	const remove = useDeleteTopic(topic.courseId);
 	const [confirming, setConfirming] = useState(false);
 	const notes =
@@ -49,6 +60,10 @@ export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 					<DropdownMenuItem onSelect={onOpenNotes}>
 						<NotebookPen />
 						Notes
+					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={onOpenQuestions}>
+						<ListChecks />
+						Questions
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link href={topicStudyRoute(topic.courseId, topic.id)}>
