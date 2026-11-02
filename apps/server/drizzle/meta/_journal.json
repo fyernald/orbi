@@ -85,6 +85,13 @@
       "when": 1793609748364,
       "tag": "0011_follow-ups",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793647802068,
+      "tag": "0012_reminder-settings",
+      "breakpoints": true
     }
   ]
 }

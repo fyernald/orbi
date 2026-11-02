@@ -58,7 +58,8 @@ The **Basis** column is the reason the law allows it:
 | Education level, field of study            | `profile.education_level`, `field_of_study` | Question difficulty, terms, and examples from that field            | Until changed or deleted     | Service |
 | Interests                                  | `profile.interests`                         | Examples in explanations, Home suggestions                          | Until changed or deleted     | Service |
 | Explanation style                          | `profile.explanation_style`                 | How the tutor writes answers                                        | Until changed or deleted     | Service |
-| Daily minutes, usual study time            | `profile.daily_minutes`, `study_time`       | Size of today's study list and when reminders are sent              | Until changed or deleted     | Service |
+| Daily minutes, usual study time            | `profile.daily_minutes`, `study_time`       | Size of today's study list, and the suggested reminder time         | Until changed or deleted     | Service |
+| Daily reminder on or off, its time (US-24) | `profile.reminder_enabled`, `reminder_time` | When the study reminder email is sent, if at all                    | Until changed or deleted     | Service |
 | Language, time zone                        | `profile.locale`, `timezone`                | Language of the AI, and where a day starts for the list and streaks | Until changed or deleted     | Service |
 | Analytics choice and time (planned, US-37) | `profile`                                   | Remembers the answer on every device                                | Until changed or deleted     | Consent |
 

@@ -1,57 +1,22 @@
-"use client";
-import { useState } from "react";
+import type { Metadata } from 'next';
+import { getServerProfile } from '@/features/profile/server';
+import { ReminderSettingsCard } from '@/features/settings/components/reminder-settings';
+import { toReminderValues } from '@/features/settings/reminder';
 
-export default function SettingsPage() {
-  const [enabled, setEnabled] = useState(false);
-  const [reminderTime, setReminderTime] = useState("18:00");
+export const metadata: Metadata = { title: 'Settings' };
 
-  return (
-    <main style={{ maxWidth: 600, margin: "60px auto", padding: 24, fontFamily: "Arial" }}>
-      <h1>Study Reminder Settings</h1>
-      <p>Choose when to receive your daily study reminder.</p>
+export default async function SettingsPage() {
+	const saved = await getServerProfile();
 
-      <section style={{ border: "1px solid #ccc", borderRadius: 12, padding: 24 }}>
-        <h2>Daily Email Reminder</h2>
-
-        <label>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-          />
-          Enable daily study reminders
-        </label>
-
-        <div style={{ marginTop: 24 }}>
-          <label htmlFor="reminder-time">Reminder time</label>
-          <br />
-          <input
-            id="reminder-time"
-            type="time"
-            value={reminderTime}
-            onChange={(e) => setReminderTime(e.target.value)}
-            disabled={!enabled}
-            style={{ marginTop: 8, padding: 8 }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => alert(`Reminder: ${enabled ? "ON" : "OFF"} at ${reminderTime}`)}
-          style={{
-            marginTop: 24,
-            padding: "12px 20px",
-            background: "#2563eb",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            cursor: "pointer"
-          }}
-        >
-          Test Settings
-        </button>
-      </section>
-    </main>
-  );
+	return (
+		<section className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 md:px-7">
+			<header className="flex flex-col gap-1">
+				<h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+			</header>
+			<ReminderSettingsCard
+				saved={toReminderValues(saved)}
+				timezone={saved.timezone}
+			/>
+		</section>
+	);
 }
-

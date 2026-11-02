@@ -62,6 +62,8 @@ describe('profile', () => {
 			studyTime: null,
 			locale: null,
 			timezone: null,
+			reminderEnabled: false,
+			reminderTime: null,
 			onboardedAt: null,
 		});
 	});
@@ -100,6 +102,9 @@ describe('profile', () => {
 		['a birth date in the future', { birthDate: '2999-01-01' }],
 		['a birth date before 1900', { birthDate: '1899-12-31' }],
 		['someone younger than 13', { birthDate: yearsAgo(13, 1) }],
+		['a reminder time that is not a time', { reminderTime: '25:00' }],
+		['a reminder time with seconds', { reminderTime: '18:00:00' }],
+		['a reminder switch that is not on or off', { reminderEnabled: 'yes' }],
 	])('refuses %s', async (_, payload) => {
 		const alan = await signUpTestUser(app, `alan-${Math.random()}@test.dev`);
 
@@ -116,6 +121,28 @@ describe('profile', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
+	});
+
+	it('saves the daily reminder and its time', async () => {
+		const hedy = await signUpTestUser(app, 'hedy@test.dev');
+
+		const response = await send(hedy, 'PATCH', '/api/profile', {
+			reminderEnabled: true,
+			reminderTime: '07:30',
+		});
+		const turnedOff = await send(hedy, 'PATCH', '/api/profile', {
+			reminderEnabled: false,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			reminderEnabled: true,
+			reminderTime: '07:30',
+		});
+		expect(turnedOff.json()).toMatchObject({
+			reminderEnabled: false,
+			reminderTime: '07:30',
+		});
 	});
 
 	it('keeps onboarding open until every question is answered', async () => {
