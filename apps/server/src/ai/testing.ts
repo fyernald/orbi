@@ -1,5 +1,6 @@
 import type {
 	LanguageModelV4CallOptions,
+	LanguageModelV4Content,
 	LanguageModelV4StreamPart,
 } from '@ai-sdk/provider';
 import { simulateReadableStream } from 'ai';
@@ -70,18 +71,45 @@ function streamFor(step: ScriptedStep, call: number) {
 	};
 }
 
+// the same step for a call that waits for the whole answer, like generateText
+function resultFor(step: ScriptedStep, call: number) {
+	if ('error' in step) throw step.error;
+	const content: LanguageModelV4Content[] =
+		'text' in step
+			? [{ type: 'text', text: step.text }]
+			: [
+					{
+						type: 'tool-call',
+						toolCallId: `call-${call}`,
+						toolName: step.tool,
+						input: JSON.stringify(step.input),
+					},
+				];
+	return {
+		content,
+		finishReason: {
+			unified: 'text' in step ? ('stop' as const) : ('tool-calls' as const),
+			raw: undefined,
+		},
+		usage,
+		warnings: [],
+	};
+}
+
 // A fake model for tests: each model call takes the next scripted step. `calls`
 // keeps what the model was sent, so tests can check the prompt and the tool choice.
 export function createScriptedModels() {
 	const steps: ScriptedStep[] = [];
 	const calls: LanguageModelV4CallOptions[] = [];
+	const nextStep = (options: LanguageModelV4CallOptions) => {
+		calls.push(options);
+		const step = steps.shift();
+		if (!step) throw new Error('The test did not script this model call.');
+		return step;
+	};
 	const model = new MockLanguageModelV4({
-		doStream: async (options) => {
-			calls.push(options);
-			const step = steps.shift();
-			if (!step) throw new Error('The test did not script this model call.');
-			return streamFor(step, calls.length);
-		},
+		doStream: async (options) => streamFor(nextStep(options), calls.length),
+		doGenerate: async (options) => resultFor(nextStep(options), calls.length),
 	});
 
 	return {

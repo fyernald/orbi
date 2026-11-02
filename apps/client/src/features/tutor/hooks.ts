@@ -6,6 +6,8 @@ import {
 	chatMessagesPage,
 	chatSummary,
 	chatThread,
+	FOLLOW_UPS_MAX,
+	followUps,
 	type AskStudentOutput,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,7 +36,7 @@ import {
 	type TutorUIMessage,
 } from './chat';
 import { uploadAttachment } from './mock-upload';
-import { chatKey, courseChatsKey, modelsKey } from './query-keys';
+import { chatKey, courseChatsKey, followUpsKey, modelsKey } from './query-keys';
 
 // the models the server can use; they change only when the server is set up again
 export function useModels() {
@@ -216,6 +218,40 @@ export function useTutorChat({
 			sendingNew.current = false;
 			void chat.addToolOutput({ tool: 'askStudent', toolCallId, output });
 		},
+	};
+}
+
+// Up to 3 questions that go deeper into Orbi's latest reply. A refresh asks for new
+// ones, and leaves out every question shown so far.
+export function useFollowUps(chatId: string, messageId: string) {
+	const queryClient = useQueryClient();
+	const key = followUpsKey(chatId, messageId);
+	const url = `/chats/${chatId}/messages/${messageId}/follow-ups`;
+	const shown = useRef<string[]>([]);
+
+	const suggestions = useQuery({
+		queryKey: key,
+		queryFn: () => api.post(url, followUps, { exclude: [] }),
+		staleTime: Infinity,
+		retry: false,
+	});
+	const refresh = useMutation({
+		mutationFn: () => {
+			shown.current = [
+				...shown.current,
+				...(suggestions.data?.questions ?? []),
+			].slice(-FOLLOW_UPS_MAX * 4);
+			return api.post(url, followUps, { exclude: shown.current });
+		},
+		onSuccess: (data) => queryClient.setQueryData(key, data),
+	});
+
+	return {
+		questions: suggestions.data?.questions ?? [],
+		isLoading: suggestions.isPending,
+		isRefreshing: refresh.isPending,
+		error: refresh.error ?? suggestions.error,
+		refresh: () => refresh.mutate(),
 	};
 }
 

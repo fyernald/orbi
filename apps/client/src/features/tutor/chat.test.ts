@@ -1,6 +1,7 @@
 import { APICallError } from 'ai';
 import { describe, expect, it } from 'vitest';
 import {
+	canFollowUp,
 	chatErrorMessage,
 	hasVisibleContent,
 	isRejectedRequest,
@@ -90,5 +91,50 @@ describe('hasVisibleContent', () => {
 		expect(
 			hasVisibleContent(reply([{ type: 'reasoning', text: 'The notes say' }]))
 		).toBe(true);
+	});
+});
+
+describe('canFollowUp', () => {
+	const reply = (parts: TutorUIMessage['parts']): TutorUIMessage => ({
+		id: '1',
+		role: 'assistant',
+		parts,
+	});
+
+	it('follows an explanation', () => {
+		expect(canFollowUp(reply([{ type: 'text', text: 'Anaphase is…' }]))).toBe(
+			true
+		);
+	});
+
+	it('does not follow a question set or a question for the student', () => {
+		const questions = reply([
+			{
+				type: 'tool-createQuestions',
+				toolCallId: 'call-1',
+				state: 'output-available',
+				input: { questions: [] },
+				output: { questionIds: [] },
+			},
+			{ type: 'text', text: 'Here are 5 questions.' },
+		]);
+		const asking = reply([
+			{
+				type: 'tool-askStudent',
+				toolCallId: 'call-2',
+				state: 'input-available',
+				input: { question: 'Which part?', options: ['A', 'B'] },
+			},
+		]);
+
+		expect(canFollowUp(questions)).toBe(false);
+		expect(canFollowUp(asking)).toBe(false);
+	});
+
+	it("does not follow the student's own message or an empty reply", () => {
+		expect(
+			canFollowUp({ ...reply([{ type: 'text', text: 'Hi' }]), role: 'user' })
+		).toBe(false);
+		expect(canFollowUp(reply([{ type: 'text', text: '  ' }]))).toBe(false);
 	});
 });

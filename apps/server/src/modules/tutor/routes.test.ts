@@ -684,6 +684,141 @@ describe("another user's chat", () => {
 	});
 });
 
+describe('follow-up questions', () => {
+	// a chat with one explanation from Orbi; gives the reply's id
+	async function explained(cookie: string) {
+		const context = await createTopic(cookie, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the sister chromatids separate.' });
+		await ask(cookie, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+		const thread = (await send(cookie, 'GET', `/api/chats/${chatId}`)).json();
+		return { chatId, replyId: thread.messages[1].id as string };
+	}
+
+	const followUps = (
+		cookie: string,
+		chatId: string,
+		messageId: string,
+		exclude: string[] = []
+	) =>
+		send(
+			cookie,
+			'POST',
+			`/api/chats/${chatId}/messages/${messageId}/follow-ups`,
+			{ exclude }
+		);
+
+	it('suggests up to 3 questions on the reply, from its model', async () => {
+		const { chatId, replyId } = await explained(ada);
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: {
+				questions: [
+					' What pulls the chromatids apart? ',
+					'what pulls the chromatids  apart?',
+					'',
+					'Can you give me an example?',
+					'How is anaphase different from metaphase?',
+					'What comes after anaphase?',
+				],
+			},
+		});
+
+		const response = await followUps(ada, chatId, replyId);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().questions).toEqual([
+			'What pulls the chromatids apart?',
+			'Can you give me an example?',
+			'How is anaphase different from metaphase?',
+		]);
+		expect(ai.calls[0]!.toolChoice).toEqual({
+			type: 'tool',
+			toolName: 'suggestFollowUps',
+		});
+		const prompt = JSON.stringify(ai.calls[0]!.prompt);
+		expect(prompt).toContain('What happens in anaphase?');
+		expect(prompt).toContain('the sister chromatids separate');
+		expect(prompt).toContain('chromosomes condense');
+	});
+
+	it('brings new questions on a refresh', async () => {
+		const { chatId, replyId } = await explained(ada);
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: {
+				questions: ['Can you give me an example?', 'Why does it matter?'],
+			},
+		});
+
+		const response = await followUps(ada, chatId, replyId, [
+			'Can you give me an example?',
+		]);
+
+		expect(response.json().questions).toEqual(['Why does it matter?']);
+		expect(JSON.stringify(ai.calls[0]!.prompt)).toContain('already seen these');
+	});
+
+	it('suggests nothing under a question set', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(
+			{ tool: 'createQuestions', input: { questions: fiveQuestions } },
+			{ text: 'Here are 5 questions.' }
+		);
+		await ask(ada, chatId, context, {
+			action: 'questions',
+			message: userMessage('Make questions'),
+		});
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		ai.script();
+
+		const response = await followUps(ada, chatId, thread.messages[1].id);
+
+		expect(response.json().questions).toEqual([]);
+		expect(ai.calls).toHaveLength(0);
+	});
+
+	it('only follows the latest reply', async () => {
+		const { chatId } = await explained(ada);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		const response = await followUps(ada, chatId, thread.messages[0].id);
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it("answers like a missing chat for another user's chat", async () => {
+		const { chatId, replyId } = await explained(ada);
+
+		const response = await followUps(grace, chatId, replyId);
+
+		expect(response.statusCode).toBe(404);
+	});
+
+	it('says when the model fails', async () => {
+		const { chatId, replyId } = await explained(ada);
+		ai.script({
+			error: new APICallError({
+				message: 'Resource exhausted',
+				url: 'https://ai.test',
+				requestBodyValues: {},
+				statusCode: 429,
+				isRetryable: false,
+			}),
+		});
+
+		const response = await followUps(ada, chatId, replyId);
+
+		expect(response.statusCode).toBe(503);
+		expect(response.json().error.message).toBe(
+			'This model has reached its limit for now. Try again later, or pick another model.'
+		);
+	});
+});
+
 describe('without an AI key', () => {
 	it('says the tutor is not set up', async () => {
 		const bare = await createTestApp(createMemoryMailer(), {

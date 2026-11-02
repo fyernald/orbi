@@ -100,6 +100,26 @@ export const earlierMessagesQuery = z.object({
 	before: z.uuid('Message not found.'),
 });
 
+// a few short questions under Orbi's latest explanation, to go one step deeper
+export const FOLLOW_UPS_MAX = 3;
+export const FOLLOW_UP_MAX_LENGTH = 150;
+
+export const followUpParams = chatParams.extend({
+	messageId: z.uuid('Message not found.'),
+});
+
+// the questions the student has already seen, so a refresh brings new ones
+export const followUpsInput = z.object({
+	exclude: z
+		.array(z.string().trim().max(FOLLOW_UP_MAX_LENGTH))
+		.max(FOLLOW_UPS_MAX * 4)
+		.default([]),
+});
+
+export const followUps = z.object({
+	questions: z.array(z.string()).max(FOLLOW_UPS_MAX),
+});
+
 export type TutorAction = (typeof TUTOR_ACTIONS)[number];
 export type TutorRequestInput = z.infer<typeof tutorRequestInput>;
 export type TutorMessageMetadata = z.infer<typeof tutorMessageMetadata>;
@@ -108,3 +128,5 @@ export type SendChatMessageInput = z.infer<typeof sendChatMessageInput>;
 export type ChatSummary = z.infer<typeof chatSummary>;
 export type ChatThread = z.infer<typeof chatThread>;
 export type ChatMessagesPage = z.infer<typeof chatMessagesPage>;
+export type FollowUpsInput = z.infer<typeof followUpsInput>;
+export type FollowUps = z.infer<typeof followUps>;

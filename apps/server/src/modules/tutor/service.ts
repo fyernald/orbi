@@ -8,12 +8,15 @@ import {
 	type ChatMessagesPage,
 	type ChatSummary,
 	type ChatThread,
+	type FollowUps,
+	type FollowUpsInput,
 	type SendChatMessageInput,
 	type TutorMessageMetadata,
 } from '@orbi/shared';
 import {
 	APICallError,
 	convertToModelMessages,
+	generateText,
 	isStepCount,
 	RetryError,
 	smoothStream,
@@ -34,7 +37,15 @@ import {
 import { actionRules } from './actions';
 import { chatTitle } from './chat-title';
 import {
+	cleanFollowUps,
+	FOLLOW_UP_NOTES_MAX_LENGTH,
+	followUpInstructions,
+	followUpPrompt,
+	suggestFollowUpsTool,
+} from './follow-ups';
+import {
 	hasContent,
+	isExplanation,
 	messageText,
 	skipUnansweredQuestions,
 	toChatMessage,
@@ -74,6 +85,13 @@ export interface TutorService {
 		input: SendChatMessageInput,
 		abortSignal: AbortSignal
 	): Promise<TutorStream>;
+	// a few questions that go deeper into the latest reply, from the model that wrote it
+	suggestFollowUps(
+		userId: string,
+		chatId: string,
+		messageId: string,
+		input: FollowUpsInput
+	): Promise<FollowUps>;
 }
 
 // a tool loop: the tool call, maybe a retry after a bad tool input, then a short wrap-up
@@ -85,6 +103,8 @@ const TIMEOUT = {
 	firstChunkMs: 60_000,
 	chunkMs: 45_000,
 };
+
+const FOLLOW_UPS_TIMEOUT_MS = 30_000;
 
 // Some models send a reply in a few large pieces; this lets it appear word by word,
 // with a short pause that only adds up when the model is faster than the reader
@@ -313,6 +333,56 @@ export function createTutorService({
 			} catch (error) {
 				release();
 				throw error;
+			}
+		},
+
+		async suggestFollowUps(userId, chatId, messageId, { exclude }) {
+			const chat = await requireChat(userId, chatId);
+			const { messages } = await repo.listMessagePage(userId, chatId, {
+				limit: 2,
+			});
+			const [before, reply] = messages.map(toUIMessage);
+			if (!reply || reply.id !== messageId) {
+				throw new ValidationError(
+					"Follow-up questions are only for Orbi's latest reply."
+				);
+			}
+			if (!isExplanation(reply)) return { questions: [] };
+			const resolved = resolveModel(reply.metadata?.modelId ?? '');
+
+			const course = await repo.findCourse(userId, chat.courseId);
+			if (!course) throw new NotFoundError('Course not found.');
+			const topicId = reply.metadata?.topicId;
+			const topic = topicId
+				? await repo.findTopic(userId, course.id, topicId)
+				: undefined;
+			const notes = topic
+				? await repo.listNotes(userId, topic.id)
+				: await repo.listCourseNotes(userId, course.id);
+
+			try {
+				const result = await generateText({
+					model: resolved.model,
+					instructions: followUpInstructions({
+						scopeName: topic?.name ?? course.name,
+						notes: selectNotes(notes, FOLLOW_UP_NOTES_MAX_LENGTH),
+						exclude,
+					}),
+					prompt: followUpPrompt(
+						before?.role === 'user' ? messageText(before) : '',
+						messageText(reply)
+					),
+					tools: { suggestFollowUps: suggestFollowUpsTool },
+					toolChoice: { type: 'tool', toolName: 'suggestFollowUps' },
+					timeout: FOLLOW_UPS_TIMEOUT_MS,
+					maxRetries: 1,
+				});
+				return {
+					questions: cleanFollowUps(result.toolCalls[0]?.input, exclude),
+				};
+			} catch (error) {
+				logError(error);
+				throw new ServiceUnavailableError(replyErrorMessage(error));
 			}
 		},
 	};
