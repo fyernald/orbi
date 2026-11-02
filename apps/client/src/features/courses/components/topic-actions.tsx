@@ -4,6 +4,7 @@ import type { Topic } from '@orbi/shared';
 import {
 	Ellipsis,
 	GraduationCap,
+	ListChecks,
 	NotebookPen,
 	Pencil,
 	Trash2,
@@ -25,10 +26,15 @@ import { RenameTopicDialog } from './rename-topic-dialog';
 type TopicActionsProps = {
 	topic: Topic;
 	onOpenNotes: () => void;
+	onOpenQuestions: () => void;
 };
 
 // the menu button shows on hover and focus, and always on touch screens
-export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
+export function TopicActions({
+	topic,
+	onOpenNotes,
+	onOpenQuestions,
+}: TopicActionsProps) {
 	const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
 	const closeOn = (open: boolean) => !open && setDialog(null);
 
@@ -49,6 +55,10 @@ export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 					<DropdownMenuItem onSelect={onOpenNotes}>
 						<NotebookPen />
 						Notes
+					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={onOpenQuestions}>
+						<ListChecks />
+						Questions
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link href={topicStudyRoute(topic.courseId, topic.id)}>
