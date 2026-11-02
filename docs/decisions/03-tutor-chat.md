@@ -54,6 +54,7 @@ A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 - **Ask Orbi** lets the AI choose any tool, so "make me questions" in plain chat still works.
 - **Questions** forces `createQuestions` on the first step.
 - An action without a tool yet (Flashcards, Mock exam) answers "coming soon" instead of pretending.
+- **Follow-up questions** (US-41) are not part of the reply stream. After an explanation ends, the browser asks `POST /api/chats/:chatId/messages/:messageId/follow-ups`, which calls the reply's own model with a forced `suggestFollowUps` tool and gives back up to 3 questions. Refresh sends the questions already shown, so new ones come back. They are not saved: opening the chat again asks once more.
 
 ### 5. Storage
 

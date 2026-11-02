@@ -91,3 +91,12 @@ export function hasVisibleContent(
 		) ?? false
 	);
 }
+
+// follow-up questions go under an explanation, not under question sets or
+// Orbi's own questions to the student
+export const canFollowUp = (message: TutorUIMessage) =>
+	message.role === 'assistant' &&
+	message.parts.some(
+		(part) => part.type === 'text' && part.text.trim().length > 0
+	) &&
+	!message.parts.some(isToolPart);

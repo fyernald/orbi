@@ -65,7 +65,7 @@ function aboutStudent(student: StudentContext | undefined) {
 const escapeAttribute = (value: string) =>
 	value.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 
-function notesBlock(scopeName: string, selection: NotesSelection) {
+export function notesBlock(scopeName: string, selection: NotesSelection) {
 	if (selection.notes.length === 0) {
 		return `The student has no notes on ${scopeName} yet. Say so when it matters, and suggest adding notes.`;
 	}

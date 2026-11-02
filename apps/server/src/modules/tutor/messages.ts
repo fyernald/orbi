@@ -96,6 +96,12 @@ export function skipUnansweredQuestions(
 	return changed ? { ...message, parts } : undefined;
 }
 
+// a reply that only explains, without question sets or questions for the student
+export const isExplanation = (message: TutorUIMessage) =>
+	message.role === 'assistant' &&
+	messageText(message).length > 0 &&
+	!message.parts.some((part) => part.type.startsWith('tool-'));
+
 // a reply worth keeping has text, a finished or failed tool, or a question for the student
 export function hasContent(message: TutorUIMessage): boolean {
 	return message.parts.some((part) => {

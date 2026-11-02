@@ -6,6 +6,9 @@ import {
 	chatThread,
 	courseParams,
 	earlierMessagesQuery,
+	followUpParams,
+	followUps,
+	followUpsInput,
 	sendChatMessageInput,
 } from '@orbi/shared';
 import { createUIMessageStreamResponse } from 'ai';
@@ -66,6 +69,25 @@ export function createTutorRoutes({
 					await requireUser(request),
 					request.params.chatId,
 					request.query.before
+				)
+		);
+
+		// POST: each call asks the model again, so a refresh brings new questions
+		api.post(
+			'/chats/:chatId/messages/:messageId/follow-ups',
+			{
+				schema: {
+					params: followUpParams,
+					body: followUpsInput,
+					response: { 200: followUps },
+				},
+			},
+			async (request) =>
+				tutor.suggestFollowUps(
+					await requireUser(request),
+					request.params.chatId,
+					request.params.messageId,
+					request.body
 				)
 		);
 

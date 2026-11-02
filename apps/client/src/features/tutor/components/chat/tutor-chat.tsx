@@ -12,6 +12,7 @@ import {
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { Button } from '@/components/ui/button';
 import {
+	canFollowUp,
 	chatErrorMessage,
 	hasVisibleContent,
 	isRejectedRequest,
@@ -29,6 +30,7 @@ import { ChatMessage } from './chat-message';
 import { ChatStatusAnnouncer } from './chat-status';
 import { ChatThread } from './chat-thread';
 import { EarlierMessages } from './earlier-messages';
+import { FollowUps } from './follow-ups';
 import { ReplyError } from './reply-error';
 import { Thinking } from './thinking';
 
@@ -145,6 +147,14 @@ export function TutorChat({
 	const waiting =
 		busy && (last?.role !== 'assistant' || !hasVisibleContent(last));
 	const failed = chat.error && !isRejectedRequest(chat.error);
+	const followUpReply =
+		!busy &&
+		!chat.error &&
+		last &&
+		last.id !== chat.stoppedId &&
+		canFollowUp(last)
+			? last
+			: undefined;
 	// a retry after a reload has no request from this visit, so the saved message tells
 	const working = chat.context ?? lastStudentMetadata;
 	const workingOn = topicName(working?.topicId);
@@ -207,6 +217,23 @@ export function TutorChat({
 							/>
 						);
 					})}
+					{followUpReply && (
+						<FollowUps
+							key={followUpReply.id}
+							chatId={chatId}
+							messageId={followUpReply.id}
+							disabled={Boolean(limitReason)}
+							// the same topic and model as the reply
+							onAsk={(question) =>
+								send({
+									action: 'ask',
+									topicId: followUpReply.metadata?.topicId ?? '',
+									modelId: followUpReply.metadata?.modelId ?? '',
+									message: question,
+								})
+							}
+						/>
+					)}
 					{waiting && (
 						<div className="flex items-center gap-3">
 							<OrbiMark className="size-6" />
