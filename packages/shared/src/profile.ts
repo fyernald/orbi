@@ -35,7 +35,7 @@ export const INTEREST_MAX_LENGTH = 40;
 export const FIELD_OF_STUDY_MAX_LENGTH = 100;
 export const PREFERRED_NAME_MAX_LENGTH = 50;
 export const BIRTH_YEAR_MIN = 1900;
-// Orbi is for students aged 13 and over
+// Orbi is for students aged 13 and over (docs/decisions/04-user-data.md)
 export const MIN_AGE = 13;
 
 const isTimeZone = (value: string) => {
@@ -47,7 +47,7 @@ const isTimeZone = (value: string) => {
 	}
 };
 
-// a real day between 1900 and today; the minimum age is still to be decided in T-23
+// a date as "2004-12-10"
 const isoDay = (date: Date) => date.toISOString().slice(0, 10);
 
 // a real day between 1900 and today
