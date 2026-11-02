@@ -1,5 +1,6 @@
 import type { SessionAnswer } from '@orbi/shared';
 import { ArrowRight } from 'lucide-react';
+import type { Ref } from 'react';
 import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { choiceLetter } from '@/features/questions/choices';
@@ -9,6 +10,7 @@ type AnswerFeedbackProps = {
 	answer: SessionAnswer;
 	isLast: boolean;
 	onNext: () => void;
+	nextRef?: Ref<HTMLButtonElement>;
 };
 
 // right after each answer: was it right, the correct one if not, and why
@@ -16,6 +18,7 @@ export function AnswerFeedback({
 	answer,
 	isLast,
 	onNext,
+	nextRef,
 }: AnswerFeedbackProps) {
 	return (
 		<>
@@ -39,7 +42,12 @@ export function AnswerFeedback({
 					Press <KeyHint>Enter</KeyHint>
 				</span>
 				{/* takes the focus, so Enter moves on */}
-				<Button autoFocus onClick={onNext} className="h-10 rounded-full px-5">
+				<Button
+					ref={nextRef}
+					autoFocus
+					onClick={onNext}
+					className="h-10 rounded-full px-5"
+				>
 					{isLast ? 'See results' : 'Next question'}
 					<ArrowRight />
 				</Button>

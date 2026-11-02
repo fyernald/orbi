@@ -3,6 +3,7 @@ import type {
 	Question,
 	QuestionInput,
 	QuestionStatus,
+	ReportQuestionInput,
 	ReviewTopic,
 	SessionAnswer,
 	StudySession,
@@ -71,6 +72,12 @@ export interface QuestionService {
 		topicId: string,
 		questionId: string
 	): Promise<void>;
+	// a reported question is rejected, so it leaves study sessions and the review list
+	reportQuestion(
+		userId: string,
+		questionId: string,
+		report: ReportQuestionInput
+	): Promise<Question>;
 }
 
 // an empty explanation is saved as none
@@ -234,6 +241,15 @@ export function createQuestionService({
 			if (!(await repo.deleteQuestion(userId, topicId, questionId))) {
 				throw new NotFoundError('Question not found.');
 			}
+		},
+
+		async reportQuestion(userId, questionId, report) {
+			const reported = await repo.reportQuestion(userId, questionId, report);
+			if (!reported) throw new NotFoundError('Question not found.');
+			if (reported === 'already_reported') {
+				throw new ConflictError('You already reported this question.');
+			}
+			return reported;
 		},
 	};
 }

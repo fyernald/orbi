@@ -27,6 +27,7 @@ import {
 	QUESTION_SOURCES,
 	QUESTION_STATUSES,
 	QUESTION_TYPES,
+	REPORT_REASONS,
 	STUDY_TIMES,
 	TUTOR_ACTIONS,
 } from '@orbi/shared';
@@ -165,6 +166,8 @@ export const questionSource = pgEnum('question_source', QUESTION_SOURCES);
 
 export const answerContext = pgEnum('answer_context', ANSWER_CONTEXTS);
 
+export const reportReason = pgEnum('report_reason', REPORT_REASONS);
+
 // A tutor chat belongs to one topic, or to the whole course when topic_id is null.
 // The id comes from the browser, so a new chat needs no extra request.
 export const chat = pgTable(
@@ -295,6 +298,36 @@ export const answer = pgTable(
 			.on(t.questionId)
 			.where(sql`${t.context} = 'chat'`),
 		index('answer_user_id_idx').on(t.userId, t.answeredAt),
+	]
+);
+
+// A student's report on a bad question (US-18). The model that made the question is
+// copied in, so the team can see which models go wrong. A deleted question takes
+// its report with it, like the rest of the student's content.
+export const questionReport = pgTable(
+	'question_report',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		reason: reportReason('reason').notNull(),
+		comment: text('comment'),
+		// null for a question the student wrote
+		aiProvider: aiProvider('ai_provider'),
+		aiModel: varchar('ai_model', { length: 100 }),
+		createdAt: timestamp('created_at', { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [
+		foreignKey({
+			name: 'question_report_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// a question is reported once
+		uniqueIndex('question_report_question_id_idx').on(t.questionId),
+		index('question_report_user_id_idx').on(t.userId),
 	]
 );
 

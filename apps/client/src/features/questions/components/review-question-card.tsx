@@ -10,6 +10,7 @@ import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useSetQuestionStatus } from '../hooks';
 import { AnswerKey } from './answer-key';
+import { ReportQuestionButton } from './report-question-button';
 
 type ReviewQuestionCardProps = {
 	question: Question;
@@ -93,6 +94,15 @@ export function ReviewQuestionCard({
 			<AnswerKey {...question} />
 			<FormError message={error} />
 			<div className="flex flex-wrap justify-end gap-2">
+				{/* a reported question comes back rejected, so the card shrinks like one */}
+				<ReportQuestionButton
+					questionId={question.id}
+					onReported={() => {
+						decidedHere.current = true;
+					}}
+					disabled={pending}
+					className="mr-auto -ml-2 h-9"
+				/>
 				<Button
 					variant="outline"
 					onClick={() => decide('rejected')}

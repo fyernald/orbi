@@ -3,11 +3,18 @@ import type {
 	CourseColor,
 	Question,
 	QuestionStatus,
+	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
 import { and, asc, count, desc, eq, inArray, ne } from 'drizzle-orm';
 import type { Db } from '../../db';
-import { answer, course, question, topic } from '../../db/schema';
+import {
+	answer,
+	course,
+	question,
+	questionReport,
+	topic,
+} from '../../db/schema';
 
 // a question waiting for review, with the topic and course it belongs to
 export type PendingQuestion = {
@@ -73,6 +80,13 @@ export interface QuestionRepository {
 		topicId: string,
 		questionId: string
 	): Promise<boolean>;
+	// saves the report and takes the question out (rejected); undefined when the user
+	// has no such question
+	reportQuestion(
+		userId: string,
+		questionId: string,
+		report: ReportQuestionInput
+	): Promise<Question | 'already_reported' | undefined>;
 }
 
 // what the student writes; the status and who made it are set by the server
@@ -334,6 +348,39 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 				.where(ownQuestion(userId, topicId, questionId))
 				.returning({ id: question.id });
 			return deleted.length > 0;
+		},
+
+		// two reports at once both get here; the unique index lets only one in
+		async reportQuestion(userId, questionId, { reason, comment }) {
+			const own = and(eq(question.userId, userId), eq(question.id, questionId));
+			return db.transaction(async (tx) => {
+				const [made] = await tx
+					.select({
+						aiProvider: question.aiProvider,
+						aiModel: question.aiModel,
+					})
+					.from(question)
+					.where(own);
+				if (!made) return undefined;
+				const [saved] = await tx
+					.insert(questionReport)
+					.values({
+						userId,
+						questionId,
+						reason,
+						comment: comment || null,
+						...made,
+					})
+					.onConflictDoNothing()
+					.returning({ id: questionReport.id });
+				if (!saved) return 'already_reported';
+				const [rejected] = await tx
+					.update(question)
+					.set({ status: 'rejected' })
+					.where(own)
+					.returning(questionColumns);
+				return toApi(rejected!);
+			});
 		},
 	};
 }

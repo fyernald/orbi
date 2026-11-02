@@ -6,6 +6,7 @@ import {
 	question,
 	questionInput,
 	questionParams,
+	reportQuestionInput,
 	reviewTopic,
 	sessionAnswer,
 	studySession,
@@ -202,6 +203,27 @@ export function createQuestionRoutes({
 				const { courseId, topicId, questionId } = request.params;
 				await questions.deleteQuestion(userId, courseId, topicId, questionId);
 				return reply.status(204).send();
+			}
+		);
+
+		// sends back the question, now rejected, so the review list can update
+		api.post(
+			'/questions/:questionId/report',
+			{
+				schema: {
+					params: questionParams,
+					body: reportQuestionInput,
+					response: { 201: question },
+				},
+			},
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const rejected = await questions.reportQuestion(
+					userId,
+					request.params.questionId,
+					request.body
+				);
+				return reply.status(201).send(rejected);
 			}
 		);
 	};

@@ -44,6 +44,16 @@ function updateTopicQuestions(
 	void queryClient.invalidateQueries({ queryKey: reviewKey });
 }
 
+// a reported question comes back rejected, and the list leaves rejected ones out
+export function useDropReportedQuestion(courseId: string, topicId: string) {
+	const queryClient = useQueryClient();
+	return (id: string) =>
+		queryClient.setQueryData<Question[]>(
+			topicQuestionsKey(courseId, topicId),
+			(questions) => questions?.filter((saved) => saved.id !== id)
+		);
+}
+
 // the new question goes on top, like the server lists them
 export function useAddQuestion(courseId: string, topicId: string) {
 	const queryClient = useQueryClient();

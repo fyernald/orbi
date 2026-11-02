@@ -6,6 +6,7 @@ import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { choiceLetter, choiceMark } from '@/features/questions/choices';
 import { ChoiceOption } from '@/features/questions/components/choice-option';
+import { ReportQuestionButton } from '@/features/questions/components/report-question-button';
 import { ApiError, apiErrorMessage } from '@/lib/api';
 import { useAnswerInSession } from '../hooks';
 import { useChoiceKeys } from '../use-choice-keys';
@@ -35,7 +36,11 @@ export function SessionQuestion({
 }: SessionQuestionProps) {
 	const submit = useAnswerInSession();
 	const [picked, setPicked] = useState<number | null>(null);
+	// the answer keys stay off while the report dialog is open
+	const [reporting, setReporting] = useState(false);
+	const [reported, setReported] = useState(false);
 	const heading = useRef<HTMLHeadingElement>(null);
+	const nextButton = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (focusOnShow) heading.current?.focus({ preventScroll: true });
 	}, [focusOnShow]);
@@ -43,7 +48,7 @@ export function SessionQuestion({
 	// taken out of the study questions in another tab: it cannot be answered here
 	const removed =
 		submit.error instanceof ApiError && submit.error.status === 409;
-	const answerable = !answer && !submit.isPending && !removed;
+	const answerable = !answer && !submit.isPending && !removed && !reported;
 	const pick = (choice: number) => {
 		if (!answerable) return;
 		setPicked(choice);
@@ -52,8 +57,15 @@ export function SessionQuestion({
 			{ onSuccess: onAnswered, onError: () => setPicked(null) }
 		);
 	};
+	// An answered question stays to read its feedback, and the focus goes back to
+	// Next, since the Report button is gone. An unanswered one is skipped
+	const onReported = () => {
+		if (!answer) return onSkip();
+		setReported(true);
+		requestAnimationFrame(() => nextButton.current?.focus());
+	};
 	useChoiceKeys({
-		enabled: answerable,
+		enabled: answerable && !reporting,
 		choiceCount: question.choices.length,
 		onPick: pick,
 	});
@@ -84,7 +96,17 @@ export function SessionQuestion({
 			</ul>
 			<div aria-live="polite" className="flex flex-col gap-3">
 				{answer && (
-					<AnswerFeedback answer={answer} isLast={isLast} onNext={onNext} />
+					<AnswerFeedback
+						answer={answer}
+						isLast={isLast}
+						onNext={onNext}
+						nextRef={nextButton}
+					/>
+				)}
+				{reported && (
+					<p className="text-sm text-muted-foreground">
+						Reported. It will not come up in your study sessions again.
+					</p>
 				)}
 				{submit.error && (
 					<div className="flex flex-wrap items-center gap-3">
@@ -103,14 +125,25 @@ export function SessionQuestion({
 					</div>
 				)}
 			</div>
-			{answerable && (
-				<p className="hidden items-center gap-1.5 text-xs text-muted-foreground pointer-fine:flex">
-					Press <KeyHint>{choiceLetter(0)}</KeyHint>–
-					<KeyHint>{choiceLetter(question.choices.length - 1)}</KeyHint> or{' '}
-					<KeyHint>1</KeyHint>–<KeyHint>{question.choices.length}</KeyHint> to
-					answer
-				</p>
-			)}
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				{answerable && (
+					<p className="hidden items-center gap-1.5 text-xs text-muted-foreground pointer-fine:flex">
+						Press <KeyHint>{choiceLetter(0)}</KeyHint>–
+						<KeyHint>{choiceLetter(question.choices.length - 1)}</KeyHint> or{' '}
+						<KeyHint>1</KeyHint>–<KeyHint>{question.choices.length}</KeyHint> to
+						answer
+					</p>
+				)}
+				{!reported && !removed && (
+					<ReportQuestionButton
+						questionId={question.id}
+						onReported={onReported}
+						onOpenChange={setReporting}
+						disabled={submit.isPending}
+						className="-mr-2 ml-auto"
+					/>
+				)}
+			</div>
 		</article>
 	);
 }

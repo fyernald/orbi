@@ -1,7 +1,7 @@
 'use client';
 
 import type { Question } from '@orbi/shared';
-import { Ellipsis, Pencil, Trash2 } from 'lucide-react';
+import { Ellipsis, Flag, Pencil, Trash2 } from 'lucide-react';
 import { useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +11,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useDropReportedQuestion } from '../topic-hooks';
 import { DeleteQuestionDialog } from './delete-question-dialog';
+import { ReportQuestionDialog } from './report-question-dialog';
 
 type QuestionActionsProps = {
 	courseId: string;
@@ -27,7 +29,10 @@ export function QuestionActions({
 	onEdit,
 	triggerRef,
 }: QuestionActionsProps) {
-	const [deleting, setDeleting] = useState(false);
+	const [dialog, setDialog] = useState<'report' | 'delete' | null>(null);
+	const dropReported = useDropReportedQuestion(courseId, question.topicId);
+	const openOnly = (name: 'report' | 'delete') => (open: boolean) =>
+		setDialog(open ? name : null);
 	// the menu would move the focus back to its button after Edit, away from the editor
 	const editPicked = useRef(false);
 
@@ -63,21 +68,31 @@ export function QuestionActions({
 						<Pencil />
 						Edit question
 					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => setDialog('report')}>
+						<Flag />
+						Report question
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
-						onSelect={() => setDeleting(true)}
+						onSelect={() => setDialog('delete')}
 					>
 						<Trash2 />
 						Delete question
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<ReportQuestionDialog
+				questionId={question.id}
+				open={dialog === 'report'}
+				onOpenChange={openOnly('report')}
+				onReported={() => dropReported(question.id)}
+			/>
 			<DeleteQuestionDialog
 				courseId={courseId}
 				question={question}
-				open={deleting}
-				onOpenChange={setDeleting}
+				open={dialog === 'delete'}
+				onOpenChange={openOnly('delete')}
 			/>
 		</>
 	);
