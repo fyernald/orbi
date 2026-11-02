@@ -5,6 +5,7 @@ import {
 	chatAnswersQuery,
 	question,
 	questionParams,
+	reportQuestionInput,
 	reviewTopic,
 	sessionAnswer,
 	studySession,
@@ -134,6 +135,27 @@ export function createQuestionRoutes({
 					request.body.choice
 				);
 				return reply.status(201).send(saved);
+			}
+		);
+
+		// sends back the question, now rejected, so the review list can update
+		api.post(
+			'/questions/:questionId/report',
+			{
+				schema: {
+					params: questionParams,
+					body: reportQuestionInput,
+					response: { 201: question },
+				},
+			},
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const rejected = await questions.reportQuestion(
+					userId,
+					request.params.questionId,
+					request.body
+				);
+				return reply.status(201).send(rejected);
 			}
 		);
 	};

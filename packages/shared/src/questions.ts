@@ -115,6 +115,36 @@ export const chatAnswersQuery = z.object({
 		.pipe(z.array(z.uuid()).min(1).max(50)),
 });
 
+// why the student reports a question (US-18)
+export const REPORT_REASONS = [
+	'wrong_answer',
+	'unclear',
+	'not_in_notes',
+	'other',
+] as const;
+export const REPORT_COMMENT_MAX_LENGTH = 500;
+
+// "Something else" says nothing on its own, so it needs a comment
+export const reportQuestionInput = z
+	.object({
+		reason: z.enum(REPORT_REASONS, { error: 'Pick a reason.' }),
+		comment: z
+			.string()
+			.trim()
+			.max(
+				REPORT_COMMENT_MAX_LENGTH,
+				`Use at most ${REPORT_COMMENT_MAX_LENGTH} characters.`
+			)
+			.optional(),
+	})
+	.refine(({ reason, comment }) => reason !== 'other' || Boolean(comment), {
+		path: ['comment'],
+		message: 'Say what is wrong with it.',
+	});
+
+export type ReportReason = (typeof REPORT_REASONS)[number];
+export type ReportQuestionInput = z.infer<typeof reportQuestionInput>;
+
 export type AnswerContext = (typeof ANSWER_CONTEXTS)[number];
 export type AnswerQuestionInput = z.infer<typeof answerQuestionInput>;
 export type ChatAnswer = z.infer<typeof chatAnswer>;

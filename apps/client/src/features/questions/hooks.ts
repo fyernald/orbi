@@ -7,6 +7,7 @@ import {
 	reviewTopic,
 	type ChatAnswer,
 	type QuestionStatus,
+	type ReportQuestionInput,
 	type ReviewTopic,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -59,6 +60,22 @@ export function useApproveTopic(courseId: string, topicId: string) {
 			queryClient.setQueryData<ReviewTopic[]>(
 				reviewKey,
 				(groups) => groups && approveTopic(groups, topicId)
+			);
+		},
+	});
+}
+
+// a reported question comes back rejected, so it leaves the review list like a
+// rejected one; a study session decides itself what to show next
+export function useReportQuestion() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, ...report }: ReportQuestionInput & { id: string }) =>
+			api.post(`/questions/${id}/report`, question, report),
+		onSuccess: (rejected) => {
+			queryClient.setQueryData<ReviewTopic[]>(
+				reviewKey,
+				(groups) => groups && replaceQuestion(groups, rejected)
 			);
 		},
 	});

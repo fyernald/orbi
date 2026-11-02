@@ -2,6 +2,7 @@ import type {
 	ChatAnswer,
 	Question,
 	QuestionStatus,
+	ReportQuestionInput,
 	ReviewTopic,
 	SessionAnswer,
 	StudySession,
@@ -43,6 +44,12 @@ export interface QuestionService {
 		questionId: string,
 		choice: number
 	): Promise<SessionAnswer>;
+	// a reported question is rejected, so it leaves study sessions and the review list
+	reportQuestion(
+		userId: string,
+		questionId: string,
+		report: ReportQuestionInput
+	): Promise<Question>;
 }
 
 // another user's question answers the same as a missing one, so ids cannot be probed
@@ -160,6 +167,15 @@ export function createQuestionService({
 				correctChoice: key.correctChoice,
 				explanation: key.explanation,
 			};
+		},
+
+		async reportQuestion(userId, questionId, report) {
+			const reported = await repo.reportQuestion(userId, questionId, report);
+			if (!reported) throw new NotFoundError('Question not found.');
+			if (reported === 'already_reported') {
+				throw new ConflictError('You already reported this question.');
+			}
+			return reported;
 		},
 	};
 }

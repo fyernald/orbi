@@ -3,11 +3,18 @@ import type {
 	CourseColor,
 	Question,
 	QuestionStatus,
+	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../db';
-import { answer, course, question, topic } from '../../db/schema';
+import {
+	answer,
+	course,
+	question,
+	questionReport,
+	topic,
+} from '../../db/schema';
 
 // a question waiting for review, with the topic and course it belongs to
 export type PendingQuestion = {
@@ -53,6 +60,13 @@ export interface QuestionRepository {
 	countPending(userId: string, topicId: string): Promise<number>;
 	// a session saves every try, so a question can be answered again in a later one
 	insertSessionAnswer(userId: string, saved: ChatAnswer): Promise<void>;
+	// saves the report and takes the question out (rejected); undefined when the user
+	// has no such question
+	reportQuestion(
+		userId: string,
+		questionId: string,
+		report: ReportQuestionInput
+	): Promise<Question | 'already_reported' | undefined>;
 }
 
 export type AnswerKey = {
@@ -250,6 +264,39 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 
 		async insertSessionAnswer(userId, saved) {
 			await db.insert(answer).values({ userId, context: 'session', ...saved });
+		},
+
+		// two reports at once both get here; the unique index lets only one in
+		async reportQuestion(userId, questionId, { reason, comment }) {
+			const own = and(eq(question.userId, userId), eq(question.id, questionId));
+			return db.transaction(async (tx) => {
+				const [made] = await tx
+					.select({
+						aiProvider: question.aiProvider,
+						aiModel: question.aiModel,
+					})
+					.from(question)
+					.where(own);
+				if (!made) return undefined;
+				const [saved] = await tx
+					.insert(questionReport)
+					.values({
+						userId,
+						questionId,
+						reason,
+						comment: comment || null,
+						...made,
+					})
+					.onConflictDoNothing()
+					.returning({ id: questionReport.id });
+				if (!saved) return 'already_reported';
+				const [rejected] = await tx
+					.update(question)
+					.set({ status: 'rejected' })
+					.where(own)
+					.returning(questionColumns);
+				return toApi(rejected!);
+			});
 		},
 	};
 }
