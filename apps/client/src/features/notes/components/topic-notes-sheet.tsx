@@ -29,7 +29,16 @@ export function TopicNotesSheet({
 }: TopicNotesSheetProps) {
 	return (
 		<Sheet open={open && topic !== undefined} onOpenChange={onOpenChange}>
-			<SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
+			<SheetContent
+				// Esc in a note being edited cancels the edit, not the whole sheet
+				onEscapeKeyDown={(event) => {
+					const target = event.target as HTMLElement | null;
+					if (target?.closest('[data-note-editor="edit"]')) {
+						event.preventDefault();
+					}
+				}}
+				className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+			>
 				{topic && (
 					<>
 						<SheetHeader className="border-b border-divider pr-12">

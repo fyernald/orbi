@@ -1,7 +1,7 @@
 'use client';
 
 import type { Question } from '@orbi/shared';
-import { ConfirmDeleteDialog } from '@/features/courses/components/confirm-delete-dialog';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 import { apiErrorMessage } from '@/lib/api';
 import { useDeleteQuestion } from '../topic-hooks';
 

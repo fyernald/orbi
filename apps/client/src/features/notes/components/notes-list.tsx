@@ -42,7 +42,7 @@ export function NotesList({ courseId, topicId }: NotesListProps) {
 		<ul aria-label="Saved notes" className="flex flex-col gap-2">
 			{notes.data.map((note) => (
 				<li key={note.id}>
-					<NoteCard note={note} />
+					<NoteCard courseId={courseId} note={note} />
 				</li>
 			))}
 		</ul>

@@ -1,14 +1,22 @@
+import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { question } from '../../db/schema';
+import { createTestDb } from '../../db/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
+import { createTutorRepository } from '../tutor/repository';
 
 let app: Awaited<ReturnType<typeof createTestApp>>;
+let db: Awaited<ReturnType<typeof createTestDb>>;
 let ada: string;
 let grace: string;
 
 beforeAll(async () => {
+	db = await createTestDb();
 	app = await createTestApp(createMemoryMailer(), {
 		requireEmailVerification: false,
+		db,
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');
 	grace = await signUpTestUser(app, 'grace@test.dev');
@@ -20,7 +28,7 @@ afterAll(async () => {
 
 const send = (
 	cookie: string,
-	method: 'GET' | 'POST' | 'DELETE',
+	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	url: string,
 	payload?: object
 ) => app.inject({ method, url, headers: { cookie }, payload });
@@ -35,6 +43,53 @@ const newCourse = (fields: object = {}) => ({
 
 const createCourse = async (cookie: string, name: string) =>
 	(await send(cookie, 'POST', '/api/courses', newCourse({ name }))).json();
+
+const userIdOf = async (cookie: string) =>
+	(await send(cookie, 'GET', '/api/auth/get-session')).json().user.id as string;
+
+// a course with one topic that has a note and a question
+async function createFilledCourse(cookie: string) {
+	const course = (
+		await send(
+			cookie,
+			'POST',
+			'/api/courses',
+			newCourse({ name: 'Genetics', topics: ['DNA'] })
+		)
+	).json();
+	const [topic] = (
+		await send(cookie, 'GET', `/api/courses/${course.id}/topics`)
+	).json();
+	await send(
+		cookie,
+		'POST',
+		`/api/courses/${course.id}/topics/${topic.id}/notes`,
+		{ content: 'DNA is a double helix.' }
+	);
+	const [questionId] = await createTutorRepository(db).insertQuestions(
+		await userIdOf(cookie),
+		topic.id,
+		[
+			{
+				text: 'What shape is DNA?',
+				choices: ['A double helix', 'A ring'],
+				correctChoice: 0,
+				explanation: 'DNA is a double helix.',
+				aiProvider: 'google',
+				aiModel: 'gemini-test',
+				chatMessageId: randomUUID(),
+			},
+		]
+	);
+	return {
+		courseId: course.id as string,
+		topicId: topic.id as string,
+		questionId: questionId!,
+	};
+}
+
+const questionExists = async (id: string) =>
+	(await db.select().from(question).where(eq(question.id, id))).length > 0;
 
 describe('courses', () => {
 	it('creates a course and lists it', async () => {
@@ -207,6 +262,80 @@ describe('topics', () => {
 	});
 });
 
+describe('renaming', () => {
+	it('renames a course and sends it back with its counts', async () => {
+		const { courseId } = await createFilledCourse(ada);
+
+		const response = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			name: '  Molecular genetics ',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			id: courseId,
+			name: 'Molecular genetics',
+			topicCount: 1,
+			noteCount: 1,
+		});
+		const saved = (await send(ada, 'GET', `/api/courses/${courseId}`)).json();
+		expect(saved.name).toBe('Molecular genetics');
+	});
+
+	it('renames a topic and keeps its note count', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+
+		const response = await send(
+			ada,
+			'PATCH',
+			`/api/courses/${courseId}/topics/${topicId}`,
+			{ name: 'DNA and RNA' }
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({
+			id: topicId,
+			courseId,
+			name: 'DNA and RNA',
+			position: 0,
+			noteCount: 1,
+		});
+	});
+
+	it('rejects an empty name', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+
+		const course = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			name: '   ',
+		});
+		const topic = await send(
+			ada,
+			'PATCH',
+			`/api/courses/${courseId}/topics/${topicId}`,
+			{ name: '' }
+		);
+
+		expect(course.statusCode).toBe(400);
+		expect(course.json().error.message).toBe('Enter a course name.');
+		expect(topic.statusCode).toBe(400);
+		expect(topic.json().error.message).toBe('Enter a topic name.');
+	});
+
+	it('answers 404 for a topic of another course', async () => {
+		const first = await createFilledCourse(ada);
+		const second = await createFilledCourse(ada);
+
+		const response = await send(
+			ada,
+			'PATCH',
+			`/api/courses/${second.courseId}/topics/${first.topicId}`,
+			{ name: 'Moved' }
+		);
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json().error.message).toBe('Topic not found.');
+	});
+});
+
 describe('deleting', () => {
 	it('deletes a topic and counts one topic less', async () => {
 		const response = await send(
@@ -246,6 +375,30 @@ describe('deleting', () => {
 		expect((await send(ada, 'GET', `/api/courses/${id}`)).statusCode).toBe(404);
 		const list = (await send(ada, 'GET', '/api/courses')).json();
 		expect(list.some((c: { id: string }) => c.id === id)).toBe(false);
+	});
+
+	it('deletes the notes and questions of a deleted topic', async () => {
+		const { courseId, topicId, questionId } = await createFilledCourse(ada);
+
+		await send(ada, 'DELETE', `/api/courses/${courseId}/topics/${topicId}`);
+
+		expect(await questionExists(questionId)).toBe(false);
+		const course = (await send(ada, 'GET', `/api/courses/${courseId}`)).json();
+		expect(course.noteCount).toBe(0);
+	});
+
+	it('deletes the topics, notes, and questions of a deleted course', async () => {
+		const { courseId, topicId, questionId } = await createFilledCourse(ada);
+
+		await send(ada, 'DELETE', `/api/courses/${courseId}`);
+
+		expect(await questionExists(questionId)).toBe(false);
+		const notes = await send(
+			ada,
+			'GET',
+			`/api/courses/${courseId}/topics/${topicId}/notes`
+		);
+		expect(notes.statusCode).toBe(404);
 	});
 
 	it('answers 404 for a topic of another course', async () => {
@@ -295,6 +448,15 @@ describe("another user's data", () => {
 			`/api/courses/${id}/topics/${ownTopicId}`
 		);
 		const deletedCourse = await send(grace, 'DELETE', `/api/courses/${id}`);
+		const renamedTopic = await send(
+			grace,
+			'PATCH',
+			`/api/courses/${id}/topics/${ownTopicId}`,
+			{ name: 'Taken' }
+		);
+		const renamedCourse = await send(grace, 'PATCH', `/api/courses/${id}`, {
+			name: 'Taken',
+		});
 
 		expect([
 			course.statusCode,
@@ -302,8 +464,14 @@ describe("another user's data", () => {
 			added.statusCode,
 			deletedTopic.statusCode,
 			deletedCourse.statusCode,
-		]).toEqual([404, 404, 404, 404, 404]);
+			renamedTopic.statusCode,
+			renamedCourse.statusCode,
+		]).toEqual([404, 404, 404, 404, 404, 404, 404]);
 		const own = await send(ada, 'GET', `/api/courses/${id}/topics`);
-		expect(own.json()).toHaveLength(1);
+		expect(own.json()).toEqual([
+			expect.objectContaining({ name: 'Inflation' }),
+		]);
+		const ownCourse = (await send(ada, 'GET', `/api/courses/${id}`)).json();
+		expect(ownCourse.name).toBe('Macroeconomics');
 	});
 });

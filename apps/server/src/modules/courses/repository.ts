@@ -18,7 +18,23 @@ export interface CourseRepository {
 		courseId: string,
 		input: CreateTopicInput
 	): Promise<Topic>;
+	findTopic(
+		userId: string,
+		courseId: string,
+		topicId: string
+	): Promise<Topic | undefined>;
 	// each returns false when nothing of this user matched
+	renameCourse(
+		userId: string,
+		courseId: string,
+		name: string
+	): Promise<boolean>;
+	renameTopic(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		name: string
+	): Promise<boolean>;
 	deleteCourse(userId: string, courseId: string): Promise<boolean>;
 	deleteTopic(
 		userId: string,
@@ -59,6 +75,16 @@ const topicColumns = {
 
 const topicWithNoteCount = { ...topicColumns, noteCount: count(note.id) };
 
+const ownCourse = (userId: string, courseId: string) =>
+	and(eq(course.userId, userId), eq(course.id, courseId));
+
+const ownTopic = (userId: string, courseId: string, topicId: string) =>
+	and(
+		eq(topic.userId, userId),
+		eq(topic.courseId, courseId),
+		eq(topic.id, topicId)
+	);
+
 export function createCourseRepository(db: Db): CourseRepository {
 	return {
 		listCourses: (userId) =>
@@ -77,7 +103,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 				.from(course)
 				.leftJoin(topic, eq(topic.courseId, course.id))
 				.leftJoin(note, eq(note.topicId, topic.id))
-				.where(and(eq(course.userId, userId), eq(course.id, courseId)))
+				.where(ownCourse(userId, courseId))
 				.groupBy(course.id);
 			return found;
 		},
@@ -131,25 +157,48 @@ export function createCourseRepository(db: Db): CourseRepository {
 			return { ...created!, noteCount: 0 };
 		},
 
-		// topics and notes go with it (ON DELETE CASCADE)
+		async findTopic(userId, courseId, topicId) {
+			const [found] = await db
+				.select(topicWithNoteCount)
+				.from(topic)
+				.leftJoin(note, eq(note.topicId, topic.id))
+				.where(ownTopic(userId, courseId, topicId))
+				.groupBy(topic.id);
+			return found;
+		},
+
+		async renameCourse(userId, courseId, name) {
+			const renamed = await db
+				.update(course)
+				.set({ name })
+				.where(ownCourse(userId, courseId))
+				.returning({ id: course.id });
+			return renamed.length > 0;
+		},
+
+		async renameTopic(userId, courseId, topicId, name) {
+			const renamed = await db
+				.update(topic)
+				.set({ name })
+				.where(ownTopic(userId, courseId, topicId))
+				.returning({ id: topic.id });
+			return renamed.length > 0;
+		},
+
+		// its topics, notes, questions, answers, and chats go with it (ON DELETE CASCADE)
 		async deleteCourse(userId, courseId) {
 			const deleted = await db
 				.delete(course)
-				.where(and(eq(course.userId, userId), eq(course.id, courseId)))
+				.where(ownCourse(userId, courseId))
 				.returning({ id: course.id });
 			return deleted.length > 0;
 		},
 
+		// its notes, questions, answers, and chats go with it (ON DELETE CASCADE)
 		async deleteTopic(userId, courseId, topicId) {
 			const deleted = await db
 				.delete(topic)
-				.where(
-					and(
-						eq(topic.userId, userId),
-						eq(topic.courseId, courseId),
-						eq(topic.id, topicId)
-					)
-				)
+				.where(ownTopic(userId, courseId, topicId))
 				.returning({ id: topic.id });
 			return deleted.length > 0;
 		},

@@ -21,7 +21,7 @@ afterAll(async () => {
 
 const send = (
 	cookie: string,
-	method: 'GET' | 'POST',
+	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	url: string,
 	payload?: object
 ) => app.inject({ method, url, headers: { cookie }, payload });
@@ -149,16 +149,114 @@ describe('notes', () => {
 	});
 });
 
+// a topic with one saved note, and the url of that note
+async function createNote(cookie: string, payload: object) {
+	const topic = await createTopic(cookie);
+	const saved = (await send(cookie, 'POST', topic.notesUrl, payload)).json();
+	return {
+		...topic,
+		noteId: saved.id as string,
+		noteUrl: `${topic.notesUrl}/${saved.id}`,
+	};
+}
+
+describe('editing a note', () => {
+	it('saves the new title and text', async () => {
+		const { notesUrl, noteUrl } = await createNote(ada, { content: 'Cells' });
+
+		const response = await send(ada, 'PATCH', noteUrl, {
+			title: 'Cell parts',
+			content: 'Nucleus\nRibosomes',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			title: 'Cell parts',
+			content: 'Nucleus\nRibosomes',
+		});
+		const [saved] = (await send(ada, 'GET', notesUrl)).json();
+		expect(saved.content).toBe('Nucleus\nRibosomes');
+		expect(Date.parse(saved.updatedAt)).toBeGreaterThanOrEqual(
+			Date.parse(saved.createdAt)
+		);
+	});
+
+	it('names the note after its first line when the title is cleared', async () => {
+		const { noteUrl } = await createNote(ada, {
+			title: 'Old title',
+			content: 'Old text',
+		});
+
+		const response = await send(ada, 'PATCH', noteUrl, {
+			title: '',
+			content: '\n  Mitochondria make energy\nMore',
+		});
+
+		expect(response.json().title).toBe('Mitochondria make energy');
+	});
+
+	it('rejects empty text', async () => {
+		const { noteUrl } = await createNote(ada, { content: 'Keep me' });
+
+		const response = await send(ada, 'PATCH', noteUrl, { content: '  ' });
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('answers 404 for a note of another topic', async () => {
+		const first = await createNote(ada, { content: 'First' });
+		const second = await createTopic(ada);
+		const url = `${second.notesUrl}/${first.noteId}`;
+
+		const response = await send(ada, 'PATCH', url, { content: 'Moved' });
+
+		expect(response.statusCode).toBe(404);
+		expect(response.json().error.message).toBe('Note not found.');
+	});
+});
+
+describe('deleting a note', () => {
+	it('deletes it and counts one note less', async () => {
+		const { courseId, notesUrl, noteUrl } = await createNote(ada, {
+			content: 'Gone soon',
+		});
+
+		const response = await send(ada, 'DELETE', noteUrl);
+
+		expect(response.statusCode).toBe(204);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
+		const course = (await send(ada, 'GET', `/api/courses/${courseId}`)).json();
+		expect(course.noteCount).toBe(0);
+	});
+
+	it('answers 404 the second time', async () => {
+		const { noteUrl } = await createNote(ada, { content: 'Once' });
+		await send(ada, 'DELETE', noteUrl);
+
+		const response = await send(ada, 'DELETE', noteUrl);
+
+		expect(response.statusCode).toBe(404);
+	});
+});
+
 describe("another user's notes", () => {
 	it('answer like a topic that does not exist', async () => {
-		const { notesUrl } = await createTopic(ada);
-		await send(ada, 'POST', notesUrl, { content: 'Private' });
+		const { notesUrl, noteUrl } = await createNote(ada, {
+			content: 'Private',
+		});
 
 		const list = await send(grace, 'GET', notesUrl);
 		const add = await send(grace, 'POST', notesUrl, { content: 'Sneaky' });
+		const edit = await send(grace, 'PATCH', noteUrl, { content: 'Sneaky' });
+		const remove = await send(grace, 'DELETE', noteUrl);
 
-		expect(list.statusCode).toBe(404);
-		expect(add.statusCode).toBe(404);
-		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
+		expect([
+			list.statusCode,
+			add.statusCode,
+			edit.statusCode,
+			remove.statusCode,
+		]).toEqual([404, 404, 404, 404]);
+		const own = (await send(ada, 'GET', notesUrl)).json();
+		expect(own).toEqual([expect.objectContaining({ content: 'Private' })]);
 	});
 });

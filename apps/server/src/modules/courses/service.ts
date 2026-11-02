@@ -3,6 +3,8 @@ import type {
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
+	UpdateCourseInput,
+	UpdateTopicInput,
 } from '@orbi/shared';
 import { NotFoundError } from '../../errors';
 import type { CourseRepository } from './repository';
@@ -16,6 +18,17 @@ export interface CourseService {
 		userId: string,
 		courseId: string,
 		input: CreateTopicInput
+	): Promise<Topic>;
+	renameCourse(
+		userId: string,
+		courseId: string,
+		input: UpdateCourseInput
+	): Promise<Course>;
+	renameTopic(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		input: UpdateTopicInput
 	): Promise<Topic>;
 	deleteCourse(userId: string, courseId: string): Promise<void>;
 	deleteTopic(userId: string, courseId: string, topicId: string): Promise<void>;
@@ -47,6 +60,21 @@ export function createCourseService({
 		async createTopic(userId, courseId, input) {
 			await getCourse(userId, courseId);
 			return repo.insertTopic(userId, courseId, input);
+		},
+
+		async renameCourse(userId, courseId, { name }) {
+			if (!(await repo.renameCourse(userId, courseId, name))) {
+				throw new NotFoundError('Course not found.');
+			}
+			return getCourse(userId, courseId);
+		},
+
+		async renameTopic(userId, courseId, topicId, { name }) {
+			const renamed = await repo.renameTopic(userId, courseId, topicId, name);
+			const found =
+				renamed && (await repo.findTopic(userId, courseId, topicId));
+			if (!found) throw new NotFoundError('Topic not found.');
+			return found;
 		},
 
 		async deleteCourse(userId, courseId) {

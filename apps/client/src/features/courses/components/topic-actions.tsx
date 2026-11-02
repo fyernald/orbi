@@ -6,6 +6,7 @@ import {
 	GraduationCap,
 	ListChecks,
 	NotebookPen,
+	Pencil,
 	Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -18,11 +19,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { apiErrorMessage } from '@/lib/api';
 import { topicStudyRoute } from '@/lib/routes';
-import { useDeleteTopic } from '../hooks';
-import { noteCountLabel } from '../note-count';
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
+import { DeleteTopicDialog } from './delete-topic-dialog';
+import { RenameTopicDialog } from './rename-topic-dialog';
 
 type TopicActionsProps = {
 	topic: Topic;
@@ -36,12 +35,8 @@ export function TopicActions({
 	onOpenNotes,
 	onOpenQuestions,
 }: TopicActionsProps) {
-	const remove = useDeleteTopic(topic.courseId);
-	const [confirming, setConfirming] = useState(false);
-	const notes =
-		topic.noteCount === 0
-			? ''
-			: ` Its ${noteCountLabel(topic.noteCount).toLowerCase()} go with it.`;
+	const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
+	const closeOn = (open: boolean) => !open && setDialog(null);
 
 	return (
 		<>
@@ -71,30 +66,29 @@ export function TopicActions({
 							Study session
 						</Link>
 					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => setDialog('rename')}>
+						<Pencil />
+						Rename topic
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
-						onSelect={() => setConfirming(true)}
+						onSelect={() => setDialog('delete')}
 					>
 						<Trash2 />
 						Delete topic
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<ConfirmDeleteDialog
-				open={confirming}
-				onOpenChange={(open) => {
-					setConfirming(open);
-					if (!open) remove.reset();
-				}}
-				title={`Delete ${topic.name}?`}
-				description={`The topic is removed from this course.${notes} This cannot be undone.`}
-				confirmLabel="Delete topic"
-				pending={remove.isPending}
-				error={apiErrorMessage(remove.error)}
-				onConfirm={() =>
-					remove.mutate(topic.id, { onSuccess: () => setConfirming(false) })
-				}
+			<RenameTopicDialog
+				topic={topic}
+				open={dialog === 'rename'}
+				onOpenChange={closeOn}
+			/>
+			<DeleteTopicDialog
+				topic={topic}
+				open={dialog === 'delete'}
+				onOpenChange={closeOn}
 			/>
 		</>
 	);
