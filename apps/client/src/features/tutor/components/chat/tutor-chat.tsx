@@ -224,6 +224,7 @@ export function TutorChat({
 							key={followUpReply.id}
 							chatId={chatId}
 							messageId={followUpReply.id}
+							saved={followUpReply.metadata?.followUps}
 							disabled={Boolean(limitReason)}
 							// the same topic and model as the reply
 							onAsk={(question) =>

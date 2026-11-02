@@ -81,6 +81,7 @@ erDiagram
         tutor_action action
         varchar model_id
         integer notes_used
+        text[] follow_ups
     }
     question {
         uuid id PK
@@ -119,7 +120,7 @@ Every table also has `created_at` and `updated_at`.
 | `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                                                                                                                                                                                                                                                             |
 | `note`                                       | Study notes pasted into a topic. The tutor reads them and makes questions from them.                                                                                                                                                                                                                                                            |
 | `chat`                                       | A tutor chat of one topic, or of the whole course when `topic_id` is null. It is named after its first message. The browser makes the id, so the first message needs no extra request.                                                                                                                                                          |
-| `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, and how many notes the tutor read. See [decision 0003](decisions/03-tutor-chat.md).                                                      |
+| `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, how many notes the tutor read, and the follow-up questions shown under an explanation. See [decision 0003](decisions/03-tutor-chat.md).  |
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                           |
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                             |
 

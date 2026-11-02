@@ -39,6 +39,8 @@ export const tutorMessageMetadata = z.object({
 	notesUsed: z.int().optional(),
 	// how long each of the reply's thinking parts took, in the order they appear
 	thinkingMs: z.array(z.int().nonnegative()).optional(),
+	// the follow-up questions last shown under this reply
+	followUps: z.array(z.string()).optional(),
 	createdAt: z.iso.datetime(),
 });
 

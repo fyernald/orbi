@@ -368,6 +368,9 @@ export function createTutorService({
 				);
 			}
 			if (!isExplanation(reply)) return { questions: [] };
+			// saved ones come back without asking the model; a refresh asks again
+			const saved = reply.metadata?.followUps;
+			if (saved && exclude.length === 0) return { questions: saved };
 			// the questions only need the answer, so the model does not think first
 			const resolved = resolveModel(reply.metadata?.modelId ?? '', {
 				thinking: false,
@@ -383,6 +386,7 @@ export function createTutorService({
 				? await repo.listNotes(userId, topic.id)
 				: await repo.listCourseNotes(userId, course.id);
 
+			let questions: string[];
 			try {
 				const result = await generateText({
 					model: resolved.model,
@@ -401,13 +405,14 @@ export function createTutorService({
 					maxRetries: 1,
 					onStepEnd: logStep(resolved.entry.id, 'followUps'),
 				});
-				return {
-					questions: cleanFollowUps(result.toolCalls[0]?.input, exclude),
-				};
+				questions = cleanFollowUps(result.toolCalls[0]?.input, exclude);
 			} catch (error) {
 				logError(error);
 				throw new ServiceUnavailableError(replyErrorMessage(error));
 			}
+			// also when there are none, so the model is not asked again
+			await repo.saveFollowUps(userId, chatId, reply.id, questions);
+			return { questions };
 		},
 	};
 
