@@ -1,20 +1,17 @@
 'use client';
 
 import type { Course, Topic } from '@orbi/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { LoadError } from '@/components/load-error';
+import { useCallback, useState } from 'react';
 import { AddNotesPrompt } from '@/features/notes/components/add-notes-prompt';
 import { scopeTopicId } from '@/features/tutor/chat';
-import { ChatSkeleton } from '@/features/tutor/components/chat/chat-skeleton';
-import { TutorChat } from '@/features/tutor/components/chat/tutor-chat';
 import type {
 	ComposerDraft,
 	ComposerPreset,
 } from '@/features/tutor/components/note-composer';
-import { useScopeChat } from '@/features/tutor/hooks';
-import { apiErrorMessage } from '@/lib/api';
+import type { ScopeChats } from '@/features/tutor/open-chats';
 import { cn } from '@/lib/utils';
 import { tutorStarters, type TutorStarter } from '../tutor-starters';
+import { ChatSession } from './chat-session';
 import { TutorStarterList } from './tutor-starter-list';
 
 type ScopeChatProps = {
@@ -22,30 +19,32 @@ type ScopeChatProps = {
 	topics: Topic[];
 	// a topic id, or the whole-course scope
 	scope: string;
-	// hidden chats stay mounted, so their replies keep streaming and drafts stay
+	// the chats of this scope opened in this visit, and the one that shows
+	chats: ScopeChats;
+	// hidden scopes stay mounted, so their replies keep streaming and drafts stay
 	active: boolean;
 	preset: ComposerPreset | undefined;
-	newChatVersion: number;
-	limitReason: string | null;
-	// false for the chat the page opens on
+	// why a chat cannot send now, like the limit on parallel replies
+	limitReasonFor: (chatId: string) => string | null;
+	// false for the scope the page opens on
 	focusOnOpen: boolean;
 	onStart: (starter: Omit<TutorStarter, 'label'>) => void;
 	onOpenNotes: (topicId: string) => void;
-	onHasMessages: (scope: string, hasMessages: boolean) => void;
-	onBusyChange: (scope: string, busy: boolean) => void;
+	onHasMessages: (chatId: string, hasMessages: boolean) => void;
+	onBusyChange: (chatId: string, scope: string, busy: boolean) => void;
 	onSwitchTopic: (topicId: string | null, draft: ComposerDraft) => void;
 	onAddTopic: () => void;
 };
 
-// the chat of one topic, or of the whole course
+// the chats of one topic, or of the whole course
 export function ScopeChat({
 	course,
 	topics,
 	scope,
+	chats,
 	active,
 	preset,
-	newChatVersion,
-	limitReason,
+	limitReasonFor,
 	focusOnOpen,
 	onStart,
 	onOpenNotes,
@@ -56,41 +55,19 @@ export function ScopeChat({
 }: ScopeChatProps) {
 	const topicId = scopeTopicId(scope);
 	const topic = topics.find(({ id }) => id === topicId);
-	const session = useScopeChat({
-		courseId: course.id,
-		topicId,
-		newChatVersion,
+	// another chat starts without the preset the last one already used
+	const [usedPreset, setUsedPreset] = useState({
+		chatId: chats.currentId,
+		version: 0,
 	});
-	const hasMessages = useCallback(
-		(value: boolean) => onHasMessages(scope, value),
-		[scope, onHasMessages]
-	);
-	// a new chat starts empty, without the preset the old one already used
-	const [usedPreset, setUsedPreset] = useState({ chat: 0, version: 0 });
-	if (usedPreset.chat !== newChatVersion) {
-		setUsedPreset({ chat: newChatVersion, version: preset?.version ?? 0 });
+	if (usedPreset.chatId !== chats.currentId) {
+		setUsedPreset({ chatId: chats.currentId, version: preset?.version ?? 0 });
 	}
 	const freshPreset =
 		preset && preset.version > usedPreset.version ? preset : undefined;
-	// A chat the student opens (from the topic list or the message box) is ready to
-	// type in once it has loaded. The chat the page opens on is not, or a phone would
-	// open its keyboard by itself.
-	const container = useRef<HTMLDivElement>(null);
-	const focusWhenReady = useRef(focusOnOpen);
-	useEffect(() => {
-		if (!active) {
-			focusWhenReady.current = true;
-			return;
-		}
-		if (!focusWhenReady.current || session.isPending) return;
-		focusWhenReady.current = false;
-		container.current
-			?.querySelector('textarea')
-			?.focus({ preventScroll: true });
-	}, [active, session.isPending]);
-
+	// stays the same between renders: a chat reports busy again when it changes
 	const busy = useCallback(
-		(value: boolean) => onBusyChange(scope, value),
+		(chatId: string, value: boolean) => onBusyChange(chatId, scope, value),
 		[scope, onBusyChange]
 	);
 
@@ -118,58 +95,29 @@ export function ScopeChat({
 	);
 
 	return (
-		<div
-			ref={container}
-			className={cn('flex min-h-0 flex-1 flex-col', !active && 'hidden')}
-			// nothing inside a hidden chat should be reached by keyboard or read out
-			inert={!active}
-		>
-			{session.error ? (
-				<div className="mx-auto w-full max-w-chat flex-1 px-5 py-10">
-					<LoadError
-						message={apiErrorMessage(session.error)}
-						onRetry={() => void session.retry()}
+		<div className={cn('flex min-h-0 flex-1 flex-col', !active && 'hidden')}>
+			{chats.open.map((chat, index) => {
+				const current = chat.id === chats.currentId;
+				return (
+					<ChatSession
+						key={chat.id}
+						chat={chat}
+						course={course}
+						topicId={topicId}
+						topics={composerTopics}
+						visible={active && current}
+						// a chat opened from the list is ready to type in
+						focusOnOpen={focusOnOpen || index > 0}
+						preset={current ? freshPreset : undefined}
+						emptyState={emptyState}
+						limitReason={limitReasonFor(chat.id)}
+						onHasMessages={onHasMessages}
+						onBusyChange={busy}
+						onSwitchTopic={onSwitchTopic}
+						onAddTopic={onAddTopic}
 					/>
-				</div>
-			) : session.isPending ? (
-				<ChatLoading />
-			) : (
-				<TutorChat
-					key={session.chatId}
-					chatId={session.chatId}
-					courseId={course.id}
-					courseName={course.name}
-					chatTopicId={topicId}
-					initialMessages={session.messages}
-					initialHasEarlier={session.hasEarlier}
-					topics={composerTopics}
-					preset={freshPreset}
-					emptyState={emptyState}
-					limitReason={limitReason}
-					onHasMessages={hasMessages}
-					onBusyChange={busy}
-					onSwitchTopic={onSwitchTopic}
-					onAddTopic={onAddTopic}
-				/>
-			)}
-		</div>
-	);
-}
-
-// the chat's shape, with the composer's place kept, while its messages load
-export function ChatLoading() {
-	return (
-		<div
-			role="status"
-			aria-label="Loading the chat"
-			className="flex min-h-0 flex-1 flex-col"
-		>
-			<div className="min-h-0 flex-1 overflow-hidden">
-				<ChatSkeleton className="mx-auto w-full max-w-chat px-5 py-8" />
-			</div>
-			<div className="shrink-0 px-4 pb-4">
-				<div className="mx-auto h-34 w-full max-w-chat animate-pulse rounded-3xl border border-border bg-card motion-reduce:animate-none" />
-			</div>
+				);
+			})}
 		</div>
 	);
 }
