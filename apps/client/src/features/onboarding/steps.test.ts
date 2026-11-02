@@ -19,6 +19,8 @@ const empty: Profile = {
 	studyTime: null,
 	locale: null,
 	timezone: null,
+	reminderEnabled: false,
+	reminderTime: null,
 	onboardedAt: null,
 };
 
