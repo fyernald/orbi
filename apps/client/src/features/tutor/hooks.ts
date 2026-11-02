@@ -32,10 +32,19 @@ import {
 import {
 	fromChatMessage,
 	isRejectedRequest,
+	scopeTopicId,
 	type ChatContext,
 	type TutorUIMessage,
 } from './chat';
 import { uploadAttachment } from './mock-upload';
+import {
+	openChat,
+	scopeChatList,
+	startNewChat,
+	startScope,
+	type OpenChat,
+	type ScopeChats,
+} from './open-chats';
 import { chatKey, courseChatsKey, followUpsKey, modelsKey } from './query-keys';
 
 // the models the server can use; they change only when the server is set up again
@@ -47,58 +56,73 @@ export function useModels() {
 	});
 }
 
-// One scope's chat (a topic, or the whole course): it opens on that scope's latest
-// chat, and a new newChatVersion starts an empty one
-export function useScopeChat({
-	courseId,
-	topicId,
-	newChatVersion,
-}: {
-	courseId: string;
-	topicId: string | null;
-	newChatVersion: number;
-}) {
-	const chats = useQuery({
+// every chat of the course, newest first (the server sends the newest 50)
+export function useCourseChats(courseId: string) {
+	return useQuery({
 		queryKey: courseChatsKey(courseId),
 		queryFn: () => api.get(`/courses/${courseId}/chats`, z.array(chatSummary)),
 	});
-	const [firstNewId] = useState(() => crypto.randomUUID());
-	// fixed once chosen, so the open chat never changes under the student when the
-	// list reloads after a reply
-	const [picked, setPicked] = useState<PickedChat | null>(null);
-	const latest = chats.data?.find((chat) => chat.topicId === topicId);
-	const initial: PickedChat | null = chats.data
-		? latest
-			? { id: latest.id, isNew: false }
-			: { id: firstNewId, isNew: true }
-		: null;
-	const current = picked ?? initial;
-	useEffect(() => {
-		if (!picked && initial) setPicked(initial);
-	}, [picked, initial?.id]);
+}
 
-	useEffect(() => {
-		if (newChatVersion > 0) {
-			setPicked({ id: crypto.randomUUID(), isNew: true });
-		}
-	}, [newChatVersion]);
-
+// one chat's newest messages; a new chat has none to load yet
+export function useChatThread(chat: OpenChat) {
 	const thread = useQuery({
-		queryKey: chatKey(current?.id ?? ''),
-		queryFn: () => api.get(`/chats/${current!.id}`, chatThread),
-		enabled: current !== null && !current.isNew,
+		queryKey: chatKey(chat.id),
+		queryFn: () => api.get(`/chats/${chat.id}`, chatThread),
+		enabled: !chat.isNew,
 	});
+	return {
+		isPending: !chat.isNew && thread.isPending,
+		error: thread.error,
+		retry: () => thread.refetch(),
+		messages: chat.isNew
+			? []
+			: (thread.data?.messages.map(fromChatMessage) ?? []),
+		hasEarlier: (!chat.isNew && thread.data?.hasEarlier) ?? false,
+	};
+}
+
+// The chats each scope (a topic, or the whole course) opened in this visit. A scope
+// opens on its latest chat; once picked it is fixed, so the open chat never changes
+// under the student when the list reloads after a reply.
+export function useOpenChats(courseId: string, scopes: string[]) {
+	const list = useCourseChats(courseId);
+	const [picked, setPicked] = useState<Record<string, ScopeChats>>({});
+	// the id of each scope's first new chat, so it stays the same until it is picked
+	const [newIds] = useState(() => new Map<string, string>());
+	const newIdFor = (scope: string) => {
+		if (!newIds.has(scope)) newIds.set(scope, crypto.randomUUID());
+		return newIds.get(scope)!;
+	};
+	const chatsOf = (scope: string): ScopeChats | undefined =>
+		picked[scope] ??
+		(list.data && startScope(list.data, scopeTopicId(scope), newIdFor(scope)));
+
+	useEffect(() => {
+		if (!list.data) return;
+		const missing = scopes.filter((scope) => !picked[scope]);
+		if (missing.length === 0) return;
+		setPicked((current) => ({
+			...current,
+			...Object.fromEntries(missing.map((scope) => [scope, chatsOf(scope)!])),
+		}));
+	}, [list.data, scopes.join(), picked]);
+
+	const update = (scope: string, change: (state: ScopeChats) => ScopeChats) => {
+		const state = chatsOf(scope);
+		if (state) setPicked((current) => ({ ...current, [scope]: change(state) }));
+	};
 
 	return {
-		chatId: current?.id ?? firstNewId,
-		isPending: !current || (!current.isNew && thread.isPending),
-		error: chats.error ?? thread.error,
-		retry: () => (chats.isError ? chats.refetch() : thread.refetch()),
-		messages:
-			current && !current.isNew
-				? (thread.data?.messages.map(fromChatMessage) ?? [])
-				: [],
-		hasEarlier: (current && !current.isNew && thread.data?.hasEarlier) ?? false,
+		list,
+		chatsOf,
+		// the scope's saved chats, for the list of earlier chats
+		savedChats: (scope: string) =>
+			scopeChatList(list.data ?? [], scopeTopicId(scope)),
+		open: (scope: string, chatId: string) =>
+			update(scope, (state) => openChat(state, chatId)),
+		startNew: (scope: string) =>
+			update(scope, (state) => startNewChat(state, crypto.randomUUID())),
 	};
 }
 
@@ -118,8 +142,6 @@ export function useEarlierMessages(chatId: string) {
 		[chatId]
 	);
 }
-
-type PickedChat = { id: string; isNew: boolean };
 
 // The chat with the tutor. Only the newest message goes to the server, which keeps
 // the history; every request also says which course, topic, model, and action it is for.
