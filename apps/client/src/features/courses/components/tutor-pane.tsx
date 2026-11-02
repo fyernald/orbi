@@ -160,6 +160,8 @@ export function TutorPane({
 							<Button
 								variant="ghost"
 								size="sm"
+								// the text is hidden on phones
+								aria-label="New chat"
 								onClick={() =>
 									setNewChat((current) => ({
 										...current,

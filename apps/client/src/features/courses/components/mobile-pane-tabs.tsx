@@ -13,11 +13,13 @@ type MobilePaneTabsProps = {
 	onChange: (pane: WorkspacePane) => void;
 };
 
-// wide screens show all panes side by side, so this is for phones and tablets
+// Wide screens show all panes side by side, so this is for phones and tablets. The
+// panes are not tab panels on wide screens, so these are plain buttons that say which
+// pane shows (aria-pressed) instead of the tabs pattern.
 export function MobilePaneTabs({ value, onChange }: MobilePaneTabsProps) {
 	return (
 		<div
-			role="tablist"
+			role="group"
 			aria-label="Course panes"
 			className="flex gap-0.5 border-b border-divider px-4 lg:hidden"
 		>
@@ -25,11 +27,10 @@ export function MobilePaneTabs({ value, onChange }: MobilePaneTabsProps) {
 				<button
 					key={pane.value}
 					type="button"
-					role="tab"
-					aria-selected={value === pane.value}
+					aria-pressed={value === pane.value}
 					onClick={() => onChange(pane.value)}
 					className={cn(
-						'-mb-px h-11 border-b-2 px-3 text-sm transition-colors',
+						'-mb-px h-11 border-b-2 px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
 						value === pane.value
 							? 'border-primary font-medium text-foreground'
 							: 'border-transparent text-muted-foreground hover:text-foreground'
