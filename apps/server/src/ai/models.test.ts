@@ -1,6 +1,12 @@
 import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
-import { createModelRegistry, createProviderFactories } from './models';
+import type { LanguageModelV4ToolChoice } from '@ai-sdk/provider';
+import type { AiProvider } from '@orbi/shared';
+import {
+	createModelRegistry,
+	createProviderFactories,
+	PROVIDER_THINKING,
+} from './models';
 
 const mockFactory = () => new MockLanguageModelV4();
 
@@ -48,6 +54,44 @@ describe('createProviderFactories', () => {
 		expect(Object.keys(createProviderFactories({ google: 'key' }))).toEqual([
 			'google',
 		]);
+		expect(Object.keys(createProviderFactories({ deepseek: 'key' }))).toEqual([
+			'deepseek',
+		]);
 		expect(createProviderFactories({})).toEqual({});
+	});
+});
+
+describe('provider thinking', () => {
+	const send = (provider: AiProvider, toolChoice?: LanguageModelV4ToolChoice) =>
+		PROVIDER_THINKING[provider].transformParams!({
+			type: 'stream',
+			params: { prompt: [], toolChoice },
+			model: new MockLanguageModelV4(),
+		});
+	const forced = { type: 'tool', toolName: 'createQuestions' } as const;
+
+	it('asks every provider for its thinking', async () => {
+		expect((await send('google')).providerOptions).toEqual({
+			google: { thinkingConfig: { includeThoughts: true } },
+		});
+		expect((await send('anthropic', { type: 'auto' })).providerOptions).toEqual(
+			{ anthropic: { thinking: { type: 'adaptive', display: 'summarized' } } }
+		);
+		expect((await send('deepseek')).providerOptions).toEqual({
+			deepseek: { thinking: { type: 'enabled' } },
+		});
+	});
+
+	it('turns thinking off for a forced tool where the provider refuses both', async () => {
+		expect((await send('anthropic', forced)).providerOptions).toEqual({
+			anthropic: { thinking: { type: 'disabled' } },
+		});
+		expect((await send('deepseek', forced)).providerOptions).toEqual({
+			deepseek: { thinking: { type: 'disabled' } },
+		});
+		// Gemini already thinks while it calls a forced tool; it only sends the thoughts back
+		expect((await send('google', forced)).providerOptions).toEqual({
+			google: { thinkingConfig: { includeThoughts: true } },
+		});
 	});
 });

@@ -211,6 +211,8 @@ export const chatMessage = pgTable(
 		// the catalog id, for assistant messages
 		modelId: varchar('model_id', { length: 100 }),
 		notesUsed: integer('notes_used'),
+		// how long each thinking part took, for assistant messages
+		thinkingMs: integer('thinking_ms').array(),
 		...timestamps,
 	},
 	(t) => [

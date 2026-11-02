@@ -1,7 +1,14 @@
 'use client';
 
 import type { Topic } from '@orbi/shared';
-import { Ellipsis, NotebookPen, Pencil, Trash2 } from 'lucide-react';
+import {
+	Ellipsis,
+	GraduationCap,
+	NotebookPen,
+	Pencil,
+	Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +18,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { topicStudyRoute } from '@/lib/routes';
 import { DeleteTopicDialog } from './delete-topic-dialog';
 import { RenameTopicDialog } from './rename-topic-dialog';
 
@@ -41,6 +49,12 @@ export function TopicActions({ topic, onOpenNotes }: TopicActionsProps) {
 					<DropdownMenuItem onSelect={onOpenNotes}>
 						<NotebookPen />
 						Notes
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<Link href={topicStudyRoute(topic.courseId, topic.id)}>
+							<GraduationCap />
+							Study session
+						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem onSelect={() => setDialog('rename')}>
 						<Pencil />

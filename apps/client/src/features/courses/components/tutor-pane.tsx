@@ -1,10 +1,19 @@
 'use client';
 
 import { MAX_PARALLEL_REPLIES, type Course, type Topic } from '@orbi/shared';
-import { NotebookPen, PanelLeft, PanelRight, SquarePen, X } from 'lucide-react';
+import {
+	GraduationCap,
+	NotebookPen,
+	PanelLeft,
+	PanelRight,
+	SquarePen,
+	X,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
+import { topicStudyRoute } from '@/lib/routes';
 import type {
 	ComposerDraft,
 	ComposerPreset,
@@ -132,6 +141,19 @@ export function TutorPane({
 								<NotebookPen />
 								Notes
 								<span className="tabular-nums">{selected.noteCount}</span>
+							</Button>
+						)}
+						{selected && (
+							<Button
+								asChild
+								variant="ghost"
+								size="sm"
+								className="rounded-md text-muted-foreground"
+							>
+								<Link href={topicStudyRoute(course.id, selected.id)}>
+									<GraduationCap />
+									<span className="sr-only sm:not-sr-only">Study session</span>
+								</Link>
 							</Button>
 						)}
 						{withMessages[activeScope] && (

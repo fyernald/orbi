@@ -82,4 +82,13 @@ describe('hasVisibleContent', () => {
 			)
 		).toBe(true);
 	});
+
+	it('shows a reply once Orbi starts thinking', () => {
+		expect(hasVisibleContent(reply([{ type: 'reasoning', text: '' }]))).toBe(
+			false
+		);
+		expect(
+			hasVisibleContent(reply([{ type: 'reasoning', text: 'The notes say' }]))
+		).toBe(true);
+	});
 });

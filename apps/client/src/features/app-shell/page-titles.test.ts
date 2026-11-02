@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { routes } from '@/lib/routes';
+import { courseRoute, routes, topicStudyRoute } from '@/lib/routes';
 import { breadcrumbFor, pageTitleFor } from './page-titles';
 
 describe('pageTitleFor', () => {
@@ -30,6 +30,14 @@ describe('breadcrumbFor', () => {
 		expect(breadcrumbFor(`${routes.courses}/c1`, names)).toEqual([
 			{ label: 'Courses & notes', href: routes.courses },
 			{ label: 'Biology 101' },
+		]);
+	});
+
+	it("leads from the course to a topic's study session", () => {
+		expect(breadcrumbFor(topicStudyRoute('c1', 't1'), names)).toEqual([
+			{ label: 'Courses & notes', href: routes.courses },
+			{ label: 'Biology 101', href: courseRoute('c1') },
+			{ label: 'Study session' },
 		]);
 	});
 

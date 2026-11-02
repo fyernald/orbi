@@ -5,6 +5,7 @@ import { BookOpen, Copy, RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
 import { Markdown } from './markdown';
+import { ReasoningBlock } from './reasoning-block';
 import { Thinking } from './thinking';
 import { ToolView, type ChatActions } from './tool-views';
 
@@ -31,6 +32,11 @@ function betweenSteps(message: TutorUIMessage): boolean {
 		(last.state === 'output-available' || last.state === 'output-error')
 	);
 }
+
+// which thinking part this is; the saved times are in the same order
+const reasoningNumber = (message: TutorUIMessage, index: number) =>
+	message.parts.slice(0, index).filter(({ type }) => type === 'reasoning')
+		.length;
 
 const studentText = (message: TutorUIMessage) =>
 	message.parts
@@ -87,6 +93,21 @@ function OrbiMessage({
 					</p>
 				)}
 				{message.parts.map((part, index) => {
+					if (part.type === 'reasoning') {
+						if (!part.text.trim()) return null;
+						return (
+							<ReasoningBlock
+								key={index}
+								text={part.text}
+								thinking={streaming && part.state === 'streaming'}
+								durationMs={
+									message.metadata?.thinkingMs?.[
+										reasoningNumber(message, index)
+									]
+								}
+							/>
+						);
+					}
 					if (part.type === 'text') {
 						return (
 							<Markdown

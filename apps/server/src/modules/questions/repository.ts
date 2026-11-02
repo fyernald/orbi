@@ -3,8 +3,9 @@ import type {
 	CourseColor,
 	Question,
 	QuestionStatus,
+	StudyQuestion,
 } from '@orbi/shared';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../db';
 import { answer, course, question, topic } from '../../db/schema';
 
@@ -31,17 +32,35 @@ export interface QuestionRepository {
 		status: QuestionStatus
 	): Promise<Question | undefined>;
 	approvePending(userId: string, topicId: string): Promise<number>;
-	findChoices(
+	// what an answer is checked against; undefined when the user has no such question
+	findAnswerKey(
 		userId: string,
 		questionId: string
-	): Promise<{ count: number; correct: number } | undefined>;
+	): Promise<AnswerKey | undefined>;
 	// undefined when the question was already answered in the chat
 	insertChatAnswer(
 		userId: string,
 		saved: ChatAnswer
 	): Promise<ChatAnswer | undefined>;
 	listChatAnswers(userId: string, questionIds: string[]): Promise<ChatAnswer[]>;
+	// undefined when the user has no such topic in that course
+	findTopicNames(
+		userId: string,
+		courseId: string,
+		topicId: string
+	): Promise<{ courseName: string; topicName: string } | undefined>;
+	listApproved(userId: string, topicId: string): Promise<StudyQuestion[]>;
+	countPending(userId: string, topicId: string): Promise<number>;
+	// a session saves every try, so a question can be answered again in a later one
+	insertSessionAnswer(userId: string, saved: ChatAnswer): Promise<void>;
 }
+
+export type AnswerKey = {
+	choiceCount: number;
+	correctChoice: number;
+	explanation: string | null;
+	status: QuestionStatus;
+};
 
 const chatAnswerColumns = {
 	questionId: answer.questionId,
@@ -140,12 +159,19 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 			return approved.length;
 		},
 
-		async findChoices(userId, questionId) {
+		async findAnswerKey(userId, questionId) {
 			const [found] = await db
-				.select({ choices: question.choices, correct: question.correctChoice })
+				.select({
+					choices: question.choices,
+					correctChoice: question.correctChoice,
+					explanation: question.explanation,
+					status: question.status,
+				})
 				.from(question)
 				.where(and(eq(question.userId, userId), eq(question.id, questionId)));
-			return found && { count: found.choices.length, correct: found.correct };
+			if (!found) return undefined;
+			const { choices, ...key } = found;
+			return { choiceCount: choices.length, ...key };
 		},
 
 		// two clicks at once both get here; the unique index lets only one in
@@ -169,6 +195,61 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 						inArray(answer.questionId, questionIds)
 					)
 				);
+		},
+
+		async findTopicNames(userId, courseId, topicId) {
+			const [found] = await db
+				.select({ courseName: course.name, topicName: topic.name })
+				.from(topic)
+				.innerJoin(
+					course,
+					and(eq(course.userId, topic.userId), eq(course.id, topic.courseId))
+				)
+				.where(
+					and(
+						eq(topic.userId, userId),
+						eq(topic.courseId, courseId),
+						eq(topic.id, topicId)
+					)
+				);
+			return found;
+		},
+
+		// the oldest set first, each in the order the AI wrote it
+		async listApproved(userId, topicId) {
+			return db
+				.select({
+					id: question.id,
+					text: question.text,
+					choices: question.choices,
+				})
+				.from(question)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(question.topicId, topicId),
+						eq(question.status, 'approved')
+					)
+				)
+				.orderBy(asc(question.createdAt), asc(question.position));
+		},
+
+		async countPending(userId, topicId) {
+			const [found] = await db
+				.select({ pending: count() })
+				.from(question)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(question.topicId, topicId),
+						eq(question.status, 'pending')
+					)
+				);
+			return found?.pending ?? 0;
+		},
+
+		async insertSessionAnswer(userId, saved) {
+			await db.insert(answer).values({ userId, context: 'session', ...saved });
 		},
 	};
 }

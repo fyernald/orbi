@@ -24,6 +24,7 @@ const envSchema = z
 		// each provider is offered only when its key is set; with none, the tutor is off
 		GEMINI_API_KEY: z.string().optional(),
 		ANTHROPIC_API_KEY: z.string().optional(),
+		DEEPSEEK_API_KEY: z.string().optional(),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -53,7 +54,7 @@ export type Config = {
 	databaseUrl: string;
 	auth: { secret: string; baseURL: string };
 	smtp: SmtpOptions | null;
-	aiKeys: { google?: string; anthropic?: string };
+	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
 };
 
 // fails at startup with every missing or wrong variable listed
@@ -85,6 +86,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		aiKeys: {
 			google: vars.GEMINI_API_KEY || undefined,
 			anthropic: vars.ANTHROPIC_API_KEY || undefined,
+			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
 	};
 }

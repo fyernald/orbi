@@ -6,6 +6,8 @@ import {
 	question,
 	questionParams,
 	reviewTopic,
+	sessionAnswer,
+	studySession,
 	topicParams,
 	updateQuestionInput,
 } from '@orbi/shared';
@@ -96,6 +98,37 @@ export function createQuestionRoutes({
 			async (request, reply) => {
 				const userId = await requireUser(request);
 				const saved = await questions.answerInChat(
+					userId,
+					request.params.questionId,
+					request.body.choice
+				);
+				return reply.status(201).send(saved);
+			}
+		);
+
+		// the approved questions of a topic, to answer one by one
+		api.get(
+			'/courses/:courseId/topics/:topicId/study',
+			{ schema: { params: topicParams, response: { 200: studySession } } },
+			async (request) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				return questions.startSession(userId, courseId, topicId);
+			}
+		);
+
+		api.post(
+			'/questions/:questionId/session-answer',
+			{
+				schema: {
+					params: questionParams,
+					body: answerQuestionInput,
+					response: { 201: sessionAnswer },
+				},
+			},
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const saved = await questions.answerInSession(
 					userId,
 					request.params.questionId,
 					request.body.choice

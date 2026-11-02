@@ -17,8 +17,9 @@ const usage = {
 };
 
 export type ScriptedStep =
-	// delayMs holds the reply back, to test replies that run at the same time
-	| { text: string; delayMs?: number }
+	// delayMs holds the reply back, to test replies that run at the same time;
+	// reasoning is the model's thinking, sent before the text
+	| { text: string; reasoning?: string; delayMs?: number }
 	| { tool: string; input: unknown }
 	| { error: unknown };
 
@@ -27,6 +28,17 @@ function streamFor(step: ScriptedStep, call: number) {
 	const chunks: LanguageModelV4StreamPart[] =
 		'text' in step
 			? [
+					...(step.reasoning
+						? ([
+								{ type: 'reasoning-start', id: 'reasoning-1' },
+								{
+									type: 'reasoning-delta',
+									id: 'reasoning-1',
+									delta: step.reasoning,
+								},
+								{ type: 'reasoning-end', id: 'reasoning-1' },
+							] satisfies LanguageModelV4StreamPart[])
+						: []),
 					{ type: 'text-start', id: 'text-1' },
 					{ type: 'text-delta', id: 'text-1', delta: step.text },
 					{ type: 'text-end', id: 'text-1' },

@@ -51,6 +51,21 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		providerModelId: 'claude-opus-5-5',
 		goodAt: 'Slowest, best at deep reasoning',
 	},
+	{
+		id: 'deepseek-flash',
+		label: 'DeepSeek Flash',
+		provider: 'deepseek',
+		// follows DeepSeek's newest Flash model, like the Gemini aliases
+		providerModelId: 'deepseek-flash',
+		goodAt: 'Low cost, good for most study tasks',
+	},
+	{
+		id: 'deepseek-pro',
+		label: 'DeepSeek Pro',
+		provider: 'deepseek',
+		providerModelId: 'deepseek-v4-pro',
+		goodAt: 'Low cost, better at hard topics',
+	},
 ];
 
 // the first available one is used when this one has no key

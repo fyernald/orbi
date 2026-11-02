@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const AI_PROVIDERS = ['google', 'anthropic'] as const;
+export const AI_PROVIDERS = ['google', 'anthropic', 'deepseek'] as const;
 
 // a model the student can pick; the server's catalog decides which ones exist
 export const aiModel = z.object({

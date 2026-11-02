@@ -1,12 +1,10 @@
 'use client';
 
 import type { ChatAnswer, GeneratedQuestion } from '@orbi/shared';
-import { Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { choiceLetter, choiceMark } from '@/features/questions/choices';
+import { ChoiceOption } from '@/features/questions/components/choice-option';
 import { ApiError, apiErrorMessage } from '@/lib/api';
-import { cn } from '@/lib/utils';
-
-const letters = ['A', 'B', 'C', 'D'];
 
 type QuizQuestionProps = {
 	question: GeneratedQuestion;
@@ -57,33 +55,22 @@ export function QuizQuestion({
 			</span>
 			<p className="text-[15px] leading-snug font-medium">{question.text}</p>
 			<ul className="flex flex-col gap-1.5">
-				{question.choices.map((text, index) => {
-					const isRight = answered && index === question.correctChoice;
-					const isWrongPick = answered && index === choice && !correct;
-					return (
-						<li key={index}>
-							<button
-								type="button"
-								disabled={!answerable || answered}
-								onClick={() => void pick(index)}
-								className={cn(
-									'flex w-full items-baseline gap-2.5 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm transition-colors enabled:hover:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-default',
-									isRight &&
-										'border-tone-green-foreground/40 bg-tone-green text-tone-green-foreground',
-									isWrongPick &&
-										'border-tone-red-foreground/40 bg-tone-red text-tone-red-foreground'
-								)}
-							>
-								<span className="text-xs font-medium text-muted-foreground">
-									{letters[index]}
-								</span>
-								<span className="min-w-0 flex-1">{text}</span>
-								{isRight && <Check className="size-4 shrink-0 self-center" />}
-								{isWrongPick && <X className="size-4 shrink-0 self-center" />}
-							</button>
-						</li>
-					);
-				})}
+				{question.choices.map((text, index) => (
+					<li key={index}>
+						<ChoiceOption
+							index={index}
+							text={text}
+							mark={choiceMark(
+								index,
+								answered
+									? { choice, correctChoice: question.correctChoice }
+									: undefined
+							)}
+							disabled={!answerable || answered}
+							onPick={() => void pick(index)}
+						/>
+					</li>
+				))}
 			</ul>
 			<div aria-live="polite">
 				{answered && (
@@ -91,7 +78,7 @@ export function QuizQuestion({
 						<span className="font-medium text-foreground">
 							{correct
 								? 'Correct. '
-								: `Not quite. The answer is ${letters[question.correctChoice]}. `}
+								: `Not quite. The answer is ${choiceLetter(question.correctChoice)}. `}
 						</span>
 						{question.explanation}
 					</p>

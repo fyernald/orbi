@@ -205,6 +205,7 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `APP_ENV`: `local` or `production` (default). With `local`, sign-up logs you in without email confirmation and emails are printed in the server console instead of sent, so no mail server is needed. Never set `local` on the server
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server. Required in production, because sign-up, email confirmation, and password reset send mail. Not used with `APP_ENV=local`. `SMTP_USER` and `SMTP_PASSWORD` are only needed in production
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
+- `DEEPSEEK_API_KEY`: DeepSeek API key (server only, optional). DeepSeek models show in the model menu only when it is set
 
 ## Deployment
 
