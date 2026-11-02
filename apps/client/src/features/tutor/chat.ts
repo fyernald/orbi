@@ -18,6 +18,8 @@ export type ChatContext = {
 	// null when a whole-course message is about no topic in particular
 	topicId: string | null;
 	modelId: string;
+	// the student's Think choice for this message
+	thinking: boolean;
 	action: TutorAction;
 };
 

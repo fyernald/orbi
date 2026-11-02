@@ -25,8 +25,14 @@ import {
 	TypeValidationError,
 	validateUIMessages,
 	type InferUIMessageChunk,
+	type LanguageModelUsage,
 } from 'ai';
-import type { ModelRegistry, ResolvedModel } from '../../ai/models';
+import type {
+	ModelOptions,
+	ModelRegistry,
+	ResolvedModel,
+} from '../../ai/models';
+import { usageLine, type LogUsage, type UsageAction } from '../../ai/usage';
 import {
 	ConflictError,
 	NotFoundError,
@@ -47,10 +53,12 @@ import {
 	hasContent,
 	isExplanation,
 	messageText,
+	recentMessages,
 	skipUnansweredQuestions,
 	toChatMessage,
 	toStoredMessage,
 	toUIMessage,
+	withoutEarlierThinking,
 	withoutUnfinishedTools,
 	type TutorUIMessage,
 } from './messages';
@@ -160,16 +168,18 @@ export function createTutorService({
 	models,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
 	logError = (error) => console.error(error),
+	logUsage = () => {},
 	now = () => new Date(),
 }: {
 	repo: TutorRepository;
 	models: ModelRegistry;
 	limiter?: ReplyLimiter;
 	logError?: (error: unknown) => void;
+	logUsage?: LogUsage;
 	now?: () => Date;
 }): TutorService {
-	function resolveModel(modelId: string): ResolvedModel {
-		const resolved = models.resolve(modelId);
+	function resolveModel(modelId: string, options: ModelOptions): ResolvedModel {
+		const resolved = models.resolve(modelId, options);
 		if (resolved) return resolved;
 		if (models.list().models.length === 0) {
 			throw new ServiceUnavailableError(
@@ -184,6 +194,14 @@ export function createTutorService({
 		if (!chat) throw new NotFoundError('Chat not found.');
 		return chat;
 	}
+
+	// one log line after every model call, with its token counts
+	const logStep =
+		(modelId: string, action: UsageAction) =>
+		(step: { stepNumber: number; usage: LanguageModelUsage }) =>
+			logUsage(
+				usageLine({ modelId, action, step: step.stepNumber, usage: step.usage })
+			);
 
 	// the messages the model sees, and the student's new message to save first
 	async function nextMessages(
@@ -280,7 +298,9 @@ export function createTutorService({
 		async reply(userId, chatId, input, abortSignal) {
 			const rule = actionRules[input.action];
 			if (!rule.available) throw new ValidationError(rule.message);
-			const resolved = resolveModel(input.modelId);
+			const resolved = resolveModel(input.modelId, {
+				thinking: input.thinking,
+			});
 
 			const course = await repo.findCourse(userId, input.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -348,7 +368,10 @@ export function createTutorService({
 				);
 			}
 			if (!isExplanation(reply)) return { questions: [] };
-			const resolved = resolveModel(reply.metadata?.modelId ?? '');
+			// the questions only need the answer, so the model does not think first
+			const resolved = resolveModel(reply.metadata?.modelId ?? '', {
+				thinking: false,
+			});
 
 			const course = await repo.findCourse(userId, chat.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -376,6 +399,7 @@ export function createTutorService({
 					toolChoice: { type: 'tool', toolName: 'suggestFollowUps' },
 					timeout: FOLLOW_UPS_TIMEOUT_MS,
 					maxRetries: 1,
+					onStepEnd: logStep(resolved.entry.id, 'followUps'),
 				});
 				return {
 					questions: cleanFollowUps(result.toolCalls[0]?.input, exclude),
@@ -506,7 +530,10 @@ export function createTutorService({
 				action: input.action,
 				today: startedAt,
 			}),
-			messages: await convertToModelMessages(validated, { tools }),
+			messages: await convertToModelMessages(
+				recentMessages(withoutEarlierThinking(validated)),
+				{ tools }
+			),
 			tools,
 			// practice questions belong to a topic, so the whole-course chat cannot make them
 			activeTools: topic ? undefined : ['askStudent'],
@@ -533,6 +560,7 @@ export function createTutorService({
 			abortSignal,
 			timeout: TIMEOUT,
 			maxRetries: 1,
+			onStepEnd: logStep(resolved.entry.id, input.action),
 		});
 
 		// a millisecond after the student's message, so the two never swap places
@@ -562,6 +590,8 @@ export function createTutorService({
 			tools,
 			originalMessages: validated,
 			generateMessageId: () => responseId,
+			// with Think off nothing is shown, even from a model that cannot stop thinking
+			sendReasoning: input.thinking,
 			// sent again after each thinking part, so the student sees how long it took
 			messageMetadata: ({ part }) => {
 				thinking.track(part);

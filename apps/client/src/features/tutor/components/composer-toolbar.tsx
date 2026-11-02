@@ -6,6 +6,8 @@ import { AttachButton } from './attach-button';
 import { ModelPicker } from './model-picker';
 import { SendButton } from './send-button';
 import { StopButton } from './stop-button';
+import { ThinkToggle } from './think-toggle';
+import { ThinkWarning } from './think-warning';
 
 type ComposerToolbarProps = {
 	control: Control<TutorRequestInput>;
@@ -27,11 +29,20 @@ export function ComposerToolbar({
 	onStop,
 }: ComposerToolbarProps) {
 	const { field: modelField } = useController({ control, name: 'modelId' });
+	const { field: thinkingField } = useController({
+		control,
+		name: 'thinking',
+	});
 
 	return (
 		<div className="flex items-center gap-1.5 p-1">
 			<AttachButton onFiles={onFiles} />
 			<div className="ml-auto flex items-center gap-1">
+				<ThinkToggle
+					on={thinkingField.value}
+					onChange={thinkingField.onChange}
+				/>
+				<ThinkWarning />
 				<ModelPicker
 					models={models}
 					selectedId={modelField.value}

@@ -17,6 +17,8 @@ export const tutorRequestInput = z.object({
 	// empty means the whole course; the composer decides when that is allowed
 	topicId: z.string(),
 	modelId: z.string().min(1, 'Choose a model first.'),
+	// whether the model thinks before it answers; thinking costs the most tokens
+	thinking: z.boolean(),
 	message: z
 		.string()
 		.trim()
@@ -64,6 +66,7 @@ export const sendChatMessageInput = z
 		// whole-course chat null
 		topicId: z.uuid('Topic not found.').nullable(),
 		modelId: z.string().min(1, 'Choose a model first.'),
+		thinking: z.boolean().default(false),
 		action: z.enum(TUTOR_ACTIONS),
 		trigger: z.enum(CHAT_TRIGGERS),
 		message: chatMessage.omit({ metadata: true }).optional(),

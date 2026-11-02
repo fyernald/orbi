@@ -68,5 +68,6 @@ export const MODEL_CATALOG: CatalogModel[] = [
 	},
 ];
 
-// the first available one is used when this one has no key
-export const DEFAULT_MODEL_ID = 'gemini-flash';
+// the first of these with a key is the default, so it stays a cheap model;
+// with none of them, the first available model is used
+export const DEFAULT_MODEL_IDS = ['gemini-flash', 'deepseek-flash'];

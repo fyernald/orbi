@@ -10,6 +10,7 @@ const values = (
 	action: 'ask',
 	topicId: 'bio-meiosis',
 	modelId: 'gemini-flash',
+	thinking: false,
 	message: 'Why does crossing over happen?',
 	...changes,
 });

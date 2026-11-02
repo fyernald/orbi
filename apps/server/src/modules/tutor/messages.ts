@@ -96,6 +96,37 @@ export function skipUnansweredQuestions(
 	return changed ? { ...message, parts } : undefined;
 }
 
+// how many of the newest messages a reply sends to the model
+export const MODEL_HISTORY_MAX = 20;
+
+// The newest messages, starting on one of the student's. A tool call and its result
+// are one part of the same message, so the cut never splits them.
+export function recentMessages(
+	messages: TutorUIMessage[],
+	max = MODEL_HISTORY_MAX
+): TutorUIMessage[] {
+	const recent = messages.slice(-max);
+	const firstStudent = recent.findIndex(({ role }) => role === 'user');
+	return firstStudent === -1 ? recent : recent.slice(firstStudent);
+}
+
+// Earlier replies go to the model without their thinking, which it does not need
+// again. A reply that goes on after the student's answer keeps it: that is still the
+// same turn, and Claude and DeepSeek want its thinking back.
+export function withoutEarlierThinking(
+	messages: TutorUIMessage[]
+): TutorUIMessage[] {
+	const continuing = messages.at(-1)?.role === 'assistant';
+	return messages.map((message, index) => {
+		const keep = continuing && index === messages.length - 1;
+		if (message.role !== 'assistant' || keep) return message;
+		return {
+			...message,
+			parts: message.parts.filter(({ type }) => type !== 'reasoning'),
+		};
+	});
+}
+
 // a reply that only explains, without question sets or questions for the student
 export const isExplanation = (message: TutorUIMessage) =>
 	message.role === 'assistant' &&

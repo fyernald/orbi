@@ -26,6 +26,7 @@ export type ComposerPreset = {
 	action?: TutorAction;
 	topicId?: string;
 	modelId?: string;
+	thinking?: boolean;
 	message?: string;
 };
 
@@ -34,6 +35,7 @@ export type ComposerDraft = {
 	message: string;
 	action: TutorAction;
 	modelId: string;
+	thinking: boolean;
 };
 
 type NoteComposerProps = {
@@ -75,6 +77,7 @@ export function NoteComposer({
 			action: 'ask',
 			topicId: topicId ?? topics[0]?.id ?? '',
 			modelId: '',
+			thinking: false,
 			message: '',
 		},
 	});
@@ -95,6 +98,9 @@ export function NoteComposer({
 		if (preset.action) form.setValue('action', preset.action);
 		if (preset.topicId) form.setValue('topicId', preset.topicId);
 		if (preset.modelId) form.setValue('modelId', preset.modelId);
+		if (preset.thinking !== undefined) {
+			form.setValue('thinking', preset.thinking);
+		}
 		if (preset.message !== undefined) form.setValue('message', preset.message);
 		form.setFocus('message');
 		// only a new version applies the preset, not every render
@@ -146,10 +152,10 @@ export function NoteComposer({
 							onTopicChange &&
 							((next) => {
 								if (next === form.getValues('topicId')) return;
-								const { message, action, modelId } = form.getValues();
+								const { message, action, modelId, thinking } = form.getValues();
 								// the draft goes with the student to the other chat
 								form.setValue('message', '');
-								onTopicChange(next, { message, action, modelId });
+								onTopicChange(next, { message, action, modelId, thinking });
 							})
 						}
 						onAddTopic={onAddTopic}

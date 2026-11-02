@@ -4,9 +4,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
+import type { UsageLine } from '../../ai/usage';
 import { createReplyLimiter } from './reply-limiter';
 
 const ai = createScriptedModels();
+const usage: UsageLine[] = [];
 let app: Awaited<ReturnType<typeof createTestApp>>;
 let ada: string;
 let grace: string;
@@ -15,6 +17,7 @@ beforeAll(async () => {
 	app = await createTestApp(createMemoryMailer(), {
 		requireEmailVerification: false,
 		models: ai.registry,
+		logUsage: (line) => usage.push(line),
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');
 	grace = await signUpTestUser(app, 'grace@test.dev');
@@ -24,7 +27,10 @@ afterAll(async () => {
 	await app.close();
 });
 
-beforeEach(() => ai.script());
+beforeEach(() => {
+	ai.script();
+	usage.length = 0;
+});
 
 const send = (
 	cookie: string,
@@ -152,7 +158,7 @@ describe('tutor chat', () => {
 		expect(chats.map((chat: { id: string }) => chat.id)).toEqual([chatId]);
 	});
 
-	it("streams the model's thinking and saves how long it took", async () => {
+	it("streams the model's thinking with Think on and saves how long it took", async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();
 		ai.script({
@@ -162,7 +168,10 @@ describe('tutor chat', () => {
 
 		const response = await ask(ada, chatId, context, {
 			message: userMessage('What happens in anaphase?'),
+			thinking: true,
 		});
+
+		expect(ai.thinking).toEqual([true]);
 
 		const thinking = chunksOf(response.body)
 			.filter((chunk) => chunk.type === 'reasoning-delta')
@@ -816,6 +825,133 @@ describe('follow-up questions', () => {
 		expect(response.json().error.message).toBe(
 			'This model has reached its limit for now. Try again later, or pick another model.'
 		);
+	});
+});
+
+describe('token use', () => {
+	// what the model was sent besides the instructions
+	const chatSent = (call = 0) =>
+		ai.calls[call]!.prompt.filter(({ role }) => role !== 'system');
+
+	it('does not think or show thinking with Think off', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({
+			reasoning: 'A little thinking.',
+			text: 'Chromatids separate.',
+		});
+
+		const response = await ask(ada, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+
+		expect(ai.thinking).toEqual([false]);
+		expect(
+			chunksOf(response.body).some((chunk) =>
+				chunk.type.startsWith('reasoning')
+			)
+		).toBe(false);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(
+			thread.messages[1].parts.map((part: { type: string }) => part.type)
+		).not.toContain('reasoning');
+	});
+
+	it('sends only the last 20 messages of a long chat', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		for (let round = 0; round < 11; round += 1) {
+			ai.script({ text: `Answer ${round}.` });
+			await ask(ada, chatId, context, {
+				message: userMessage(`Question ${round}?`),
+			});
+		}
+
+		ai.script({ text: 'Answer 11.' });
+		await ask(ada, chatId, context, { message: userMessage('Question 11?') });
+
+		const sent = chatSent();
+		expect(sent.length).toBeLessThanOrEqual(20);
+		expect(sent[0]!.role).toBe('user');
+		const text = JSON.stringify(sent);
+		expect(text).not.toContain('Question 0?');
+		expect(text).not.toContain('Question 1?');
+		expect(text).toContain('Question 11?');
+	});
+
+	it("never sends an earlier reply's thinking back to the model", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({
+			reasoning: 'Private thinking about anaphase.',
+			text: 'Chromatids separate.',
+		});
+		await ask(ada, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+			thinking: true,
+		});
+
+		ai.script({ text: 'They are pulled to the poles.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Where do they go?'),
+			thinking: true,
+		});
+
+		const sent = chatSent();
+		expect(JSON.stringify(sent)).toContain('Chromatids separate.');
+		expect(JSON.stringify(sent)).not.toContain('Private thinking');
+		expect(
+			sent.flatMap(({ content }) =>
+				Array.isArray(content) ? content.map(({ type }) => type) : []
+			)
+		).not.toContain('reasoning');
+	});
+
+	it('logs the tokens of every model call, without what the student wrote', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script({ text: 'Chromatids separate.' });
+
+		await ask(ada, randomUUID(), context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+
+		expect(usage).toEqual([
+			{
+				modelId: 'gemini-flash',
+				action: 'ask',
+				step: 0,
+				inputTokens: 10,
+				cachedInputTokens: 0,
+				outputTokens: 5,
+				thinkingTokens: 0,
+			},
+		]);
+	});
+
+	it('gives follow-up questions at most 4,000 characters of notes, without thinking', async () => {
+		const longNote = 'a'.repeat(9_000);
+		const context = await createTopic(ada, longNote);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+			thinking: true,
+		});
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		ai.script({ tool: 'suggestFollowUps', input: { questions: [] } });
+
+		await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${thread.messages[1].id}/follow-ups`,
+			{ exclude: [] }
+		);
+
+		const instructions = JSON.stringify(ai.calls[0]!.prompt[0]);
+		expect(instructions).toContain('a'.repeat(4_000));
+		expect(instructions).not.toContain('a'.repeat(4_001));
+		expect(ai.thinking).toEqual([false]);
+		expect(usage.map(({ action }) => action)).toEqual(['ask', 'followUps']);
 	});
 });
 

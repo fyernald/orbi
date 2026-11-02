@@ -1,4 +1,5 @@
 import { createModelRegistry, type ModelRegistry } from './ai/models';
+import type { LogUsage } from './ai/usage';
 import { buildApp } from './app';
 import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
@@ -23,6 +24,8 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
+	// gets the token counts of every model call
+	logUsage?: LogUsage;
 	// pass one to put rows in place that no route can make, like the tutor's questions
 	db?: TestDb;
 };
@@ -37,6 +40,7 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
+		logUsage,
 		db: givenDb,
 	}: TestAppOptions = {}
 ) {
@@ -59,6 +63,7 @@ export async function createTestApp(
 		models,
 		limiter,
 		logError: () => {},
+		logUsage,
 	});
 	return buildApp({
 		auth,

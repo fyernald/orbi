@@ -48,6 +48,7 @@ const tutor = createTutorService({
 		providers: createProviderFactories(config.aiKeys),
 	}),
 	logError: (error) => app.log.error(error),
+	logUsage: (line) => app.log.info(line, 'ai usage'),
 });
 
 const app: ReturnType<typeof buildApp> = buildApp({
