@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createReplyLimiter } from './reply-limiter';
+import { createReplyLimiter, releaseOnAbort } from './reply-limiter';
 
 describe('createReplyLimiter', () => {
 	it('lets each student run up to the limit', () => {
@@ -22,5 +22,28 @@ describe('createReplyLimiter', () => {
 
 		expect(next).toBeDefined();
 		expect(limiter.acquire('ada')).toBeUndefined();
+	});
+});
+
+describe('releaseOnAbort', () => {
+	it('frees the place when the reply is stopped', () => {
+		const limiter = createReplyLimiter(1);
+		const controller = new AbortController();
+		releaseOnAbort(limiter.acquire('ada')!, controller.signal);
+
+		expect(limiter.acquire('ada')).toBeUndefined();
+		controller.abort();
+		expect(limiter.acquire('ada')).toBeDefined();
+	});
+
+	it('frees the place of a reply stopped before it started', () => {
+		const limiter = createReplyLimiter(1);
+		const controller = new AbortController();
+		const release = limiter.acquire('ada')!;
+
+		controller.abort();
+		releaseOnAbort(release, controller.signal);
+
+		expect(limiter.acquire('ada')).toBeDefined();
 	});
 });

@@ -26,3 +26,10 @@ export function createReplyLimiter(max: number): ReplyLimiter {
 		},
 	};
 }
+
+// The student can stop a reply before it has started, and an abort listener added
+// after that never fires, so a signal that is already aborted frees the place at once
+export function releaseOnAbort(release: () => void, signal: AbortSignal) {
+	if (signal.aborted) return release();
+	signal.addEventListener('abort', release, { once: true });
+}
