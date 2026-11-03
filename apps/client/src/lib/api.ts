@@ -27,15 +27,69 @@ async function request<T>(
 	const response = await fetch(`/api${path}`, init);
 	const body: unknown = await response.json().catch(() => null);
 
-	if (!response.ok) {
-		const error = (body as ErrorBody)?.error;
-		throw new ApiError(
-			response.status,
-			error?.code ?? 'unknown',
-			error?.message ?? fallbackMessage
-		);
-	}
+	if (!response.ok) throw toApiError(response.status, body);
 	return schema.parse(body);
+}
+
+function toApiError(status: number, body: unknown) {
+	const error = (body as ErrorBody)?.error;
+	return new ApiError(
+		status,
+		error?.code ?? 'unknown',
+		error?.message ?? fallbackMessage
+	);
+}
+
+export type UploadProgress = {
+	signal: AbortSignal;
+	// 0 to 1, how much of the file has been sent
+	onProgress: (progress: number) => void;
+};
+
+type UploadInput = UploadProgress & { file: Blob; contentType: string };
+
+// fetch cannot tell how much of a file has been sent, so files go up with
+// XMLHttpRequest; the file itself is the body
+function upload<T>(
+	path: string,
+	schema: ZodType<T>,
+	{ file, contentType, signal, onProgress }: UploadInput
+): Promise<T> {
+	return new Promise((resolve, reject) => {
+		if (signal.aborted) return reject(signal.reason);
+		const xhr = new XMLHttpRequest();
+		xhr.open('POST', `/api${path}`);
+		xhr.setRequestHeader('content-type', contentType);
+		xhr.upload.onprogress = (event) => {
+			if (event.lengthComputable) onProgress(event.loaded / event.total);
+		};
+		xhr.onload = () => {
+			let body: unknown = null;
+			try {
+				body = JSON.parse(xhr.responseText);
+			} catch {
+				// an error page from a proxy is not JSON; the general message is used
+			}
+			if (xhr.status < 200 || xhr.status >= 300) {
+				return reject(toApiError(xhr.status, body));
+			}
+			try {
+				resolve(schema.parse(body));
+			} catch (error) {
+				reject(error);
+			}
+		};
+		xhr.onerror = () => reject(new Error(fallbackMessage));
+		signal.addEventListener(
+			'abort',
+			() => {
+				xhr.abort();
+				reject(signal.reason);
+			},
+			{ once: true }
+		);
+		xhr.send(file);
+	});
 }
 
 const withJson = (method: string, body: unknown): RequestInit =>
@@ -56,6 +110,7 @@ export const api = {
 		request(path, schema, withJson('PATCH', body)),
 	// the server answers 204 with no body
 	delete: (path: string) => request(path, z.null(), { method: 'DELETE' }),
+	upload,
 };
 
 // the server writes its messages for users; anything else (offline, a crash) gets a general one

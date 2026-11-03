@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { NoteForm } from './note-form';
 import { NotesList } from './notes-list';
+import { PdfUpload } from './pdf-upload';
 
 type TopicNotesSheetProps = {
 	courseId: string;
@@ -53,7 +54,10 @@ export function TopicNotesSheet({
 							key={topic.id}
 							className="flex flex-1 flex-col gap-6 overflow-y-auto p-4"
 						>
-							<NoteForm courseId={courseId} topicId={topic.id} />
+							<div className="flex flex-col gap-3">
+								<NoteForm courseId={courseId} topicId={topic.id} />
+								<PdfUpload courseId={courseId} topicId={topic.id} />
+							</div>
 							<section
 								aria-labelledby="saved-notes-title"
 								className="flex flex-col gap-3"

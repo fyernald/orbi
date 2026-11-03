@@ -2,6 +2,9 @@ import {
 	createNoteInput,
 	note,
 	noteParams,
+	PDF_MAX_SIZE,
+	pdfUploadQuery,
+	pdfUploadResult,
 	topicParams,
 	updateNoteInput,
 } from '@orbi/shared';
@@ -20,6 +23,13 @@ export function createNoteRoutes({
 	requireUser,
 }: NoteRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
+		// a PDF upload sends the file itself as the body, kept as bytes
+		api.addContentTypeParser(
+			'application/pdf',
+			{ parseAs: 'buffer', bodyLimit: PDF_MAX_SIZE },
+			(_request, body, done) => done(null, body)
+		);
+
 		api.get(
 			'/courses/:courseId/topics/:topicId/notes',
 			{ schema: { params: topicParams, response: { 200: z.array(note) } } },
@@ -49,6 +59,29 @@ export function createNoteRoutes({
 					request.body
 				);
 				return reply.status(201).send(created);
+			}
+		);
+
+		api.post(
+			'/courses/:courseId/topics/:topicId/notes/pdf',
+			{
+				schema: {
+					params: topicParams,
+					querystring: pdfUploadQuery,
+					body: z.instanceof(Uint8Array, { error: 'Attach a PDF file.' }),
+					response: { 200: pdfUploadResult, 201: pdfUploadResult },
+				},
+			},
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				const result = await notes.createNotesFromPdf(
+					userId,
+					courseId,
+					topicId,
+					{ fileName: request.query.fileName, data: request.body }
+				);
+				return reply.status(result.reused ? 200 : 201).send(result);
 			}
 		);
 

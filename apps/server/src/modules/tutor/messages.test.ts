@@ -2,14 +2,16 @@ import { APICallError, RetryError } from 'ai';
 import { describe, expect, it } from 'vitest';
 import { chatTitle } from './chat-title';
 import {
+	attachedNoteIds,
 	hasContent,
 	recentMessages,
 	skipUnansweredQuestions,
+	withAttachmentNames,
 	withoutEarlierThinking,
 	withoutUnfinishedTools,
 	type TutorUIMessage,
 } from './messages';
-import { replyErrorMessage } from './service';
+import { replyErrorMessage, timeoutAsError } from './service';
 
 const reply = (parts: unknown[]): TutorUIMessage => ({
 	id: 'reply-1',
@@ -196,5 +198,59 @@ describe('withoutEarlierThinking', () => {
 			'reasoning',
 			'text',
 		]);
+	});
+});
+
+describe('attachments', () => {
+	const sent = (
+		id: string,
+		attachments: { fileName: string; noteIds: string[] }[]
+	): TutorUIMessage => ({
+		id,
+		role: 'user',
+		parts: [{ type: 'text', text: 'Can you solve this?' }],
+		metadata: { topicId: null, attachments, createdAt: '2026-11-03T10:00:00Z' },
+	});
+
+	it('lists the notes of the newest attachments first, each once', () => {
+		const messages = [
+			sent('first', [{ fileName: 'a.pdf', noteIds: ['a1', 'a2'] }]),
+			sent('second', [{ fileName: 'b.pdf', noteIds: ['b1', 'a1'] }]),
+		];
+
+		expect(attachedNoteIds(messages)).toEqual(['b1', 'a1', 'a2']);
+	});
+
+	it("names the attached files at the start of the student's message", () => {
+		const [named] = withAttachmentNames([
+			sent('first', [{ fileName: 'Lecture 3.pdf', noteIds: ['a1'] }]),
+		]);
+
+		expect(named!.parts).toHaveLength(2);
+		expect(named!.parts[0]).toMatchObject({
+			type: 'text',
+			text: expect.stringContaining('attached "Lecture 3.pdf"'),
+		});
+	});
+
+	it('leaves messages without files alone', () => {
+		const message = sent('plain', []);
+		expect(withAttachmentNames([message])).toEqual([message]);
+	});
+});
+
+describe('timeoutAsError', () => {
+	it('turns a reply cut by the timeout into an error', () => {
+		expect(timeoutAsError({ type: 'abort' }, false)).toMatchObject({
+			type: 'error',
+			errorText: expect.stringContaining('stopped answering'),
+		});
+	});
+
+	it('keeps a stop by the student, and every other chunk', () => {
+		expect(timeoutAsError({ type: 'abort' }, true)).toEqual({ type: 'abort' });
+		expect(timeoutAsError({ type: 'text-delta' }, false)).toEqual({
+			type: 'text-delta',
+		});
 	});
 });

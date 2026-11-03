@@ -1,6 +1,6 @@
 import { tutorRequestInput, type TutorRequestInput } from '@orbi/shared';
 import { composerActions } from './actions';
-import type { Attachment } from './attachments';
+import { attachmentSummary, type Attachment } from './attachments';
 
 type ComposerState = {
 	values: TutorRequestInput;
@@ -10,7 +10,7 @@ type ComposerState = {
 };
 
 // why the composer cannot be sent yet, or null when it can; the form rules come
-// from the shared schema, the file rules only exist in the browser
+// from the shared schema
 export function sendBlockedReason({
 	values,
 	attachments,
@@ -29,9 +29,14 @@ export function sendBlockedReason({
 			return 'Pick a topic first. Practice questions belong to one topic.';
 		}
 	}
-	// the upload endpoint does not exist yet, so the tutor cannot read files
-	if (attachments.length > 0) {
-		return 'Orbi cannot read files yet. Paste the text into the message instead.';
+	// an attached PDF is saved to the topic's notes, and the tutor reads it there
+	if (attachments.some((file) => file.status === 'uploading')) {
+		return 'Wait until your PDFs are saved to the notes.';
+	}
+	const failed = attachments.find((file) => file.status === 'error');
+	if (failed) {
+		const reason = attachmentSummary(failed).replace(/\.$/, '');
+		return `${failed.file.name}: ${reason}. Remove it to send.`;
 	}
 	if (action.emptyHint && !parsed.data.message) return action.emptyHint;
 	return null;

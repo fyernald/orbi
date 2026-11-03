@@ -11,6 +11,19 @@ export interface NoteRepository {
 	): Promise<boolean>;
 	listNotes(userId: string, topicId: string): Promise<Note[]>;
 	insertNote(userId: string, topicId: string, input: NoteFields): Promise<Note>;
+	// all or none are saved; they list in the order given
+	insertNotes(
+		userId: string,
+		topicId: string,
+		inputs: NoteFields[],
+		source: NoteSource
+	): Promise<Note[]>;
+	// the notes a PDF with this hash was saved as on the topic, in page order
+	listSourceNotes(
+		userId: string,
+		topicId: string,
+		sourceHash: string
+	): Promise<Note[]>;
 	updateNote(
 		userId: string,
 		topicId: string,
@@ -22,6 +35,9 @@ export interface NoteRepository {
 }
 
 type NoteFields = { title: string; content: string };
+
+// the PDF a note was taken from
+export type NoteSource = { name: string; hash: string };
 
 const noteColumns = {
 	id: note.id,
@@ -78,6 +94,42 @@ export function createNoteRepository(db: Db): NoteRepository {
 				.values({ userId, topicId, ...input })
 				.returning(noteColumns);
 			return toApi(created!);
+		},
+
+		// the notes are listed newest first, so each one is saved a millisecond
+		// newer than the next, and the first one ends up on top
+		async insertNotes(userId, topicId, inputs, source) {
+			const now = Date.now();
+			const created = await db
+				.insert(note)
+				.values(
+					inputs.map((input, index) => ({
+						userId,
+						topicId,
+						...input,
+						sourceName: source.name,
+						sourceHash: source.hash,
+						createdAt: new Date(now - index),
+						updatedAt: new Date(now - index),
+					}))
+				)
+				.returning(noteColumns);
+			return created.map(toApi);
+		},
+
+		async listSourceNotes(userId, topicId, sourceHash) {
+			const rows = await db
+				.select(noteColumns)
+				.from(note)
+				.where(
+					and(
+						eq(note.userId, userId),
+						eq(note.topicId, topicId),
+						eq(note.sourceHash, sourceHash)
+					)
+				)
+				.orderBy(desc(note.createdAt), desc(note.id));
+			return rows.map(toApi);
 		},
 
 		async updateNote(userId, topicId, noteId, input) {

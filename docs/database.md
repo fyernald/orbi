@@ -65,6 +65,8 @@ erDiagram
         uuid topic_id FK
         varchar title
         text content
+        varchar source_name
+        varchar source_hash
     }
     chat {
         uuid id PK
@@ -84,6 +86,7 @@ erDiagram
         varchar model_id
         integer notes_used
         text[] follow_ups
+        jsonb attachments
     }
     question {
         uuid id PK
@@ -120,9 +123,9 @@ Every table also has `created_at` and `updated_at`.
 | `profile`                                    | One per user: the onboarding answers (what Orbi calls them, date of birth, how they use Orbi, level, field, interests, explanation style, daily minutes, study time, language, time zone). `onboarded_at` is set once every answer is there; until then the app sends the user to `/welcome`. `reminder_enabled` and `reminder_time` are the daily study reminder from the settings page, in the user's time zone. `institution` and `occupation` are not asked yet. |
 | `course`                                     | A course of a user: its colour, what it is for (`goal`), and an optional exam date.                                                                                                                                                                                                                                                                                                                                                                                  |
 | `topic`                                      | A topic inside a course. `position` keeps the order the user chose.                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `note`                                       | Study notes pasted into a topic. The tutor reads them and makes questions from them.                                                                                                                                                                                                                                                                                                                                                                                 |
+| `note`                                       | Study notes pasted into a topic, or taken from an uploaded PDF (US-13). For a PDF, `source_name` is the file name and `source_hash` a SHA-256 of the file, so the same file uploaded to the topic again reuses its notes. The tutor reads them and makes questions from them.                                                                                                                                                                                        |
 | `chat`                                       | A tutor chat of one topic, or of the whole course when `topic_id` is null. It is named after its first message. The browser makes the id, so the first message needs no extra request.                                                                                                                                                                                                                                                                               |
-| `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, how many notes the tutor read, and the follow-up questions shown under an explanation. See [decision 0003](decisions/03-tutor-chat.md).                                                                                                                       |
+| `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, how many notes the tutor read, the follow-up questions shown under an explanation, and the PDFs sent with a student's message (`attachments`: each file's name and the notes it was saved as). See [decision 0003](decisions/03-tutor-chat.md).               |
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                                                                                                                                                |
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                                                                                                                                                  |
 

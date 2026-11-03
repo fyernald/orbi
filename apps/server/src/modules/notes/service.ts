@@ -1,7 +1,18 @@
-import type { CreateNoteInput, Note, UpdateNoteInput } from '@orbi/shared';
-import { NotFoundError } from '../../errors';
+import { createHash } from 'node:crypto';
+import {
+	PDF_MAX_NOTES,
+	type CreateNoteInput,
+	type Note,
+	type PdfUploadResult,
+	type UpdateNoteInput,
+} from '@orbi/shared';
+import { NotFoundError, ValidationError } from '../../errors';
+import { PdfReadError, type PdfReader } from '../../pdf/reader';
+import { pdfNotes } from './pdf-notes';
 import type { NoteRepository } from './repository';
 import { noteTitle } from './title';
+
+export type PdfUpload = { fileName: string; data: Uint8Array };
 
 export interface NoteService {
 	listNotes(userId: string, courseId: string, topicId: string): Promise<Note[]>;
@@ -11,6 +22,14 @@ export interface NoteService {
 		topicId: string,
 		input: CreateNoteInput
 	): Promise<Note>;
+	// the PDF's text is saved as notes, more than one when it is long; the same
+	// file again gives back the notes it was saved as before
+	createNotesFromPdf(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		upload: PdfUpload
+	): Promise<PdfUploadResult>;
 	updateNote(
 		userId: string,
 		courseId: string,
@@ -26,11 +45,34 @@ export interface NoteService {
 	): Promise<void>;
 }
 
+const pdfMessages = {
+	locked:
+		'This PDF is locked with a password. Remove the password and try again.',
+	broken:
+		'Orbi could not open this file. Make sure it is a PDF that is not damaged.',
+	noText:
+		'This PDF has no text Orbi can read. It may be a scan or photos of pages. Paste the text instead.',
+	tooLong: `This PDF has too much text for ${PDF_MAX_NOTES} notes. Split it into smaller files.`,
+};
+
 export function createNoteService({
 	repo,
+	pdf,
 }: {
 	repo: NoteRepository;
+	pdf: PdfReader;
 }): NoteService {
+	async function readPdf(data: Uint8Array) {
+		try {
+			return await pdf.readPages(data);
+		} catch (error) {
+			if (error instanceof PdfReadError) {
+				throw new ValidationError(pdfMessages[error.reason]);
+			}
+			throw error;
+		}
+	}
+
 	// another user's topic answers the same as a missing one, so ids cannot be probed
 	async function requireTopic(
 		userId: string,
@@ -54,6 +96,25 @@ export function createNoteService({
 				title: noteTitle(title, content),
 				content,
 			});
+		},
+
+		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
+			await requireTopic(userId, courseId, topicId);
+			// a deleted note is not brought back: the parts still there are given back
+			const hash = createHash('sha256').update(data).digest('hex');
+			const saved = await repo.listSourceNotes(userId, topicId, hash);
+			if (saved.length > 0) return { notes: saved, reused: true };
+
+			const notes = pdfNotes(fileName, await readPdf(data));
+			if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
+			if (notes.length > PDF_MAX_NOTES) {
+				throw new ValidationError(pdfMessages.tooLong);
+			}
+			const created = await repo.insertNotes(userId, topicId, notes, {
+				name: fileName,
+				hash,
+			});
+			return { notes: created, reused: false };
 		},
 
 		// a title cleared while editing is named after the first line again

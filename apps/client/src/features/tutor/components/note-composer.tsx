@@ -3,12 +3,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
 	tutorRequestInput,
+	type MessageAttachment,
 	type TutorAction,
 	type TutorRequestInput,
 } from '@orbi/shared';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
+import { messageAttachments } from '../attachments';
 import { sendBlockedReason } from '../composer';
 import { useAttachments, useFileDrop, useModels } from '../hooks';
 import type { Topic } from '../mock-data';
@@ -40,6 +42,9 @@ export type ComposerDraft = {
 
 type NoteComposerProps = {
 	topics: Topic[];
+	// attached PDFs are saved to the picked topic of this course; without it
+	// (Home, until it has real topics) files cannot be attached
+	courseId?: string;
 	// the topic it starts on; '' is the whole course
 	topicId?: string;
 	// the course's name, when the composer can send about the whole course
@@ -50,7 +55,10 @@ type NoteComposerProps = {
 	onAddTopic?: () => void;
 	preset?: ComposerPreset;
 	// without it the composer is only a preview (Home, until it has real topics)
-	onSend?: (request: TutorRequestInput) => void;
+	onSend?: (
+		request: TutorRequestInput,
+		attachments: MessageAttachment[]
+	) => void;
 	// a reply is on its way: the send button stops it instead
 	busy?: boolean;
 	onStop?: () => void;
@@ -60,6 +68,7 @@ type NoteComposerProps = {
 
 export function NoteComposer({
 	topics,
+	courseId,
 	topicId,
 	wholeCourse,
 	onTopicChange,
@@ -82,8 +91,11 @@ export function NoteComposer({
 		},
 	});
 	const values = form.watch();
-	const { attachments, add, remove } = useAttachments();
+	const { attachments, add, remove, clearSaved } = useAttachments(
+		courseId && values.topicId ? { courseId, topicId: values.topicId } : null
+	);
 	const { isDragging, dropZoneProps } = useFileDrop(add);
+	const canAttach = courseId !== undefined;
 
 	// the list comes from the server, so the default model is set once it is there
 	const defaultModelId = models.data?.defaultModelId;
@@ -124,7 +136,8 @@ export function NoteComposer({
 			focusMessage();
 			return;
 		}
-		onSend(request);
+		onSend(request, messageAttachments(attachments));
+		clearSaved();
 		form.setValue('message', '');
 		focusMessage();
 	};
@@ -140,7 +153,7 @@ export function NoteComposer({
 			<form
 				onSubmit={form.handleSubmit(send, focusMessage)}
 				noValidate
-				{...dropZoneProps}
+				{...(canAttach && dropZoneProps)}
 				className="relative rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-primary"
 			>
 				<div className="flex flex-wrap items-center gap-2 px-2.5 pt-2">
@@ -174,7 +187,7 @@ export function NoteComposer({
 				<ComposerToolbar
 					control={form.control}
 					models={models.data?.models ?? []}
-					onFiles={add}
+					onFiles={canAttach ? add : undefined}
 					sendLabel={action.submitLabel}
 					blockedReason={blockedReason}
 					busy={busy}
