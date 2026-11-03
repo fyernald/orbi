@@ -1,10 +1,12 @@
 'use client';
 
 import type { AiModel } from '@orbi/shared';
-import { BookOpen, Copy, RotateCcw } from 'lucide-react';
+import { BookOpen, RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
+import { CopyButton } from './copy-button';
 import { Markdown } from './markdown';
+import { MessageAttachments } from './message-attachments';
 import { ReasoningBlock } from './reasoning-block';
 import { Thinking } from './thinking';
 import { ToolView, type ChatActions } from './tool-views';
@@ -53,11 +55,12 @@ export function ChatMessage(props: ChatMessageProps) {
 
 function StudentMessage({ message }: { message: TutorUIMessage }) {
 	return (
-		<article className="flex justify-end">
+		<article className="flex flex-col items-end gap-1.5">
 			<h3 className="sr-only">You said</h3>
 			<p className="max-w-[85%] rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap">
 				{studentText(message)}
 			</p>
+			<MessageAttachments attachments={message.metadata?.attachments} />
 		</article>
 	);
 }
@@ -139,18 +142,7 @@ function OrbiMessage({
 				)}
 				{!streaming && (
 					<footer className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-						{text && (
-							<button
-								type="button"
-								onClick={() =>
-									navigator.clipboard?.writeText(text).catch(() => {})
-								}
-								className="flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-muted hover:text-foreground"
-							>
-								<Copy className="size-3.5" />
-								Copy
-							</button>
-						)}
+						{text && <CopyButton text={text} />}
 						{onRetry && (
 							<button
 								type="button"

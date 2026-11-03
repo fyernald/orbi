@@ -10,6 +10,7 @@ import {
 	type ChatThread,
 	type FollowUps,
 	type FollowUpsInput,
+	type MessageAttachment,
 	type SendChatMessageInput,
 	type TutorMessageMetadata,
 } from '@orbi/shared';
@@ -50,6 +51,7 @@ import {
 	suggestFollowUpsTool,
 } from './follow-ups';
 import {
+	attachedNoteIds,
 	hasContent,
 	isExplanation,
 	messageText,
@@ -58,6 +60,7 @@ import {
 	toChatMessage,
 	toStoredMessage,
 	toUIMessage,
+	withAttachmentNames,
 	withoutEarlierThinking,
 	withoutUnfinishedTools,
 	type TutorUIMessage,
@@ -113,6 +116,21 @@ const TIMEOUT = {
 };
 
 const FOLLOW_UPS_TIMEOUT_MS = 30_000;
+
+// The model stopped sending for longer than chunkMs, usually because the AI
+// service is overloaded. That ends the stream with an abort, like the student's
+// Stop button, so an abort the student did not ask for becomes an error.
+export function timeoutAsError<Chunk extends { type: string }>(
+	chunk: Chunk,
+	stoppedByStudent: boolean
+): Chunk | { type: 'error'; errorText: string } {
+	if (chunk.type !== 'abort' || stoppedByStudent) return chunk;
+	return {
+		type: 'error',
+		errorText:
+			'The AI service stopped answering partway. Try again, or pick another model.',
+	};
+}
 
 // Some models send a reply in a few large pieces; this lets it appear word by word,
 // with a short pause that only adds up when the model is faster than the reader
@@ -392,11 +410,18 @@ export function createTutorService({
 					model: resolved.model,
 					instructions: followUpInstructions({
 						scopeName: topic?.name ?? course.name,
-						notes: selectNotes(notes, FOLLOW_UP_NOTES_MAX_LENGTH),
+						notes: selectNotes(
+							notes,
+							FOLLOW_UP_NOTES_MAX_LENGTH,
+							before ? attachedNoteIds([before]) : []
+						),
 						exclude,
 					}),
 					prompt: followUpPrompt(
-						before?.role === 'user' ? messageText(before) : '',
+						// with the names of the PDFs the student sent, if any
+						before?.role === 'user'
+							? messageText(withAttachmentNames([before])[0]!)
+							: '',
 						messageText(reply)
 					),
 					tools: { suggestFollowUps: suggestFollowUpsTool },
@@ -415,6 +440,29 @@ export function createTutorService({
 			return { questions };
 		},
 	};
+
+	// an attached PDF was saved as notes first; only notes of the student in this
+	// course are kept, so a message cannot point at someone else's notes
+	async function ownAttachments(
+		userId: string,
+		input: SendChatMessageInput
+	): Promise<MessageAttachment[] | undefined> {
+		if (input.attachments.length === 0) return undefined;
+		const own = new Set(
+			await repo.ownNoteIds(
+				userId,
+				input.courseId,
+				input.attachments.flatMap(({ noteIds }) => noteIds)
+			)
+		);
+		const kept = input.attachments
+			.map((file) => ({
+				...file,
+				noteIds: file.noteIds.filter((id) => own.has(id)),
+			}))
+			.filter(({ noteIds }) => noteIds.length > 0);
+		return kept.length > 0 ? kept : undefined;
+	}
 
 	async function startReply({
 		userId,
@@ -447,6 +495,7 @@ export function createTutorService({
 			: [];
 
 		const startedAt = now();
+		const attachments = await ownAttachments(userId, input);
 		const { messages, studentMessage } = await nextMessages(
 			userId,
 			chatId,
@@ -455,6 +504,7 @@ export function createTutorService({
 			{
 				topicId: topic?.id ?? null,
 				action: input.action,
+				attachments,
 				createdAt: startedAt.toISOString(),
 			}
 		);
@@ -468,7 +518,7 @@ export function createTutorService({
 				`Add notes to ${scopeName} first. Orbi makes questions from your notes.`
 			);
 		}
-		const notes = selectNotes(allNotes);
+		const notes = selectNotes(allNotes, undefined, attachedNoteIds(messages));
 
 		const continuing = messages.at(-1)?.role === 'assistant';
 		const responseId = continuing ? messages.at(-1)!.id : randomUUID();
@@ -536,7 +586,7 @@ export function createTutorService({
 				today: startedAt,
 			}),
 			messages: await convertToModelMessages(
-				recentMessages(withoutEarlierThinking(validated)),
+				withAttachmentNames(recentMessages(withoutEarlierThinking(validated))),
 				{ tools }
 			),
 			tools,
@@ -608,9 +658,11 @@ export function createTutorService({
 				logError(error);
 				return replyErrorMessage(error);
 			},
-			// a stopped reply is kept up to where it got
-			onEnd: async ({ responseMessage }) => {
+			// a reply the student stopped is kept up to where it got; one cut by the
+			// timeout is not, so Try again starts it fresh
+			onEnd: async ({ responseMessage, isAborted }) => {
 				release();
+				if (isAborted && !abortSignal.aborted) return;
 				const reply = withoutUnfinishedTools({
 					...responseMessage,
 					metadata: currentMetadata(),
@@ -627,6 +679,15 @@ export function createTutorService({
 				}
 			},
 		});
-		return stream.pipeThrough(new TransformStream({ flush: () => release() }));
+		// the timeout also ends the stream with an abort, which the chat would show as
+		// "You stopped this reply"; it becomes an error with Try again instead
+		return stream.pipeThrough(
+			new TransformStream({
+				transform(chunk, controller) {
+					controller.enqueue(timeoutAsError(chunk, abortSignal.aborted));
+				},
+				flush: () => release(),
+			})
+		);
 	}
 }

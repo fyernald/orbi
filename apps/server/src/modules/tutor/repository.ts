@@ -4,6 +4,7 @@ import type {
 	EducationLevel,
 	ExplanationStyle,
 	GeneratedQuestion,
+	MessageAttachment,
 	TutorAction,
 } from '@orbi/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
@@ -47,6 +48,8 @@ export type NoteForTutor = {
 	title: string;
 	// set for notes of the whole course, so the model knows where each comes from
 	topicName?: string;
+	// the PDF the note was taken from, if any
+	fileName: string | null;
 	content: string;
 	createdAt: Date;
 };
@@ -70,6 +73,7 @@ export type StoredMessage = {
 	notesUsed: number | null;
 	thinkingMs: number[] | null;
 	followUps: string[] | null;
+	attachments: MessageAttachment[] | null;
 	createdAt: Date;
 };
 
@@ -94,6 +98,12 @@ export interface TutorRepository {
 	listNotes(userId: string, topicId: string): Promise<NoteForTutor[]>;
 	// every note of the course, newest first, for the whole-course chat
 	listCourseNotes(userId: string, courseId: string): Promise<NoteForTutor[]>;
+	// the ids among these that are notes of the user in this course
+	ownNoteIds(
+		userId: string,
+		courseId: string,
+		ids: string[]
+	): Promise<string[]>;
 	findChat(userId: string, chatId: string): Promise<ChatRecord | undefined>;
 	listChats(userId: string, courseId: string): Promise<ChatRecord[]>;
 	// undefined when the id is already taken, by any user
@@ -153,6 +163,7 @@ const messageColumns = {
 	notesUsed: chatMessage.notesUsed,
 	thinkingMs: chatMessage.thinkingMs,
 	followUps: chatMessage.followUps,
+	attachments: chatMessage.attachments,
 	createdAt: chatMessage.createdAt,
 };
 
@@ -185,6 +196,7 @@ export function createTutorRepository(db: Db): TutorRepository {
 					id: note.id,
 					title: note.title,
 					topicName: topic.name,
+					fileName: note.sourceName,
 					content: note.content,
 					createdAt: note.createdAt,
 				})
@@ -236,12 +248,29 @@ export function createTutorRepository(db: Db): TutorRepository {
 				.select({
 					id: note.id,
 					title: note.title,
+					fileName: note.sourceName,
 					content: note.content,
 					createdAt: note.createdAt,
 				})
 				.from(note)
 				.where(and(eq(note.userId, userId), eq(note.topicId, topicId)))
 				.orderBy(desc(note.createdAt), desc(note.id));
+		},
+
+		async ownNoteIds(userId, courseId, ids) {
+			if (ids.length === 0) return [];
+			const rows = await db
+				.select({ id: note.id })
+				.from(note)
+				.innerJoin(topic, eq(topic.id, note.topicId))
+				.where(
+					and(
+						eq(note.userId, userId),
+						eq(topic.courseId, courseId),
+						inArray(note.id, ids)
+					)
+				);
+			return rows.map(({ id }) => id);
 		},
 
 		async findChat(userId, chatId) {

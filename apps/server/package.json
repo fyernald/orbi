@@ -26,6 +26,7 @@
 		"fastify-type-provider-zod": "^7.0.0",
 		"nodemailer": "^10.2.1",
 		"pg": "^8.23.1",
+		"unpdf": "2.1.0",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {

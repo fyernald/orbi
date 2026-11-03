@@ -20,6 +20,7 @@ export function toUIMessage(stored: StoredMessage): TutorUIMessage {
 			notesUsed: stored.notesUsed ?? undefined,
 			thinkingMs: stored.thinkingMs ?? undefined,
 			followUps: stored.followUps ?? undefined,
+			attachments: stored.attachments ?? undefined,
 			createdAt: stored.createdAt.toISOString(),
 		},
 	};
@@ -40,6 +41,7 @@ export function toStoredMessage(
 		notesUsed: metadata?.notesUsed ?? null,
 		thinkingMs: metadata?.thinkingMs ?? null,
 		followUps: metadata?.followUps ?? null,
+		attachments: metadata?.attachments ?? null,
 		createdAt: metadata ? new Date(metadata.createdAt) : fallbackDate,
 	};
 }
@@ -143,5 +145,33 @@ export function hasContent(message: TutorUIMessage): boolean {
 			return 'state' in part && part.state !== 'input-streaming';
 		}
 		return false;
+	});
+}
+
+// the notes of every PDF attached in the chat: the newest message's files first,
+// each in page order
+export function attachedNoteIds(messages: TutorUIMessage[]): string[] {
+	const ids = [...messages]
+		.reverse()
+		.flatMap((message) => message.metadata?.attachments ?? [])
+		.flatMap(({ noteIds }) => noteIds);
+	return [...new Set(ids)];
+}
+
+// The model only reads text, so a message sent with PDFs says which ones. Their
+// text is in the notes, marked with the file's name. Saved messages keep the
+// attachments, so this works for earlier messages too.
+export function withAttachmentNames(
+	messages: TutorUIMessage[]
+): TutorUIMessage[] {
+	return messages.map((message) => {
+		const files = message.metadata?.attachments;
+		if (message.role !== 'user' || !files?.length) return message;
+		const names = files.map(({ fileName }) => `"${fileName}"`).join(', ');
+		const note = `[The student attached ${names} to this message. Its text is in the notes with that file attribute.]`;
+		return {
+			...message,
+			parts: [{ type: 'text', text: note }, ...message.parts],
+		};
 	});
 }

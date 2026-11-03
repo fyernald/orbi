@@ -3,6 +3,7 @@ import { APICallError } from 'ai';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
+import { createTestPdf } from '../../pdf/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
 import type { UsageLine } from '../../ai/usage';
 import { createReplyLimiter } from './reply-limiter';
@@ -1049,5 +1050,73 @@ describe('without an AI key', () => {
 		expect(response.json().error.message).toBe(
 			'The AI tutor is not set up on this server yet.'
 		);
+	});
+});
+
+describe('attached PDFs', () => {
+	const uploadPdf = async (cookie: string, { courseId, topicId }: Context) =>
+		(
+			await app.inject({
+				method: 'POST',
+				url: `/api/courses/${courseId}/topics/${topicId}/notes/pdf?fileName=Lecture%203.pdf`,
+				headers: { cookie, 'content-type': 'application/pdf' },
+				payload: Buffer.from(createTestPdf(['Solve 2x + 4 = 10'])),
+			})
+		).json().notes as { id: string }[];
+
+	it('saves them with the message and tells the model, also later', async () => {
+		const context = await createTopic(ada, NOTES);
+		const [pdfNote] = await uploadPdf(ada, context);
+		const [othersNote] = await uploadPdf(grace, await createTopic(grace));
+		const chatId = randomUUID();
+		const attachment = {
+			fileName: 'Lecture 3.pdf',
+			noteIds: [pdfNote!.id, othersNote!.id],
+		};
+
+		ai.script({ text: 'x = 3' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Can you solve this?'),
+			attachments: [attachment],
+		});
+		ai.script({ text: 'It is the PDF from before.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Check the PDF I attached before'),
+		});
+
+		const [question] = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages;
+		expect(question.metadata.attachments).toEqual([
+			{ fileName: 'Lecture 3.pdf', noteIds: [pdfNote!.id] },
+		]);
+		const later = JSON.stringify(ai.calls[0]!.prompt);
+		expect(later).toContain('attached \\"Lecture 3.pdf\\" to this message');
+		expect(later).toContain('file=\\"Lecture 3.pdf\\"');
+		expect(later).toContain('attached in this chat first');
+	});
+
+	it('tells the follow-up questions which PDF the student sent', async () => {
+		const context = await createTopic(ada);
+		const [pdfNote] = await uploadPdf(ada, context);
+		const chatId = randomUUID();
+		ai.script({ text: 'x = 3, because 2x = 6.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Can you solve this?'),
+			attachments: [{ fileName: 'Lecture 3.pdf', noteIds: [pdfNote!.id] }],
+		});
+		const [, reply] = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages;
+
+		ai.script({ tool: 'suggestFollowUps', input: { questions: ['Why 2x?'] } });
+		await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+
+		const prompt = JSON.stringify(ai.calls[0]!.prompt);
+		expect(prompt).toContain('attached \\"Lecture 3.pdf\\"');
+		expect(prompt).toContain('Solve 2x + 4 = 10');
 	});
 });

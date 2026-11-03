@@ -9,6 +9,7 @@ import {
 	FOLLOW_UPS_MAX,
 	followUps,
 	type AskStudentOutput,
+	type MessageAttachment,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -23,10 +24,12 @@ import {
 	type DragEvent,
 } from 'react';
 import { z } from 'zod';
-import { api } from '@/lib/api';
+import { useUploadPdf } from '@/features/notes/hooks';
+import { api, apiErrorMessage } from '@/lib/api';
 import {
 	attachmentError,
 	attachmentKind,
+	noTopicError,
 	type Attachment,
 } from './attachments';
 import {
@@ -36,7 +39,6 @@ import {
 	type ChatContext,
 	type TutorUIMessage,
 } from './chat';
-import { uploadAttachment } from './mock-upload';
 import {
 	openChat,
 	scopeChatList,
@@ -180,6 +182,10 @@ export function useTutorChat({
 						...(context.current ?? fallback.current),
 						trigger,
 						message: trigger === 'submit-message' ? messages.at(-1) : undefined,
+						attachments:
+							trigger === 'submit-message'
+								? (messages.at(-1)?.metadata?.attachments ?? [])
+								: [],
 					},
 				}),
 			})
@@ -220,13 +226,30 @@ export function useTutorChat({
 		context: lastContext,
 		// typed is what the student wrote; text can be a message written for them, which
 		// must not go back into the composer as if they had typed it
-		send: (text: string, next: ChatContext, typed: string) => {
+		// the attached PDFs go with the message, so it shows them at once
+		send: (
+			text: string,
+			next: ChatContext,
+			typed: string,
+			attachments: MessageAttachment[] = []
+		) => {
 			context.current = next;
 			setLastContext(next);
 			lastText.current = typed;
 			sendingNew.current = true;
 			chat.clearError();
-			void chat.sendMessage({ text });
+			void chat.sendMessage({
+				text,
+				metadata:
+					attachments.length > 0
+						? {
+								topicId: next.topicId,
+								action: next.action,
+								attachments,
+								createdAt: new Date().toISOString(),
+							}
+						: undefined,
+			});
 		},
 		// a failed reply is dropped and asked for again; a message that never got an
 		// answer is sent again
@@ -287,37 +310,51 @@ export function useFollowUps(
 	};
 }
 
-export function useUploadAttachment() {
-	return useMutation({ mutationFn: uploadAttachment });
-}
+// where attached PDFs are saved: a topic of the course, or null when no topic
+// is picked (the whole-course chat)
+export type AttachmentTarget = { courseId: string; topicId: string } | null;
 
-// the files attached to the note composer, each uploading on its own
-export function useAttachments() {
+// the files attached to the note composer, each uploading on its own and saved
+// as notes of the target topic
+export function useAttachments(target: AttachmentTarget) {
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const uploads = useRef(new Map<string, AbortController>());
 	const nextId = useRef(0);
-	const { mutateAsync: upload } = useUploadAttachment();
+	const { mutateAsync: upload } = useUploadPdf();
 
 	const update = (id: string, changes: Partial<Attachment>) =>
 		setAttachments((current) =>
 			current.map((item) => (item.id === id ? { ...item, ...changes } : item))
 		);
 
-	const startUpload = (attachment: Attachment) => {
+	const startUpload = (
+		attachment: Attachment,
+		{ courseId, topicId }: NonNullable<AttachmentTarget>
+	) => {
 		const controller = new AbortController();
 		uploads.current.set(attachment.id, controller);
 		upload({
+			courseId,
+			topicId,
 			file: attachment.file,
 			signal: controller.signal,
 			onProgress: (progress) => update(attachment.id, { progress }),
 		})
-			.then(() => update(attachment.id, { status: 'ready', progress: 1 }))
-			.catch(() => {
+			.then(({ notes, reused }) =>
+				update(attachment.id, {
+					status: 'ready',
+					progress: 1,
+					noteIds: notes.map(({ id }) => id),
+					reused,
+				})
+			)
+			.catch((error: unknown) => {
 				// removed by the user, so there is nothing to show
 				if (controller.signal.aborted) return;
 				update(attachment.id, {
 					status: 'error',
-					error: 'Upload failed',
+					error: 'Not saved',
+					errorDetail: apiErrorMessage(error),
 				});
 			})
 			.finally(() => uploads.current.delete(attachment.id));
@@ -326,21 +363,27 @@ export function useAttachments() {
 	const add = (files: File[]) => {
 		const added = files.map((file): Attachment => {
 			const kind = attachmentKind(file);
-			const error = attachmentError(file, kind) ?? undefined;
+			const fileError = attachmentError(file, kind);
+			const problem = fileError
+				? { error: fileError }
+				: target
+					? {}
+					: noTopicError;
 			nextId.current += 1;
 			return {
 				id: String(nextId.current),
 				file,
 				kind,
-				status: error ? 'error' : 'uploading',
+				status: problem.error ? 'error' : 'uploading',
 				progress: 0,
-				error,
+				...problem,
 			};
 		});
 		setAttachments((current) => [...current, ...added]);
+		if (!target) return;
 		added
 			.filter((attachment) => attachment.status === 'uploading')
-			.forEach(startUpload);
+			.forEach((attachment) => startUpload(attachment, target));
 	};
 
 	const remove = (id: string) => {
@@ -354,7 +397,13 @@ export function useAttachments() {
 		return () => running.forEach((controller) => controller.abort());
 	}, []);
 
-	return { attachments, add, remove };
+	// after a send the saved files are done: their text is in the notes now
+	const clearSaved = () =>
+		setAttachments((current) =>
+			current.filter((item) => item.status !== 'ready')
+		);
+
+	return { attachments, add, remove, clearSaved };
 }
 
 const hasFiles = (event: DragEvent | globalThis.DragEvent) =>

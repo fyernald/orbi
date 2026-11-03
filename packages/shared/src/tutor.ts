@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PDF_MAX_NOTES } from './notes';
 
 export const TUTOR_ACTIONS = [
 	'ask',
@@ -28,6 +29,15 @@ export const tutorRequestInput = z.object({
 		),
 });
 
+// a PDF sent with a message: it is saved as notes first, and the message keeps
+// which ones, so the tutor reads them first and knows what was attached
+export const MESSAGE_ATTACHMENTS_MAX = 5;
+
+export const messageAttachment = z.object({
+	fileName: z.string().min(1).max(255),
+	noteIds: z.array(z.uuid()).min(1).max(PDF_MAX_NOTES),
+});
+
 export const chatParams = z.object({ chatId: z.uuid('Chat not found.') });
 
 // saved with every message, so the history shows what each one was about
@@ -41,6 +51,8 @@ export const tutorMessageMetadata = z.object({
 	thinkingMs: z.array(z.int().nonnegative()).optional(),
 	// the follow-up questions last shown under this reply
 	followUps: z.array(z.string()).optional(),
+	// the PDFs the student sent with this message
+	attachments: z.array(messageAttachment).optional(),
 	createdAt: z.iso.datetime(),
 });
 
@@ -72,6 +84,11 @@ export const sendChatMessageInput = z
 		action: z.enum(TUTOR_ACTIONS),
 		trigger: z.enum(CHAT_TRIGGERS),
 		message: chatMessage.omit({ metadata: true }).optional(),
+		// only read with a new message
+		attachments: z
+			.array(messageAttachment)
+			.max(MESSAGE_ATTACHMENTS_MAX)
+			.default([]),
 	})
 	.refine(
 		(input) => input.trigger !== 'submit-message' || input.message,
@@ -129,6 +146,7 @@ export type TutorAction = (typeof TUTOR_ACTIONS)[number];
 export type TutorRequestInput = z.infer<typeof tutorRequestInput>;
 export type TutorMessageMetadata = z.infer<typeof tutorMessageMetadata>;
 export type ChatMessage = z.infer<typeof chatMessage>;
+export type MessageAttachment = z.infer<typeof messageAttachment>;
 export type SendChatMessageInput = z.infer<typeof sendChatMessageInput>;
 export type ChatSummary = z.infer<typeof chatSummary>;
 export type ChatThread = z.infer<typeof chatThread>;

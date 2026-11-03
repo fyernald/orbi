@@ -18,7 +18,7 @@ export function ChatThread({ children }: { children: ReactNode }) {
 			{/* focusable, so the arrow keys scroll the chat */}
 			<StickToBottom.Content
 				tabIndex={0}
-				className="mx-auto flex w-full max-w-chat flex-col gap-7 px-5 py-8 focus-visible:outline-none"
+				className="mx-auto flex w-full max-w-chat flex-col gap-7 rounded-xl px-5 py-8 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
 				// relative: the sr-only headings are absolute, and would otherwise stretch
 				// the page and scroll it along with the chat
 				scrollClassName="relative overflow-y-auto"
