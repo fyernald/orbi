@@ -59,6 +59,21 @@ describe('lazyCodeHighlighter', () => {
 		expect(highlighter.supportsLanguage('cobol')).toBe(false);
 	});
 
+	it('keeps a block as plain text when the plugin cannot load', async () => {
+		const load = vi.fn(() => Promise.reject(new Error('Loading chunk failed')));
+		const highlighter = lazyCodeHighlighter(CODE_THEMES, load);
+		const callback = vi.fn();
+
+		expect(highlighter.highlight(options, callback)).toBeNull();
+		await vi.waitFor(() => expect(load).toHaveBeenCalled());
+		// a streaming block asks again on every update
+		expect(highlighter.highlight(options, callback)).toBeNull();
+		await Promise.resolve();
+
+		expect(load).toHaveBeenCalledTimes(1);
+		expect(callback).not.toHaveBeenCalled();
+	});
+
 	it('treats every language as supported before it has loaded', () => {
 		const highlighter = lazyCodeHighlighter(CODE_THEMES, vi.fn());
 		expect(highlighter.supportsLanguage('sql')).toBe(true);
