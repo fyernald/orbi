@@ -3,8 +3,10 @@
 import { LoadError } from '@/components/load-error';
 import { apiErrorMessage } from '@/lib/api';
 import { useStudySession } from '../hooks';
+import { SessionAside } from './session-aside';
 import { SessionEmpty } from './session-empty';
 import { SessionHeader } from './session-header';
+import { SessionLayout } from './session-layout';
 import { SessionLoading } from './session-loading';
 import { StudyRunner } from './study-runner';
 
@@ -19,27 +21,26 @@ export function StudySessionView({ courseId, topicId }: StudySessionViewProps) {
 	if (session.isPending) return <SessionLoading />;
 	if (session.isError) {
 		return (
-			<LoadError
-				message={apiErrorMessage(session.error)}
-				onRetry={() => void session.refetch()}
-			/>
+			<SessionLayout>
+				<LoadError
+					message={apiErrorMessage(session.error)}
+					onRetry={() => void session.refetch()}
+				/>
+			</SessionLayout>
 		);
 	}
 	const { courseName, topicName, questions, pendingCount } = session.data;
 	if (questions.length === 0) {
+		const names = { courseId, courseName, topicName };
 		return (
-			<>
-				<SessionHeader
-					courseId={courseId}
-					courseName={courseName}
-					topicName={topicName}
-				/>
+			<SessionLayout start={<SessionAside {...names} />}>
+				<SessionHeader {...names} />
 				<SessionEmpty
 					courseId={courseId}
 					topicName={topicName}
 					pendingCount={pendingCount}
 				/>
-			</>
+			</SessionLayout>
 		);
 	}
 

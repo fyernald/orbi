@@ -1,6 +1,6 @@
 import type { Course } from '@orbi/shared';
+import { orbitPoint } from '@/lib/orbit';
 import { groupCourses, type CourseGroupId } from './course-groups';
-import { orbitPoint } from './orbit';
 
 // each group's ring, from the center out: exam soon, exam later, no exam
 const ringOf: Record<CourseGroupId, number> = { soon: 0, later: 1, none: 2 };

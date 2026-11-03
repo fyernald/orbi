@@ -10,8 +10,9 @@ export default async function StudySessionPage({
 }) {
 	const { courseId, topicId } = await params;
 
+	// the session lays itself out by this width, so the app sidebar counts
 	return (
-		<section className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 md:px-7">
+		<section className="@container mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 md:px-7">
 			<StudySessionView courseId={courseId} topicId={topicId} />
 		</section>
 	);
