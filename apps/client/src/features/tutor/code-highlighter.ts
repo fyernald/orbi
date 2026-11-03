@@ -21,6 +21,9 @@ const loadCodePlugin: LoadPlugin = async (themes) => {
 // Streamdown's code highlighter, loaded the first time a code block needs it, so the
 // chat does not load Shiki up front. Shiki then loads each language on first use.
 // Until it is ready a block shows as plain text, and colours itself when it is.
+// A failed load is not tried again: it usually means the file is gone after a deploy,
+// and a streaming block asks on every update, so each try would fail once more.
+// The blocks stay plain text, and a reload brings the new version.
 export function lazyCodeHighlighter(
 	themes: Themes,
 	load: LoadPlugin = loadCodePlugin
@@ -39,10 +42,14 @@ export function lazyCodeHighlighter(
 		supportsLanguage: (language) => plugin?.supportsLanguage(language) ?? true,
 		highlight(options, callback) {
 			if (plugin) return plugin.highlight(options, callback);
-			void ready().then((loaded) => {
-				const result = loaded.highlight(options, callback);
-				if (result) callback?.(result);
-			});
+			void ready().then(
+				(loaded) => {
+					const result = loaded.highlight(options, callback);
+					if (result) callback?.(result);
+				},
+				// the block keeps showing as plain text
+				() => {}
+			);
 			return null;
 		},
 	};
