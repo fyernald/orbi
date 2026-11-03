@@ -7,7 +7,6 @@ import { ModelPicker } from './model-picker';
 import { SendButton } from './send-button';
 import { StopButton } from './stop-button';
 import { ThinkToggle } from './think-toggle';
-import { ThinkWarning } from './think-warning';
 
 type ComposerToolbarProps = {
 	control: Control<TutorRequestInput>;
@@ -43,7 +42,6 @@ export function ComposerToolbar({
 					on={thinkingField.value}
 					onChange={thinkingField.onChange}
 				/>
-				<ThinkWarning />
 				<ModelPicker
 					models={models}
 					selectedId={modelField.value}
