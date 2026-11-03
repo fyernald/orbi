@@ -1,9 +1,10 @@
 'use client';
 
 import type { AiModel } from '@orbi/shared';
-import { BookOpen, Copy, RotateCcw } from 'lucide-react';
+import { BookOpen, RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
+import { CopyButton } from './copy-button';
 import { Markdown } from './markdown';
 import { ReasoningBlock } from './reasoning-block';
 import { Thinking } from './thinking';
@@ -139,18 +140,7 @@ function OrbiMessage({
 				)}
 				{!streaming && (
 					<footer className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-						{text && (
-							<button
-								type="button"
-								onClick={() =>
-									navigator.clipboard?.writeText(text).catch(() => {})
-								}
-								className="flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-muted hover:text-foreground"
-							>
-								<Copy className="size-3.5" />
-								Copy
-							</button>
-						)}
+						{text && <CopyButton text={text} />}
 						{onRetry && (
 							<button
 								type="button"

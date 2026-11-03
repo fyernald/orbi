@@ -71,7 +71,9 @@ export function AddTopicInline({
 				className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-xs text-muted-foreground"
 			>
 				{message ? (
-					<span className="text-destructive">{message}</span>
+					<span role="alert" className="text-destructive">
+						{message}
+					</span>
 				) : (
 					<>
 						<span className="flex items-center gap-1">
