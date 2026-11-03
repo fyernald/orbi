@@ -418,7 +418,10 @@ export function createTutorService({
 						exclude,
 					}),
 					prompt: followUpPrompt(
-						before?.role === 'user' ? messageText(before) : '',
+						// with the names of the PDFs the student sent, if any
+						before?.role === 'user'
+							? messageText(withAttachmentNames([before])[0]!)
+							: '',
 						messageText(reply)
 					),
 					tools: { suggestFollowUps: suggestFollowUpsTool },

@@ -1094,4 +1094,29 @@ describe('attached PDFs', () => {
 		expect(later).toContain('file=\\"Lecture 3.pdf\\"');
 		expect(later).toContain('attached in this chat first');
 	});
+
+	it('tells the follow-up questions which PDF the student sent', async () => {
+		const context = await createTopic(ada);
+		const [pdfNote] = await uploadPdf(ada, context);
+		const chatId = randomUUID();
+		ai.script({ text: 'x = 3, because 2x = 6.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Can you solve this?'),
+			attachments: [{ fileName: 'Lecture 3.pdf', noteIds: [pdfNote!.id] }],
+		});
+		const [, reply] = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages;
+
+		ai.script({ tool: 'suggestFollowUps', input: { questions: ['Why 2x?'] } });
+		await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+
+		const prompt = JSON.stringify(ai.calls[0]!.prompt);
+		expect(prompt).toContain('attached \\"Lecture 3.pdf\\"');
+		expect(prompt).toContain('Solve 2x + 4 = 10');
+	});
 });
