@@ -66,7 +66,11 @@ import {
 	type TutorUIMessage,
 } from './messages';
 import { buildInstructions, selectNotes } from './prompt';
-import { createReplyLimiter, type ReplyLimiter } from './reply-limiter';
+import {
+	createReplyLimiter,
+	releaseOnAbort,
+	type ReplyLimiter,
+} from './reply-limiter';
 import type {
 	ChatRecord,
 	CourseContext,
@@ -355,6 +359,9 @@ export function createTutorService({
 					`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
 				);
 			}
+			// a reply ends by finishing, failing, or being stopped; each frees its place.
+			// Watched from here, because the student can stop while the reply is set up.
+			releaseOnAbort(release, abortSignal);
 			try {
 				return await startReply({
 					userId,
@@ -638,8 +645,6 @@ export function createTutorService({
 			thinkingMs: thinking.times(),
 		});
 
-		// a reply ends by finishing, failing, or being stopped; each frees its place
-		abortSignal.addEventListener('abort', release, { once: true });
 		const stream = toUIMessageStream<typeof tools, TutorUIMessage>({
 			stream: result.stream,
 			tools,
