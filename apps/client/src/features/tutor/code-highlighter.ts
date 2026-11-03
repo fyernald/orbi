@@ -4,8 +4,12 @@ import type { CodeHighlighterPlugin } from 'streamdown';
 // a type import only: the plugin itself loads later
 type Themes = NonNullable<CodePluginOptions['themes']>;
 
-// muted pinks and purples that sit well next to Orbi's berry; [light, dark]
-export const CODE_THEMES: Themes = ['rose-pine-dawn', 'rose-pine'];
+// clearly coloured, and every colour keeps at least 4.5:1 contrast on Orbi's card in
+// both modes; [light, dark]
+export const CODE_THEMES: Themes = [
+	'github-light-default',
+	'github-dark-default',
+];
 
 type LoadPlugin = (themes: Themes) => Promise<CodeHighlighterPlugin>;
 
