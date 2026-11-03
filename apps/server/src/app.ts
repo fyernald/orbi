@@ -31,9 +31,17 @@ export type AppDeps = {
 	};
 };
 
+// The API is only reached through a proxy on a private network: nginx through the
+// Docker network in production, the Next.js server on the same network, and the
+// Next.js rewrite on this machine in development. From those addresses Fastify takes
+// the student's address and the scheme from X-Forwarded-*; a client that connects
+// from anywhere else cannot set them. The names are proxy-addr's ranges.
+const TRUSTED_PROXIES = ['loopback', 'uniquelocal'];
+
 export function buildApp({ auth, services }: AppDeps) {
 	const app = Fastify({
 		logger: process.env.NODE_ENV !== 'test' && loggerOptions,
+		trustProxy: TRUSTED_PROXIES,
 	});
 
 	// route schemas are the shared Zod schemas (app-patterns rule 4)
