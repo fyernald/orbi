@@ -1,4 +1,8 @@
-import { NOTE_CONTENT_MAX_LENGTH, PDF_MAX_SIZE } from '@orbi/shared';
+import {
+	NOTE_CONTENT_MAX_LENGTH,
+	PDF_MAX_SIZE,
+	PDF_NOTE_MAX_LENGTH,
+} from '@orbi/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestPdf } from '../../pdf/testing';
@@ -177,18 +181,35 @@ describe('uploading a PDF', () => {
 		const response = await uploadPdf(ada, notesUrl, pdf);
 
 		expect(response.statusCode).toBe(201);
-		expect(response.json()).toEqual([
-			expect.objectContaining({
-				title: 'Lecture 3',
-				content: 'Mitosis\nProphase (early)\n\nMetaphase',
-			}),
-		]);
-		expect((await send(ada, 'GET', notesUrl)).json()).toEqual(response.json());
+		expect(response.json()).toEqual({
+			notes: [
+				expect.objectContaining({
+					title: 'Lecture 3',
+					content: 'Mitosis\nProphase (early)\n\nMetaphase',
+				}),
+			],
+			reused: false,
+		});
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual(
+			response.json().notes
+		);
+	});
+
+	it('gives back the saved notes when the same PDF comes again', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const pdf = createTestPdf(['Mitosis']);
+		const first = (await uploadPdf(ada, notesUrl, pdf)).json();
+
+		const again = await uploadPdf(ada, notesUrl, pdf);
+
+		expect(again.statusCode).toBe(200);
+		expect(again.json()).toEqual({ notes: first.notes, reused: true });
+		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
 	});
 
 	it('splits a long PDF into notes by pages, listed in page order', async () => {
 		const { notesUrl } = await createTopic(ada);
-		const third = Math.floor(NOTE_CONTENT_MAX_LENGTH / 2.5);
+		const third = Math.floor(PDF_NOTE_MAX_LENGTH / 2.5);
 		const pdf = createTestPdf([pageOf(third), pageOf(third), pageOf(third)]);
 
 		const response = await uploadPdf(ada, notesUrl, pdf);

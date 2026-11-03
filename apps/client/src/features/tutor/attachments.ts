@@ -1,4 +1,8 @@
-import { PDF_MAX_SIZE, PDF_MAX_SIZE_LABEL } from '@orbi/shared';
+import {
+	PDF_MAX_SIZE,
+	PDF_MAX_SIZE_LABEL,
+	type MessageAttachment,
+} from '@orbi/shared';
 
 export type AttachmentKind = 'pdf' | 'image' | 'text' | 'document' | 'slides';
 
@@ -14,6 +18,9 @@ export type Attachment = {
 	// a short reason for the chip, and the whole one for the tooltip
 	error?: string;
 	errorDetail?: string;
+	// once saved: the notes the PDF became, and whether they were there already
+	noteIds?: string[];
+	reused?: boolean;
 };
 
 // the kinds Orbi can read; the others are known so they get an icon and a clear
@@ -77,16 +84,31 @@ export function attachmentSummary({
 	progress,
 	error,
 	errorDetail,
+	reused,
 }: Attachment) {
 	if (status === 'error') return errorDetail ?? error ?? 'Could not attach';
 	if (status === 'uploading') {
 		return `Uploading, ${Math.round(progress * 100)}%`;
 	}
 	const size = formatFileSize(file.size);
-	return `${kind ? `${kindLabel[kind]} · ${size}` : size} · Saved to the topic's notes`;
+	const saved = reused
+		? "Already in the topic's notes"
+		: "Saved to the topic's notes";
+	return `${kind ? `${kindLabel[kind]} · ${size}` : size} · ${saved}`;
 }
 
 export function formatFileSize(bytes: number) {
 	if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// what a message keeps of its saved files, so the chat shows them and the tutor
+// reads their notes first
+export const messageAttachments = (
+	attachments: Attachment[]
+): MessageAttachment[] =>
+	attachments.flatMap(({ status, file, noteIds }) =>
+		status === 'ready' && noteIds?.length
+			? [{ fileName: file.name, noteIds }]
+			: []
+	);

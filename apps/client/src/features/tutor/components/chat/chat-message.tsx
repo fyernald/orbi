@@ -5,6 +5,7 @@ import { BookOpen, Copy, RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
 import { Markdown } from './markdown';
+import { MessageAttachments } from './message-attachments';
 import { ReasoningBlock } from './reasoning-block';
 import { Thinking } from './thinking';
 import { ToolView, type ChatActions } from './tool-views';
@@ -53,11 +54,12 @@ export function ChatMessage(props: ChatMessageProps) {
 
 function StudentMessage({ message }: { message: TutorUIMessage }) {
 	return (
-		<article className="flex justify-end">
+		<article className="flex flex-col items-end gap-1.5">
 			<h3 className="sr-only">You said</h3>
 			<p className="max-w-[85%] rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap">
 				{studentText(message)}
 			</p>
+			<MessageAttachments attachments={message.metadata?.attachments} />
 		</article>
 	);
 }

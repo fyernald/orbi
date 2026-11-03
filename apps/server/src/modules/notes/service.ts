@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import {
 	PDF_MAX_NOTES,
 	type CreateNoteInput,
 	type Note,
+	type PdfUploadResult,
 	type UpdateNoteInput,
 } from '@orbi/shared';
 import { NotFoundError, ValidationError } from '../../errors';
@@ -20,13 +22,14 @@ export interface NoteService {
 		topicId: string,
 		input: CreateNoteInput
 	): Promise<Note>;
-	// the PDF's text is saved as notes, more than one when it is long
+	// the PDF's text is saved as notes, more than one when it is long; the same
+	// file again gives back the notes it was saved as before
 	createNotesFromPdf(
 		userId: string,
 		courseId: string,
 		topicId: string,
 		upload: PdfUpload
-	): Promise<Note[]>;
+	): Promise<PdfUploadResult>;
 	updateNote(
 		userId: string,
 		courseId: string,
@@ -97,12 +100,21 @@ export function createNoteService({
 
 		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
 			await requireTopic(userId, courseId, topicId);
+			// a deleted note is not brought back: the parts still there are given back
+			const hash = createHash('sha256').update(data).digest('hex');
+			const saved = await repo.listSourceNotes(userId, topicId, hash);
+			if (saved.length > 0) return { notes: saved, reused: true };
+
 			const notes = pdfNotes(fileName, await readPdf(data));
 			if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
 			if (notes.length > PDF_MAX_NOTES) {
 				throw new ValidationError(pdfMessages.tooLong);
 			}
-			return repo.insertNotes(userId, topicId, notes);
+			const created = await repo.insertNotes(userId, topicId, notes, {
+				name: fileName,
+				hash,
+			});
+			return { notes: created, reused: false };
 		},
 
 		// a title cleared while editing is named after the first line again

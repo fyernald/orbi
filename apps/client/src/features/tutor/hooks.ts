@@ -9,6 +9,7 @@ import {
 	FOLLOW_UPS_MAX,
 	followUps,
 	type AskStudentOutput,
+	type MessageAttachment,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -181,6 +182,10 @@ export function useTutorChat({
 						...(context.current ?? fallback.current),
 						trigger,
 						message: trigger === 'submit-message' ? messages.at(-1) : undefined,
+						attachments:
+							trigger === 'submit-message'
+								? (messages.at(-1)?.metadata?.attachments ?? [])
+								: [],
 					},
 				}),
 			})
@@ -221,13 +226,30 @@ export function useTutorChat({
 		context: lastContext,
 		// typed is what the student wrote; text can be a message written for them, which
 		// must not go back into the composer as if they had typed it
-		send: (text: string, next: ChatContext, typed: string) => {
+		// the attached PDFs go with the message, so it shows them at once
+		send: (
+			text: string,
+			next: ChatContext,
+			typed: string,
+			attachments: MessageAttachment[] = []
+		) => {
 			context.current = next;
 			setLastContext(next);
 			lastText.current = typed;
 			sendingNew.current = true;
 			chat.clearError();
-			void chat.sendMessage({ text });
+			void chat.sendMessage({
+				text,
+				metadata:
+					attachments.length > 0
+						? {
+								topicId: next.topicId,
+								action: next.action,
+								attachments,
+								createdAt: new Date().toISOString(),
+							}
+						: undefined,
+			});
 		},
 		// a failed reply is dropped and asked for again; a message that never got an
 		// answer is sent again
@@ -318,7 +340,14 @@ export function useAttachments(target: AttachmentTarget) {
 			signal: controller.signal,
 			onProgress: (progress) => update(attachment.id, { progress }),
 		})
-			.then(() => update(attachment.id, { status: 'ready', progress: 1 }))
+			.then(({ notes, reused }) =>
+				update(attachment.id, {
+					status: 'ready',
+					progress: 1,
+					noteIds: notes.map(({ id }) => id),
+					reused,
+				})
+			)
 			.catch((error: unknown) => {
 				// removed by the user, so there is nothing to show
 				if (controller.signal.aborted) return;

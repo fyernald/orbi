@@ -10,7 +10,12 @@ export function pdfFileError(file: File): string | null {
 	return null;
 }
 
-export function pdfSavedMessage(fileName: string, noteCount: number) {
+export function pdfSavedMessage(
+	fileName: string,
+	noteCount: number,
+	reused = false
+) {
+	if (reused) return `${fileName} is already in your notes.`;
 	return noteCount === 1
 		? `Saved ${fileName} as a note.`
 		: `Saved ${fileName} as ${noteCount} notes, split by pages.`;

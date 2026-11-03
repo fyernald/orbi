@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorRequestInput } from '@orbi/shared';
+import type { MessageAttachment, TutorRequestInput } from '@orbi/shared';
 import { RotateCcw, X } from 'lucide-react';
 import {
 	useCallback,
@@ -161,7 +161,10 @@ export function TutorChat({
 	const workingOn = topicName(working?.topicId);
 	const notesOf = workingOn ? `your ${workingOn} notes` : 'your notes';
 
-	const send = (request: TutorRequestInput) => {
+	const send = (
+		request: TutorRequestInput,
+		attachments: MessageAttachment[] = []
+	) => {
 		const text = messageToSend(
 			request.action,
 			request.message,
@@ -178,7 +181,8 @@ export function TutorChat({
 				thinking: request.thinking,
 				action: request.action,
 			},
-			request.message
+			request.message,
+			attachments
 		);
 	};
 

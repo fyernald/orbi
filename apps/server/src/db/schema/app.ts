@@ -31,6 +31,7 @@ import {
 	REPORT_REASONS,
 	STUDY_TIMES,
 	TUTOR_ACTIONS,
+	type MessageAttachment,
 } from '@orbi/shared';
 import { user } from './auth';
 
@@ -141,6 +142,10 @@ export const note = pgTable(
 		topicId: uuid('topic_id').notNull(),
 		title: varchar('title', { length: 255 }).notNull(),
 		content: text('content').notNull(),
+		// for a note taken from a PDF: the file's name, and a SHA-256 of its bytes so
+		// the same file uploaded again reuses its notes
+		sourceName: varchar('source_name', { length: 255 }),
+		sourceHash: varchar('source_hash', { length: 64 }),
 		...timestamps,
 	},
 	(t) => [
@@ -151,6 +156,7 @@ export const note = pgTable(
 		}).onDelete('cascade'),
 		index('note_topic_id_idx').on(t.topicId),
 		index('note_user_id_idx').on(t.userId),
+		index('note_source_hash_idx').on(t.topicId, t.sourceHash),
 		// at least one character that is not a space or a line break
 		check('note_content_not_empty', sql`${t.content} ~ '\\S'`),
 	]
@@ -222,6 +228,8 @@ export const chatMessage = pgTable(
 		thinkingMs: integer('thinking_ms').array(),
 		// the follow-up questions shown under an explanation, so a visit does not ask again
 		followUps: text('follow_ups').array(),
+		// the PDFs sent with a student's message, and the notes each was saved as
+		attachments: jsonb('attachments').$type<MessageAttachment[]>(),
 		...timestamps,
 	},
 	(t) => [

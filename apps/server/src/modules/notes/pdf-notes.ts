@@ -1,4 +1,4 @@
-import { NOTE_CONTENT_MAX_LENGTH, NOTE_TITLE_MAX_LENGTH } from '@orbi/shared';
+import { NOTE_TITLE_MAX_LENGTH, PDF_NOTE_MAX_LENGTH } from '@orbi/shared';
 
 type NoteFields = { title: string; content: string };
 
@@ -15,12 +15,12 @@ export function cleanPageText(text: string): string {
 		.trim();
 }
 
-// the file name without .pdf is the title; a PDF too long for one note becomes a
-// few notes named after their pages, in page order. Empty when no page has text
+// the file name without .pdf is the title; a longer PDF becomes a few notes of a
+// few pages each, named after their pages, in page order. Empty when no page has text
 export function pdfNotes(
 	fileName: string,
 	pages: string[],
-	maxLength = NOTE_CONTENT_MAX_LENGTH
+	maxLength = PDF_NOTE_MAX_LENGTH
 ): NoteFields[] {
 	const parts: Part[] = [];
 	pages.forEach((page, index) => {

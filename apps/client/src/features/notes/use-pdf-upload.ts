@@ -36,10 +36,10 @@ export function usePdfUpload(courseId: string, topicId: string) {
 			onProgress: (progress) =>
 				setState({ status: 'uploading', fileName, progress }),
 		})
-			.then((notes) =>
+			.then(({ notes, reused }) =>
 				setState({
 					status: 'saved',
-					message: pdfSavedMessage(fileName, notes.length),
+					message: pdfSavedMessage(fileName, notes.length, reused),
 				})
 			)
 			.catch((error: unknown) => {

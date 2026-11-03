@@ -15,7 +15,14 @@ export interface NoteRepository {
 	insertNotes(
 		userId: string,
 		topicId: string,
-		inputs: NoteFields[]
+		inputs: NoteFields[],
+		source: NoteSource
+	): Promise<Note[]>;
+	// the notes a PDF with this hash was saved as on the topic, in page order
+	listSourceNotes(
+		userId: string,
+		topicId: string,
+		sourceHash: string
 	): Promise<Note[]>;
 	updateNote(
 		userId: string,
@@ -28,6 +35,9 @@ export interface NoteRepository {
 }
 
 type NoteFields = { title: string; content: string };
+
+// the PDF a note was taken from
+export type NoteSource = { name: string; hash: string };
 
 const noteColumns = {
 	id: note.id,
@@ -88,7 +98,7 @@ export function createNoteRepository(db: Db): NoteRepository {
 
 		// the notes are listed newest first, so each one is saved a millisecond
 		// newer than the next, and the first one ends up on top
-		async insertNotes(userId, topicId, inputs) {
+		async insertNotes(userId, topicId, inputs, source) {
 			const now = Date.now();
 			const created = await db
 				.insert(note)
@@ -97,12 +107,29 @@ export function createNoteRepository(db: Db): NoteRepository {
 						userId,
 						topicId,
 						...input,
+						sourceName: source.name,
+						sourceHash: source.hash,
 						createdAt: new Date(now - index),
 						updatedAt: new Date(now - index),
 					}))
 				)
 				.returning(noteColumns);
 			return created.map(toApi);
+		},
+
+		async listSourceNotes(userId, topicId, sourceHash) {
+			const rows = await db
+				.select(noteColumns)
+				.from(note)
+				.where(
+					and(
+						eq(note.userId, userId),
+						eq(note.topicId, topicId),
+						eq(note.sourceHash, sourceHash)
+					)
+				)
+				.orderBy(desc(note.createdAt), desc(note.id));
+			return rows.map(toApi);
 		},
 
 		async updateNote(userId, topicId, noteId, input) {

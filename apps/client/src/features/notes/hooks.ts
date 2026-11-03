@@ -2,6 +2,7 @@
 
 import {
 	note,
+	pdfUploadResult,
 	type CreateNoteInput,
 	type Note,
 	type Topic,
@@ -96,19 +97,21 @@ export type PdfUpload = UploadProgress & {
 };
 
 // the server reads the text and saves it as one note, or a few for a long PDF;
-// the course and topic come with each upload, since the composer can switch
-// topics while a file is still going up
+// the same file again gives back its saved notes. The course and topic come
+// with each upload, since the composer can switch topics while a file is still
+// going up
 export function useUploadPdf() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ courseId, topicId, file, ...progress }: PdfUpload) =>
 			api.upload(
 				`${notesPath(courseId, topicId)}/pdf?fileName=${encodeURIComponent(file.name)}`,
-				z.array(note),
+				pdfUploadResult,
 				{ file, contentType: 'application/pdf', ...progress }
 			),
-		onSuccess: (created, { courseId, topicId }) =>
-			notesAdded(queryClient, courseId, topicId, created),
+		onSuccess: async ({ notes, reused }, { courseId, topicId }) => {
+			if (!reused) await notesAdded(queryClient, courseId, topicId, notes);
+		},
 	});
 }
 

@@ -4,6 +4,7 @@ import {
 	noteParams,
 	PDF_MAX_SIZE,
 	pdfUploadQuery,
+	pdfUploadResult,
 	topicParams,
 	updateNoteInput,
 } from '@orbi/shared';
@@ -68,19 +69,19 @@ export function createNoteRoutes({
 					params: topicParams,
 					querystring: pdfUploadQuery,
 					body: z.instanceof(Uint8Array, { error: 'Attach a PDF file.' }),
-					response: { 201: z.array(note) },
+					response: { 200: pdfUploadResult, 201: pdfUploadResult },
 				},
 			},
 			async (request, reply) => {
 				const userId = await requireUser(request);
 				const { courseId, topicId } = request.params;
-				const created = await notes.createNotesFromPdf(
+				const result = await notes.createNotesFromPdf(
 					userId,
 					courseId,
 					topicId,
 					{ fileName: request.query.fileName, data: request.body }
 				);
-				return reply.status(201).send(created);
+				return reply.status(result.reused ? 200 : 201).send(result);
 			}
 		);
 

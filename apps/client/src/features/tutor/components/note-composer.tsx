@@ -3,12 +3,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
 	tutorRequestInput,
+	type MessageAttachment,
 	type TutorAction,
 	type TutorRequestInput,
 } from '@orbi/shared';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
+import { messageAttachments } from '../attachments';
 import { sendBlockedReason } from '../composer';
 import { useAttachments, useFileDrop, useModels } from '../hooks';
 import type { Topic } from '../mock-data';
@@ -53,7 +55,10 @@ type NoteComposerProps = {
 	onAddTopic?: () => void;
 	preset?: ComposerPreset;
 	// without it the composer is only a preview (Home, until it has real topics)
-	onSend?: (request: TutorRequestInput) => void;
+	onSend?: (
+		request: TutorRequestInput,
+		attachments: MessageAttachment[]
+	) => void;
 	// a reply is on its way: the send button stops it instead
 	busy?: boolean;
 	onStop?: () => void;
@@ -131,7 +136,7 @@ export function NoteComposer({
 			focusMessage();
 			return;
 		}
-		onSend(request);
+		onSend(request, messageAttachments(attachments));
 		clearSaved();
 		form.setValue('message', '');
 		focusMessage();
