@@ -79,7 +79,7 @@ orbi/
 ├── docs/
 │   ├── decisions/       # Architecture decision records
 │   ├── database.md      # Tables, relations, and how to change the schema
-│   └── deployment.md    # How automatic deployment works and how to set it up
+│   └── deployment.md    # How automatic deployment and backups work and how to set them up
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml           # Typecheck, test, build, and deploy

@@ -11,17 +11,22 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { LoadError } from '@/components/load-error';
 import { Button } from '@/components/ui/button';
 import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
+import { useOpenChats } from '@/features/tutor/hooks';
+import { apiErrorMessage } from '@/lib/api';
 import { topicStudyRoute } from '@/lib/routes';
 import type {
 	ComposerDraft,
 	ComposerPreset,
 } from '@/features/tutor/components/note-composer';
 import type { TutorStarter } from '../tutor-starters';
+import { ChatHistoryMenu } from './chat-history-menu';
+import { ChatLoading } from './chat-loading';
 import { PaneHeader } from './pane-header';
 import { PaneToggle } from './pane-toggle';
-import { ChatLoading, ScopeChat } from './scope-chat';
+import { ScopeChat } from './scope-chat';
 
 // a preset for one chat: a topic id, or the whole-course scope
 export type ScopedPreset = ComposerPreset & { scope: string };
@@ -35,9 +40,9 @@ type TutorPaneProps = {
 	onOpenNotes: (topicId: string) => void;
 	preset: ScopedPreset | undefined;
 	onStart: (starter: Omit<TutorStarter, 'label'>) => void;
-	// the chats with a reply running, by scope
-	busyScopes: ReadonlySet<string>;
-	onBusyChange: (scope: string, busy: boolean) => void;
+	// the chats with a reply running, and the scope of each
+	busyChats: ReadonlyMap<string, string>;
+	onBusyChange: (chatId: string, scope: string, busy: boolean) => void;
 	onSwitchTopic: (topicId: string | null, draft: ComposerDraft) => void;
 	// the message box's topic menu opens the new topic field in the topics pane
 	onAddTopic: () => void;
@@ -48,8 +53,9 @@ type TutorPaneProps = {
 	className?: string;
 };
 
-// Each topic has its own chat, and the course has one more. Every chat opened in
-// this visit stays mounted, so switching topics keeps its reply streaming and its draft.
+// Each topic has its own chats, and the course has its own too. Every chat opened in
+// this visit stays mounted, so switching topics or chats keeps a reply streaming and
+// its draft.
 export function TutorPane({
 	course,
 	topics,
@@ -58,7 +64,7 @@ export function TutorPane({
 	onOpenNotes,
 	preset,
 	onStart,
-	busyScopes,
+	busyChats,
 	onBusyChange,
 	onSwitchTopic,
 	onAddTopic,
@@ -71,7 +77,7 @@ export function TutorPane({
 	const activeScope = scopeOf(selectedTopicId);
 	const selected = topics?.find((topic) => topic.id === selectedTopicId);
 	const [opened, setOpened] = useState<string[]>([activeScope]);
-	const [newChat, setNewChat] = useState<Record<string, number>>({});
+	// by chat id
 	const [withMessages, setWithMessages] = useState<Record<string, boolean>>({});
 
 	useEffect(() => {
@@ -81,9 +87,9 @@ export function TutorPane({
 	}, [activeScope]);
 
 	const markMessages = useCallback(
-		(scope: string, value: boolean) =>
+		(chatId: string, value: boolean) =>
 			setWithMessages((current) =>
-				current[scope] === value ? current : { ...current, [scope]: value }
+				current[chatId] === value ? current : { ...current, [chatId]: value }
 			),
 		[]
 	);
@@ -96,7 +102,14 @@ export function TutorPane({
 		),
 		...(opened.includes(activeScope) ? [] : [activeScope]),
 	];
-	const atLimit = busyScopes.size >= MAX_PARALLEL_REPLIES;
+	const chats = useOpenChats(course.id, scopes);
+	const activeChats = chats.chatsOf(activeScope);
+	const savedChats = chats.savedChats(activeScope);
+	const atLimit = busyChats.size >= MAX_PARALLEL_REPLIES;
+	const limitReasonFor = (chatId: string) =>
+		atLimit && !busyChats.has(chatId)
+			? `You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
+			: null;
 
 	return (
 		<section aria-labelledby="tutor-pane-title" className={className}>
@@ -156,18 +169,21 @@ export function TutorPane({
 								</Link>
 							</Button>
 						)}
-						{withMessages[activeScope] && (
+						{activeChats && savedChats.length > 0 && (
+							<ChatHistoryMenu
+								chats={savedChats}
+								currentId={activeChats.currentId}
+								scopeName={selected ? selected.name : 'Whole course'}
+								onOpen={(chatId) => chats.open(activeScope, chatId)}
+							/>
+						)}
+						{activeChats && withMessages[activeChats.currentId] && (
 							<Button
 								variant="ghost"
 								size="sm"
 								// the text is hidden on phones
 								aria-label="New chat"
-								onClick={() =>
-									setNewChat((current) => ({
-										...current,
-										[activeScope]: (current[activeScope] ?? 0) + 1,
-									}))
-								}
+								onClick={() => chats.startNew(activeScope)}
 								className="rounded-md text-muted-foreground"
 							>
 								<SquarePen />
@@ -183,22 +199,25 @@ export function TutorPane({
 					</>
 				}
 			/>
-			{topics ? (
+			{chats.list.error ? (
+				<div className="mx-auto w-full max-w-chat flex-1 px-5 py-10">
+					<LoadError
+						message={apiErrorMessage(chats.list.error)}
+						onRetry={() => void chats.list.refetch()}
+					/>
+				</div>
+			) : topics && chats.list.data ? (
 				scopes.map((scope) => (
 					<ScopeChat
 						key={scope}
 						course={course}
 						topics={topics}
 						scope={scope}
+						chats={chats.chatsOf(scope)!}
 						active={scope === activeScope}
 						preset={preset?.scope === scope ? preset : undefined}
-						newChatVersion={newChat[scope] ?? 0}
 						focusOnOpen={scope !== opened[0]}
-						limitReason={
-							atLimit && !busyScopes.has(scope)
-								? `You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
-								: null
-						}
+						limitReasonFor={limitReasonFor}
 						onStart={onStart}
 						onOpenNotes={onOpenNotes}
 						onHasMessages={markMessages}

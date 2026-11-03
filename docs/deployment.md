@@ -7,7 +7,7 @@ Every merge into `main` is deployed to the VPS automatically. Nobody has to log 
 1. A pull request is merged into `main`.
 2. GitHub Actions runs the CI checks (format, typecheck, tests, build).
 3. If they pass, it builds a Docker image for the client and one for the server and uploads them to GitHub Container Registry (`ghcr.io/fyernald/orbi-client` and `orbi-server`).
-4. It connects to the VPS with SSH, copies `deploy/compose.yml`, downloads the new images, and restarts the containers.
+4. It connects to the VPS with SSH, copies `deploy/compose.yml` and the backup scripts, downloads the new images, and restarts the containers.
 5. It waits until the new containers are healthy. If they are not, the run turns red in the **Actions** tab.
 
 The VPS also hosts other projects, so Orbi shares the existing nginx web server:
@@ -123,3 +123,149 @@ docker compose logs -f server
 Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), so older lines are deleted. Errors are logged without the student's notes or chat: AI errors keep the error name, status code, and the provider's message, and failed queries keep the query without its values (see `apps/server/src/log.ts`).
 
 **Stop deploys for a while:** set the `DEPLOY_ENABLED` variable to `false`.
+
+## Backups
+
+Every night cron runs [deploy/backup/backup.sh](../deploy/backup/backup.sh) on the VPS. Here is what it does:
+
+1. It saves the database with `pg_dump` to `/home/orbi/orbi/backups/orbi-<date>.dump`.
+2. It checks that the new file can be read.
+3. It deletes backups on the VPS that are older than `BACKUP_KEEP_DAYS` (14 days by default).
+4. It copies the new backup off the server with [rclone](https://rclone.org/) to `BACKUP_REMOTE`.
+5. It deletes copies there that are older than `BACKUP_REMOTE_KEEP_DAYS` (30 days by default).
+
+Deploys copy the scripts to `/home/orbi/orbi/backup/`. The commands run inside the `postgres` container, so the VPS needs no PostgreSQL tools. A backup holds the students' notes and chats, so the off-server copy is encrypted.
+
+### Set up (once)
+
+**1. Install rclone.** As `root`:
+
+```bash
+apt install rclone
+```
+
+**2. Make the storage.** Orbi uses a private Backblaze B2 bucket called `orbi-backups`. Any storage rclone supports works, as long as it is not on this VPS. For B2:
+
+- Make the bucket **Private**. Bucket names are shared by all B2 users, so a short name like `orbi` is usually taken.
+- In the bucket's **Lifecycle Settings**, choose **Keep only the last version of the file**. Otherwise B2 only hides the old backups the script deletes, and keeps them.
+- Make an **application key** for this bucket only, with **Read and Write**. Copy the keyID and the key; B2 shows the key only once.
+
+**3. Add the rclone remotes.** As `orbi` (`su - orbi` from `root`), not as `root`, because cron runs the backup as `orbi`. Run `rclone config` and make two remotes:
+
+- **`orbi-storage`:** type `b2`, with the keyID as `account` and the key as `key`.
+- **`orbi-backup`:** type `crypt`, with remote `orbi-storage:orbi-backups/orbi` (the bucket name, then a folder), standard filename encryption, and directory names encrypted. For both passwords, answer `g` to make a random one. rclone encrypts each file before it leaves the VPS.
+
+Keep both crypt passwords in the team's password manager. Without them nobody can read the backups, not even you.
+
+Check that it works:
+
+```bash
+rclone listremotes
+rclone config show orbi-backup | grep remote
+echo test > /tmp/t && rclone copy /tmp/t orbi-backup: && rclone ls orbi-backup:
+rclone delete orbi-backup: --include t
+```
+
+Always write the remote with the colon (`orbi-backup:`). Without it rclone looks for a local folder with that name.
+
+**4. Settings.** These lines are in [deploy/.env.example](../deploy/.env.example). Copy them into `/home/orbi/orbi/.env`:
+
+```bash
+BACKUP_KEEP_DAYS=14
+BACKUP_REMOTE=orbi-backup:
+BACKUP_REMOTE_KEEP_DAYS=30
+```
+
+If `BACKUP_REMOTE` is empty, the backup stays only on the VPS and the log says so.
+
+**5. Run it every night.** On this VPS `orbi` is not allowed to use `crontab`, so `root` adds the job to `/etc/cron.d/`. The `orbi` in the line makes cron run it as `orbi`, with its rclone remotes and Docker access. As `orbi`, make the folder:
+
+```bash
+mkdir -p ~/orbi/backups
+```
+
+Then as `root`:
+
+```bash
+cat > /etc/cron.d/orbi-backup <<'CRON'
+# Nightly Orbi database backup (see "Backups" in docs/deployment.md)
+30 3 * * * orbi cd /home/orbi/orbi && bash backup/backup.sh >> backups/backup.log 2>&1
+CRON
+chmod 644 /etc/cron.d/orbi-backup
+systemctl is-active cron
+```
+
+It runs at 03:30 server time. The server uses CET, so that is 05:30 in Erbil. The backup file names use UTC. Keep the file name without a dot, because cron skips files in `/etc/cron.d/` with a dot in the name.
+
+**6. Test it.** Make a backup by hand and restore it into an empty database (both are described below). To see cron run it without waiting for the night, add a job that runs every minute, check the log, and remove it again:
+
+```bash
+echo '* * * * * orbi cd /home/orbi/orbi && bash backup/backup.sh >> backups/backup.log 2>&1' > /etc/cron.d/orbibackuptest
+# after a minute or two
+tail /home/orbi/orbi/backups/backup.log
+rm /etc/cron.d/orbibackuptest
+```
+
+The next morning, check that `backups/backup.log` shows a new backup with no `ERROR`.
+
+### Make a backup by hand
+
+Do this before anything risky, such as a big migration or a database change by hand:
+
+```bash
+ssh orbi@<vps-ip>
+cd orbi
+bash backup/backup.sh
+```
+
+To see the backups:
+
+```bash
+ls -lh backups/
+rclone ls orbi-backup:
+tail backups/backup.log
+```
+
+### Check that a backup restores
+
+This restores a backup into a new, empty database called `orbi_restore_check` and prints how many rows each table has. Then it drops that database again. The app's database is not touched and the app keeps running, so you can run it any time:
+
+```bash
+bash backup/restore.sh --check backups/orbi-2026-11-02T033000Z.dump
+```
+
+### Restore a backup
+
+This replaces the app's database with the backup:
+
+```bash
+bash backup/restore.sh backups/orbi-2026-11-02T033000Z.dump
+```
+
+Here is what it does:
+
+1. It restores the backup into a new database first and shows the row counts. A broken file never touches the live data.
+2. It asks you to type the database name before going on.
+3. It stops the app for a few seconds and swaps the databases.
+4. It starts the app again. The server applies any migrations that are newer than the backup.
+
+The old database is kept as `orbi_before_<date>`. When the app works, drop the old database with the command the script prints.
+
+**Use an off-server copy** (for example after losing the VPS). Set up the new VPS with the steps above and let a deploy start the app. Then copy the backup back and restore it:
+
+```bash
+rclone ls orbi-backup:
+rclone copy orbi-backup:orbi-2026-11-02T033000Z.dump backups/
+bash backup/restore.sh backups/orbi-2026-11-02T033000Z.dump
+```
+
+### Try it on your own computer
+
+Use the local database from `docker-compose.yml`. From the repository root, in Git Bash:
+
+```bash
+ORBI_DIR=$PWD bash deploy/backup/backup.sh
+ORBI_DIR=$PWD bash deploy/backup/restore.sh --check backups/<file>
+```
+
+For a full restore, stop `pnpm dev` first and add `APP_SERVICES=`, because the app runs outside Docker there. The `backups/` folder is ignored by git.

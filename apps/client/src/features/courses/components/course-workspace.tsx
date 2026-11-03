@@ -1,7 +1,7 @@
 'use client';
 
 import type { Course, TutorAction } from '@orbi/shared';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
 import { TopicQuestionsSheet } from '@/features/questions/components/topic-questions-sheet';
 import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
@@ -48,19 +48,24 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 			? { version: 1, scope: COURSE_SCOPE, ...start }
 			: undefined
 	);
-	// the chats with a reply running, for the limit on parallel replies and the topic list
-	const [busyScopes, setBusyScopes] = useState<ReadonlySet<string>>(
-		() => new Set()
+	// the chats with a reply running and the scope of each, for the limit on parallel
+	// replies and the topic list
+	const [busyChats, setBusyChats] = useState<ReadonlyMap<string, string>>(
+		() => new Map()
 	);
-	const setScopeBusy = useCallback((scope: string, busy: boolean) => {
-		setBusyScopes((current) => {
-			if (current.has(scope) === busy) return current;
-			const next = new Set(current);
-			if (busy) next.add(scope);
-			else next.delete(scope);
-			return next;
-		});
-	}, []);
+	const setChatBusy = useCallback(
+		(chatId: string, scope: string, busy: boolean) => {
+			setBusyChats((current) => {
+				if (current.has(chatId) === busy) return current;
+				const next = new Map(current);
+				if (busy) next.set(chatId, scope);
+				else next.delete(chatId);
+				return next;
+			});
+		},
+		[]
+	);
+	const busyScopes = useMemo(() => new Set(busyChats.values()), [busyChats]);
 
 	// a request about a topic opens that topic's chat; others go to the open chat
 	const sendToTutor = (changes: Omit<ComposerPreset, 'version'>) => {
@@ -154,8 +159,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onOpenNotes={notesSheet.openFor}
 					preset={preset}
 					onStart={sendToTutor}
-					busyScopes={busyScopes}
-					onBusyChange={setScopeBusy}
+					busyChats={busyChats}
+					onBusyChange={setChatBusy}
 					onSwitchTopic={switchTopic}
 					onAddTopic={addTopic}
 					topicsOpen={topicsOpen}

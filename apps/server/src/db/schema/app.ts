@@ -10,6 +10,7 @@ import {
 	pgEnum,
 	pgTable,
 	text,
+	time,
 	timestamp,
 	unique,
 	uniqueIndex,
@@ -83,6 +84,9 @@ export const profile = pgTable('profile', {
 	explanationStyle: explanationStyle('explanation_style'),
 	dailyMinutes: integer('daily_minutes'),
 	studyTime: studyTime('study_time'),
+	// the daily study reminder email, sent at reminder_time in the user's time zone
+	reminderEnabled: boolean('reminder_enabled').notNull().default(false),
+	reminderTime: time('reminder_time'),
 	// set once every onboarding question is answered; the app stays closed until then
 	onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
 	...timestamps,
