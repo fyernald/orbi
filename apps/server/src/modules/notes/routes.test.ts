@@ -1,6 +1,7 @@
-import { NOTE_CONTENT_MAX_LENGTH } from '@orbi/shared';
+import { NOTE_CONTENT_MAX_LENGTH, PDF_MAX_SIZE } from '@orbi/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMemoryMailer } from '../../mail/testing';
+import { createTestPdf } from '../../pdf/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
 
 let app: Awaited<ReturnType<typeof createTestApp>>;
@@ -146,6 +147,101 @@ describe('notes', () => {
 		const response = await app.inject({ method: 'GET', url: notesUrl });
 
 		expect(response.statusCode).toBe(401);
+	});
+});
+
+const uploadPdf = (
+	cookie: string,
+	notesUrl: string,
+	body: Uint8Array,
+	contentType = 'application/pdf'
+) =>
+	app.inject({
+		method: 'POST',
+		url: `${notesUrl}/pdf?fileName=${encodeURIComponent('Lecture 3.pdf')}`,
+		headers: { cookie, 'content-type': contentType },
+		payload: Buffer.from(body),
+	});
+
+// lines of words, like a page of real notes
+const pageOf = (length: number) =>
+	Array.from({ length: length / 50 }, () => 'cells divide '.repeat(4).trim())
+		.join('\n')
+		.padEnd(length, '.');
+
+describe('uploading a PDF', () => {
+	it('saves its text as a note named after the file', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const pdf = createTestPdf(['Mitosis\nProphase (early)', '', 'Metaphase']);
+
+		const response = await uploadPdf(ada, notesUrl, pdf);
+
+		expect(response.statusCode).toBe(201);
+		expect(response.json()).toEqual([
+			expect.objectContaining({
+				title: 'Lecture 3',
+				content: 'Mitosis\nProphase (early)\n\nMetaphase',
+			}),
+		]);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual(response.json());
+	});
+
+	it('splits a long PDF into notes by pages, listed in page order', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const third = Math.floor(NOTE_CONTENT_MAX_LENGTH / 2.5);
+		const pdf = createTestPdf([pageOf(third), pageOf(third), pageOf(third)]);
+
+		const response = await uploadPdf(ada, notesUrl, pdf);
+
+		expect(response.statusCode).toBe(201);
+		const titles = (await send(ada, 'GET', notesUrl))
+			.json()
+			.map((n: { title: string }) => n.title);
+		expect(titles).toEqual(['Lecture 3 · pages 1–2', 'Lecture 3 · page 3']);
+	});
+
+	it('refuses a PDF without text, like a scan', async () => {
+		const { notesUrl } = await createTopic(ada);
+
+		const response = await uploadPdf(ada, notesUrl, createTestPdf(['', '']));
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json().error.message).toMatch(/no text Orbi can read/);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
+	});
+
+	it('refuses a file that is not a PDF', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const text = new TextEncoder().encode('just some text');
+
+		const renamed = await uploadPdf(ada, notesUrl, text);
+		const otherType = await uploadPdf(ada, notesUrl, text, 'text/plain');
+
+		expect(renamed.statusCode).toBe(400);
+		expect(renamed.json().error.message).toMatch(/could not open this file/);
+		expect(otherType.statusCode).toBe(400);
+		expect(otherType.json().error.message).toBe('Attach a PDF file.');
+	});
+
+	it('refuses a file over the size limit', async () => {
+		const { notesUrl } = await createTopic(ada);
+
+		const response = await uploadPdf(
+			ada,
+			notesUrl,
+			new Uint8Array(PDF_MAX_SIZE + 1)
+		);
+
+		expect(response.statusCode).toBe(413);
+	});
+
+	it("answers 404 for another user's topic", async () => {
+		const { notesUrl } = await createTopic(ada);
+
+		const response = await uploadPdf(grace, notesUrl, createTestPdf(['Mine']));
+
+		expect(response.statusCode).toBe(404);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
 	});
 });
 

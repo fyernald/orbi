@@ -7,7 +7,12 @@ import {
 	type Topic,
 	type UpdateNoteInput,
 } from '@orbi/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type QueryClient,
+} from '@tanstack/react-query';
 import { z } from 'zod';
 import {
 	courseKey,
@@ -15,7 +20,7 @@ import {
 	notesKey,
 	topicsKey,
 } from '@/features/courses/query-keys';
-import { api } from '@/lib/api';
+import { api, type UploadProgress } from '@/lib/api';
 
 const notesPath = (courseId: string, topicId: string) =>
 	`/courses/${courseId}/topics/${topicId}/notes`;
@@ -27,45 +32,83 @@ export function useNotes(courseId: string, topicId: string) {
 	});
 }
 
-// after a note changes, the topic counts it at once, and the course list and the
+// after notes change, the topic counts them at once, and the course list and the
 // course load again for their counts and activity
-function useNotesChanged(courseId: string, topicId: string) {
-	const queryClient = useQueryClient();
-	return (noteChange: number) => {
-		queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
-			topics?.map((topic) =>
-				topic.id === topicId
-					? { ...topic, noteCount: topic.noteCount + noteChange }
-					: topic
-			)
-		);
-		void queryClient.invalidateQueries({ queryKey: coursesKey, exact: true });
-		void queryClient.invalidateQueries({
-			queryKey: courseKey(courseId),
-			exact: true,
-		});
-	};
+function notesChanged(
+	queryClient: QueryClient,
+	courseId: string,
+	topicId: string,
+	noteChange: number
+) {
+	queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
+		topics?.map((topic) =>
+			topic.id === topicId
+				? { ...topic, noteCount: topic.noteCount + noteChange }
+				: topic
+		)
+	);
+	void queryClient.invalidateQueries({ queryKey: coursesKey, exact: true });
+	void queryClient.invalidateQueries({
+		queryKey: courseKey(courseId),
+		exact: true,
+	});
 }
 
-// the new note goes on top, like the server lists them. The notes list loads
-// again too. A request still on its way was sent before the insert, so it is
-// cancelled first: otherwise the reload would reuse it and the new note would be
-// missing from the list
+function useNotesChanged(courseId: string, topicId: string) {
+	const queryClient = useQueryClient();
+	return (noteChange: number) =>
+		notesChanged(queryClient, courseId, topicId, noteChange);
+}
+
+// new notes go on top, like the server lists them. The notes list loads again
+// too. A request still on its way was sent before the insert, so it is
+// cancelled first: otherwise the reload would reuse it and the new notes would
+// be missing from the list
+async function notesAdded(
+	queryClient: QueryClient,
+	courseId: string,
+	topicId: string,
+	created: Note[]
+) {
+	const notesQuery = { queryKey: notesKey(courseId, topicId), exact: true };
+	await queryClient.cancelQueries(notesQuery);
+	queryClient.setQueryData<Note[]>(notesKey(courseId, topicId), (notes) =>
+		notes ? [...created, ...notes] : notes
+	);
+	void queryClient.invalidateQueries(notesQuery);
+	notesChanged(queryClient, courseId, topicId, created.length);
+}
+
 export function useCreateNote(courseId: string, topicId: string) {
 	const queryClient = useQueryClient();
-	const notesChanged = useNotesChanged(courseId, topicId);
 	return useMutation({
 		mutationFn: (input: CreateNoteInput) =>
 			api.post(notesPath(courseId, topicId), note, input),
-		onSuccess: async (created) => {
-			const notesQuery = { queryKey: notesKey(courseId, topicId), exact: true };
-			await queryClient.cancelQueries(notesQuery);
-			queryClient.setQueryData<Note[]>(notesKey(courseId, topicId), (notes) =>
-				notes ? [created, ...notes] : notes
-			);
-			void queryClient.invalidateQueries(notesQuery);
-			notesChanged(1);
-		},
+		onSuccess: (created) =>
+			notesAdded(queryClient, courseId, topicId, [created]),
+	});
+}
+
+export type PdfUpload = UploadProgress & {
+	courseId: string;
+	topicId: string;
+	file: File;
+};
+
+// the server reads the text and saves it as one note, or a few for a long PDF;
+// the course and topic come with each upload, since the composer can switch
+// topics while a file is still going up
+export function useUploadPdf() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ courseId, topicId, file, ...progress }: PdfUpload) =>
+			api.upload(
+				`${notesPath(courseId, topicId)}/pdf?fileName=${encodeURIComponent(file.name)}`,
+				z.array(note),
+				{ file, contentType: 'application/pdf', ...progress }
+			),
+		onSuccess: (created, { courseId, topicId }) =>
+			notesAdded(queryClient, courseId, topicId, created),
 	});
 }
 

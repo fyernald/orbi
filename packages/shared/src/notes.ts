@@ -28,6 +28,17 @@ export const createNoteInput = z.object({
 // an edit saves the whole note again, with the same rules as a new one
 export const updateNoteInput = createNoteInput;
 
+// a PDF is read on the server and its text saved as notes; a long one is split
+// into a few notes by pages, at most this many
+export const PDF_MAX_SIZE = 20 * 1024 * 1024;
+export const PDF_MAX_SIZE_LABEL = '20 MB';
+export const PDF_MAX_NOTES = 20;
+
+// the PDF itself is the request body; its name comes in the address
+export const pdfUploadQuery = z.object({
+	fileName: z.string().trim().min(1, 'The file needs a name.').max(255),
+});
+
 export const noteParams = topicParams.extend({
 	noteId: z.uuid('Note not found.'),
 });
@@ -44,4 +55,5 @@ export const note = z.object({
 
 export type CreateNoteInput = z.infer<typeof createNoteInput>;
 export type UpdateNoteInput = z.infer<typeof updateNoteInput>;
+export type PdfUploadQuery = z.infer<typeof pdfUploadQuery>;
 export type Note = z.infer<typeof note>;

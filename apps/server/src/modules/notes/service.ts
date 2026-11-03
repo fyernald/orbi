@@ -1,7 +1,16 @@
-import type { CreateNoteInput, Note, UpdateNoteInput } from '@orbi/shared';
-import { NotFoundError } from '../../errors';
+import {
+	PDF_MAX_NOTES,
+	type CreateNoteInput,
+	type Note,
+	type UpdateNoteInput,
+} from '@orbi/shared';
+import { NotFoundError, ValidationError } from '../../errors';
+import { PdfReadError, type PdfReader } from '../../pdf/reader';
+import { pdfNotes } from './pdf-notes';
 import type { NoteRepository } from './repository';
 import { noteTitle } from './title';
+
+export type PdfUpload = { fileName: string; data: Uint8Array };
 
 export interface NoteService {
 	listNotes(userId: string, courseId: string, topicId: string): Promise<Note[]>;
@@ -11,6 +20,13 @@ export interface NoteService {
 		topicId: string,
 		input: CreateNoteInput
 	): Promise<Note>;
+	// the PDF's text is saved as notes, more than one when it is long
+	createNotesFromPdf(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		upload: PdfUpload
+	): Promise<Note[]>;
 	updateNote(
 		userId: string,
 		courseId: string,
@@ -26,11 +42,34 @@ export interface NoteService {
 	): Promise<void>;
 }
 
+const pdfMessages = {
+	locked:
+		'This PDF is locked with a password. Remove the password and try again.',
+	broken:
+		'Orbi could not open this file. Make sure it is a PDF that is not damaged.',
+	noText:
+		'This PDF has no text Orbi can read. It may be a scan or photos of pages. Paste the text instead.',
+	tooLong: `This PDF has too much text for ${PDF_MAX_NOTES} notes. Split it into smaller files.`,
+};
+
 export function createNoteService({
 	repo,
+	pdf,
 }: {
 	repo: NoteRepository;
+	pdf: PdfReader;
 }): NoteService {
+	async function readPdf(data: Uint8Array) {
+		try {
+			return await pdf.readPages(data);
+		} catch (error) {
+			if (error instanceof PdfReadError) {
+				throw new ValidationError(pdfMessages[error.reason]);
+			}
+			throw error;
+		}
+	}
+
 	// another user's topic answers the same as a missing one, so ids cannot be probed
 	async function requireTopic(
 		userId: string,
@@ -54,6 +93,16 @@ export function createNoteService({
 				title: noteTitle(title, content),
 				content,
 			});
+		},
+
+		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
+			await requireTopic(userId, courseId, topicId);
+			const notes = pdfNotes(fileName, await readPdf(data));
+			if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
+			if (notes.length > PDF_MAX_NOTES) {
+				throw new ValidationError(pdfMessages.tooLong);
+			}
+			return repo.insertNotes(userId, topicId, notes);
 		},
 
 		// a title cleared while editing is named after the first line again

@@ -1,3 +1,5 @@
+import { PDF_MAX_SIZE, PDF_MAX_SIZE_LABEL } from '@orbi/shared';
+
 export type AttachmentKind = 'pdf' | 'image' | 'text' | 'document' | 'slides';
 
 export type AttachmentStatus = 'uploading' | 'ready' | 'error';
@@ -9,12 +11,14 @@ export type Attachment = {
 	status: AttachmentStatus;
 	// 0 to 1
 	progress: number;
+	// a short reason for the chip, and the whole one for the tooltip
 	error?: string;
+	errorDetail?: string;
 };
 
-// move these limits to packages/shared when the upload endpoint is built,
-// so the server checks the same ones
-export const maxAttachmentSize = 20 * 1024 * 1024;
+// the kinds Orbi can read; the others are known so they get an icon and a clear
+// reason. A PDF is saved as notes of the topic
+const readableKinds: AttachmentKind[] = ['pdf'];
 
 const kindByExtension: Record<string, AttachmentKind> = {
 	pdf: 'pdf',
@@ -30,12 +34,12 @@ const kindByExtension: Record<string, AttachmentKind> = {
 	pptx: 'slides',
 };
 
-export const acceptedFileTypes = Object.keys(kindByExtension)
-	.map((extension) => `.${extension}`)
+export const acceptedFileTypes = Object.entries(kindByExtension)
+	.filter(([, kind]) => readableKinds.includes(kind))
+	.map(([extension]) => `.${extension}`)
 	.join(',');
 
-export const acceptedFilesHint =
-	'PDF, images, text, Word or PowerPoint, up to 20 MB';
+export const acceptedFilesHint = `PDF, up to ${PDF_MAX_SIZE_LABEL}. Orbi saves it to the topic's notes`;
 
 export const kindLabel: Record<AttachmentKind, string> = {
 	pdf: 'PDF',
@@ -53,10 +57,17 @@ export function attachmentError(
 	kind: AttachmentKind | null
 ): string | null {
 	if (!kind) return 'Not supported';
+	if (!readableKinds.includes(kind)) return 'Only PDFs for now';
 	if (file.size === 0) return 'Empty file';
-	if (file.size > maxAttachmentSize) return 'Over 20 MB';
+	if (file.size > PDF_MAX_SIZE) return `Over ${PDF_MAX_SIZE_LABEL}`;
 	return null;
 }
+
+// a PDF is saved to one topic, so the whole-course chat needs one picked first
+export const noTopicError = {
+	error: 'Pick a topic',
+	errorDetail: 'Pick a topic first. Orbi saves a PDF to one topic’s notes.',
+};
 
 // for the tooltip and screen readers, since the chip only has room for the name
 export function attachmentSummary({
@@ -65,14 +76,14 @@ export function attachmentSummary({
 	status,
 	progress,
 	error,
+	errorDetail,
 }: Attachment) {
-	if (status === 'error') return error ?? 'Could not attach';
+	if (status === 'error') return errorDetail ?? error ?? 'Could not attach';
 	if (status === 'uploading') {
 		return `Uploading, ${Math.round(progress * 100)}%`;
 	}
-	return kind
-		? `${kindLabel[kind]} · ${formatFileSize(file.size)}`
-		: formatFileSize(file.size);
+	const size = formatFileSize(file.size);
+	return `${kind ? `${kindLabel[kind]} · ${size}` : size} · Saved to the topic's notes`;
 }
 
 export function formatFileSize(bytes: number) {

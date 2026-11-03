@@ -11,6 +11,12 @@ export interface NoteRepository {
 	): Promise<boolean>;
 	listNotes(userId: string, topicId: string): Promise<Note[]>;
 	insertNote(userId: string, topicId: string, input: NoteFields): Promise<Note>;
+	// all or none are saved; they list in the order given
+	insertNotes(
+		userId: string,
+		topicId: string,
+		inputs: NoteFields[]
+	): Promise<Note[]>;
 	updateNote(
 		userId: string,
 		topicId: string,
@@ -78,6 +84,25 @@ export function createNoteRepository(db: Db): NoteRepository {
 				.values({ userId, topicId, ...input })
 				.returning(noteColumns);
 			return toApi(created!);
+		},
+
+		// the notes are listed newest first, so each one is saved a millisecond
+		// newer than the next, and the first one ends up on top
+		async insertNotes(userId, topicId, inputs) {
+			const now = Date.now();
+			const created = await db
+				.insert(note)
+				.values(
+					inputs.map((input, index) => ({
+						userId,
+						topicId,
+						...input,
+						createdAt: new Date(now - index),
+						updatedAt: new Date(now - index),
+					}))
+				)
+				.returning(noteColumns);
+			return created.map(toApi);
 		},
 
 		async updateNote(userId, topicId, noteId, input) {

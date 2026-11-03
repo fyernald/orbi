@@ -298,6 +298,7 @@ export function TutorChat({
 					)}
 					<NoteComposer
 						topics={topics}
+						courseId={courseId}
 						topicId={chatTopicId ?? ''}
 						wholeCourse={courseName}
 						onTopicChange={

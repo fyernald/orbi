@@ -1,9 +1,10 @@
+import { PDF_MAX_SIZE } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
 import {
+	acceptedFileTypes,
 	attachmentError,
 	attachmentKind,
 	formatFileSize,
-	maxAttachmentSize,
 } from './attachments';
 
 const fileOf = (name: string, size = 1024) =>
@@ -33,9 +34,16 @@ describe('attachmentError', () => {
 	it('rejects unsupported, empty and too large files', () => {
 		expect(attachmentError(fileOf('setup.exe'), null)).toBe('Not supported');
 		expect(attachmentError(fileOf('empty.pdf', 0), 'pdf')).toBe('Empty file');
-		expect(
-			attachmentError(fileOf('huge.pdf', maxAttachmentSize + 1), 'pdf')
-		).toBe('Over 20 MB');
+		expect(attachmentError(fileOf('huge.pdf', PDF_MAX_SIZE + 1), 'pdf')).toBe(
+			'Over 20 MB'
+		);
+	});
+
+	it('only takes PDFs for now', () => {
+		expect(attachmentError(fileOf('board.png'), 'image')).toBe(
+			'Only PDFs for now'
+		);
+		expect(acceptedFileTypes).toBe('.pdf');
 	});
 });
 
