@@ -63,6 +63,7 @@ import {
 	withAttachmentNames,
 	withoutEarlierThinking,
 	withoutUnfinishedTools,
+	withStudentAnswers,
 	type TutorUIMessage,
 } from './messages';
 import { buildInstructions, selectNotes } from './prompt';
@@ -250,10 +251,11 @@ export function createTutorService({
 			if (!last || last.id !== incoming.id || last.role !== 'assistant') {
 				throw new ValidationError('Only the last reply can go on.');
 			}
-			const continued = {
-				...incoming,
-				metadata: last.metadata,
-			} as TutorUIMessage;
+			// only the answers come from the browser, the reply itself is the saved one
+			const continued = withStudentAnswers(last, incoming);
+			if (!continued) {
+				throw new ConflictError('This question was already answered.');
+			}
 			return { messages: [...history.slice(0, -1), continued] };
 		}
 
