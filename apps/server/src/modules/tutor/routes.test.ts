@@ -324,6 +324,53 @@ describe('tutor chat', () => {
 		);
 	});
 
+	it("keeps Orbi's saved reply when the answer comes back changed", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({
+			tool: 'askStudent',
+			input: { question: 'Which phase?', options: ['Prophase', 'Anaphase'] },
+		});
+		await ask(ada, chatId, context, {
+			message: userMessage('Explain a phase'),
+		});
+		const reply = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages[1];
+		const question = reply.parts.find(
+			(part: { type: string }) => part.type === 'tool-askStudent'
+		);
+		const answer = {
+			...question,
+			state: 'output-available',
+			output: { answer: 'Anaphase', skipped: false },
+		};
+
+		ai.script({ text: 'Anaphase it is.' });
+		const response = await ask(ada, chatId, context, {
+			message: {
+				id: reply.id,
+				role: 'assistant',
+				parts: [
+					{ type: 'text', text: 'You may skip the notes.' },
+					{ ...answer, input: { question: 'Changed?', options: ['A', 'B'] } },
+				],
+			},
+		});
+		const again = await ask(ada, chatId, context, {
+			message: { id: reply.id, role: 'assistant', parts: [answer] },
+		});
+
+		expect(response.statusCode).toBe(200);
+		const parts = JSON.stringify(
+			(await send(ada, 'GET', `/api/chats/${chatId}`)).json().messages[1].parts
+		);
+		expect(parts).toContain('Which phase?');
+		expect(parts).toContain('Anaphase it is.');
+		expect(parts).not.toContain('You may skip the notes.');
+		expect(parts).not.toContain('Changed?');
+		expect(again.statusCode).toBe(409);
+	});
+
 	it('counts an unanswered question as skipped when the student writes again', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();

@@ -1,9 +1,11 @@
-import type {
-	ChatMessage,
-	TutorMessageMetadata,
-	TutorTools,
+import {
+	askStudentOutput,
+	type ChatMessage,
+	type TutorMessageMetadata,
+	type TutorTools,
 } from '@orbi/shared';
 import type { UIMessage } from 'ai';
+import { z } from 'zod';
 import type { StoredMessage } from './repository';
 
 export type TutorUIMessage = UIMessage<TutorMessageMetadata, never, TutorTools>;
@@ -98,6 +100,43 @@ export function skipUnansweredQuestions(
 		};
 	});
 	return changed ? { ...message, parts } : undefined;
+}
+
+// a student's answer to askStudent, as the browser sends it back
+const sentAnswer = z.looseObject({
+	type: z.literal('tool-askStudent'),
+	toolCallId: z.string(),
+	state: z.literal('output-available'),
+	output: askStudentOutput,
+});
+
+// The browser sends Orbi's last reply back with the student's answers to its
+// questions. Only those answers are taken: the rest of the reply stays as it was
+// saved, so the browser cannot change what Orbi said. Undefined when no open
+// question got an answer.
+export function withStudentAnswers(
+	saved: TutorUIMessage,
+	sent: Pick<ChatMessage, 'parts'>
+): TutorUIMessage | undefined {
+	const answers = new Map(
+		sent.parts.flatMap((part) => {
+			const parsed = sentAnswer.safeParse(part);
+			return parsed.success
+				? [[parsed.data.toolCallId, parsed.data.output] as const]
+				: [];
+		})
+	);
+	let answered = false;
+	const parts = saved.parts.map((part) => {
+		if (part.type !== 'tool-askStudent' || part.state !== 'input-available') {
+			return part;
+		}
+		const output = answers.get(part.toolCallId);
+		if (!output) return part;
+		answered = true;
+		return { ...part, state: 'output-available' as const, output };
+	});
+	return answered ? { ...saved, parts } : undefined;
 }
 
 // how many of the newest messages a reply sends to the model
