@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { HomeGreeting } from '@/features/home/components/home-greeting';
 import { NoteComposer } from '@/features/tutor/components/note-composer';
 import { SuggestionChips } from '@/features/home/components/suggestion-chips';
-import { recentTopics, today } from '@/features/home/mock-data';
+import { recentTopics } from '@/features/home/mock-data';
 import { getServerProfile } from '@/features/profile/server';
 
 export const metadata: Metadata = { title: 'Home' };
@@ -16,7 +16,7 @@ export default async function HomePage() {
 			<HomeGreeting name={preferredName ?? ''} />
 			<div className="flex w-full max-w-190 flex-col gap-6">
 				<NoteComposer topics={recentTopics} />
-				<SuggestionChips dueCount={today.dueCount} />
+				<SuggestionChips />
 			</div>
 		</section>
 	);

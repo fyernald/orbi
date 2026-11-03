@@ -2,11 +2,6 @@
 
 import type { Topic } from '@/features/tutor/mock-data';
 
-// the due count comes with the study sessions (US-06); the questions to approve are real
-export type TodaySummary = {
-	dueCount: number;
-};
-
 const biology = (id: string, name: string): Topic => ({
 	id: `bio-${id}`,
 	course: 'Biology 101',
@@ -32,5 +27,3 @@ export const recentTopics: Topic[] = [
 	biology('enzymes', 'Enzymes & reaction rates'),
 	biology('selection', 'Natural selection'),
 ];
-
-export const today: TodaySummary = { dueCount: 24 };

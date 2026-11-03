@@ -13,11 +13,12 @@ export function suggestionsFor({
 	dueCount,
 	pendingApproval,
 }: {
-	dueCount: number;
+	// undefined until today's study list (US-10) gives the real count
+	dueCount?: number;
 	pendingApproval: number;
 }): Suggestion[] {
 	const suggestions: Suggestion[] = [];
-	if (dueCount > 0) {
+	if (dueCount) {
 		suggestions.push({
 			label: `Start today’s review · ${dueCount} due`,
 			href: routes.studySession,

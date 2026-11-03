@@ -4,7 +4,8 @@ import { usePendingQuestionCount } from '@/features/questions/hooks';
 import { suggestionsFor } from '../suggestions';
 import { SuggestionChip } from './suggestion-chip';
 
-export function SuggestionChips({ dueCount }: { dueCount: number }) {
+// dueCount is left out until today's study list (US-10) gives the real count
+export function SuggestionChips({ dueCount }: { dueCount?: number }) {
 	const pendingApproval = usePendingQuestionCount() ?? 0;
 	const suggestions = suggestionsFor({ dueCount, pendingApproval });
 	if (suggestions.length === 0) return null;
