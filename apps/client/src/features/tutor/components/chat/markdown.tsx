@@ -6,6 +6,7 @@ import { math } from '@streamdown/math';
 import { useMemo } from 'react';
 import { defaultRehypePlugins, Streamdown } from 'streamdown';
 import { cn } from '@/lib/utils';
+import { CODE_THEMES, lazyCodeHighlighter } from '../../code-highlighter';
 import { normalizeMath } from '../../math';
 import { alignNumericColumns } from '../../numeric-columns';
 import {
@@ -15,7 +16,9 @@ import {
 	ChatTableHeaderCell,
 } from './markdown-table';
 
-const plugins = { math };
+const plugins = { math, code: lazyCodeHighlighter(CODE_THEMES) };
+// code blocks get a copy button; a download is not needed for a snippet
+const controls = { code: { download: false } };
 const rehypePlugins = [
 	...Object.values(defaultRehypePlugins),
 	alignNumericColumns,
@@ -42,6 +45,8 @@ export function Markdown({
 	return (
 		<Streamdown
 			plugins={plugins}
+			shikiTheme={CODE_THEMES}
+			controls={controls}
 			rehypePlugins={rehypePlugins}
 			components={components}
 			isAnimating={streaming}
