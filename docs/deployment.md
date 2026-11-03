@@ -144,14 +144,31 @@ Deploys copy the scripts to `/home/orbi/orbi/backup/`. The commands run inside t
 apt install rclone
 ```
 
-**2. Add the off-server storage.** As `orbi`, run `rclone config` and make two remotes:
+**2. Make the storage.** Orbi uses a private Backblaze B2 bucket called `orbi-backups`. Any storage rclone supports works, as long as it is not on this VPS. For B2:
 
-- **`orbi-storage`:** where the files go. This can be any storage rclone supports, for example a Backblaze B2 or other S3 bucket, or `sftp` to another machine. Use storage that is not on this VPS.
-- **`orbi-backup`:** type `crypt`, with remote `orbi-storage:orbi` and a long random password. rclone encrypts each file before it leaves the VPS.
+- Make the bucket **Private**. Bucket names are shared by all B2 users, so a short name like `orbi` is usually taken.
+- In the bucket's **Lifecycle Settings**, choose **Keep only the last version of the file**. Otherwise B2 only hides the old backups the script deletes, and keeps them.
+- Make an **application key** for this bucket only, with **Read and Write**. Copy the keyID and the key; B2 shows the key only once.
 
-Keep the crypt password in the team's password manager. Without it nobody can read the backups, not even you.
+**3. Add the rclone remotes.** As `orbi` (`su - orbi` from `root`), not as `root`, because cron runs the backup as `orbi`. Run `rclone config` and make two remotes:
 
-**3. Settings.** These lines are in [deploy/.env.example](../deploy/.env.example). Copy them into `/home/orbi/orbi/.env`:
+- **`orbi-storage`:** type `b2`, with the keyID as `account` and the key as `key`.
+- **`orbi-backup`:** type `crypt`, with remote `orbi-storage:orbi-backups/orbi` (the bucket name, then a folder), standard filename encryption, and directory names encrypted. For both passwords, answer `g` to make a random one. rclone encrypts each file before it leaves the VPS.
+
+Keep both crypt passwords in the team's password manager. Without them nobody can read the backups, not even you.
+
+Check that it works:
+
+```bash
+rclone listremotes
+rclone config show orbi-backup | grep remote
+echo test > /tmp/t && rclone copy /tmp/t orbi-backup: && rclone ls orbi-backup:
+rclone delete orbi-backup: --include t
+```
+
+Always write the remote with the colon (`orbi-backup:`). Without it rclone looks for a local folder with that name.
+
+**4. Settings.** These lines are in [deploy/.env.example](../deploy/.env.example). Copy them into `/home/orbi/orbi/.env`:
 
 ```bash
 BACKUP_KEEP_DAYS=14
@@ -161,20 +178,35 @@ BACKUP_REMOTE_KEEP_DAYS=30
 
 If `BACKUP_REMOTE` is empty, the backup stays only on the VPS and the log says so.
 
-**4. Run it every night.** As `orbi`, make the folder and open the crontab:
+**5. Run it every night.** On this VPS `orbi` is not allowed to use `crontab`, so `root` adds the job to `/etc/cron.d/`. The `orbi` in the line makes cron run it as `orbi`, with its rclone remotes and Docker access. As `orbi`, make the folder:
 
 ```bash
 mkdir -p ~/orbi/backups
-crontab -e
 ```
 
-Add this line. It runs at 03:30 server time:
+Then as `root`:
 
-```
-30 3 * * * cd /home/orbi/orbi && bash backup/backup.sh >> backups/backup.log 2>&1
+```bash
+cat > /etc/cron.d/orbi-backup <<'CRON'
+# Nightly Orbi database backup (see "Backups" in docs/deployment.md)
+30 3 * * * orbi cd /home/orbi/orbi && bash backup/backup.sh >> backups/backup.log 2>&1
+CRON
+chmod 644 /etc/cron.d/orbi-backup
+systemctl is-active cron
 ```
 
-**5. Test it.** Make a backup by hand and restore it into an empty database (both are described below). Then check the next morning that `backups/backup.log` shows a backup with no `ERROR`.
+It runs at 03:30 server time. The server uses CET, so that is 05:30 in Erbil. The backup file names use UTC. Keep the file name without a dot, because cron skips files in `/etc/cron.d/` with a dot in the name.
+
+**6. Test it.** Make a backup by hand and restore it into an empty database (both are described below). To see cron run it without waiting for the night, add a job that runs every minute, check the log, and remove it again:
+
+```bash
+echo '* * * * * orbi cd /home/orbi/orbi && bash backup/backup.sh >> backups/backup.log 2>&1' > /etc/cron.d/orbibackuptest
+# after a minute or two
+tail /home/orbi/orbi/backups/backup.log
+rm /etc/cron.d/orbibackuptest
+```
+
+The next morning, check that `backups/backup.log` shows a new backup with no `ERROR`.
 
 ### Make a backup by hand
 
