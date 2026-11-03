@@ -6,9 +6,12 @@ import { math } from '@streamdown/math';
 import { useMemo } from 'react';
 import { Streamdown } from 'streamdown';
 import { cn } from '@/lib/utils';
+import { CODE_THEMES, lazyCodeHighlighter } from '../../code-highlighter';
 import { normalizeMath } from '../../math';
 
-const plugins = { math };
+const plugins = { math, code: lazyCodeHighlighter(CODE_THEMES) };
+// code blocks get a copy button; a download is not needed for a snippet
+const controls = { code: { download: false } };
 
 // The AI's markdown. Streamdown copes with half-written markdown while it streams,
 // and removes raw HTML and unsafe links.
@@ -25,6 +28,8 @@ export function Markdown({
 	return (
 		<Streamdown
 			plugins={plugins}
+			shikiTheme={CODE_THEMES}
+			controls={controls}
 			isAnimating={streaming}
 			animated
 			className={cn(

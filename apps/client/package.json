@@ -14,6 +14,7 @@
 		"@hookform/resolvers": "^6.0.0",
 		"@orbi/core": "workspace:*",
 		"@orbi/shared": "workspace:*",
+		"@streamdown/code": "^2.0.0",
 		"@streamdown/math": "^1.0.3",
 		"@tanstack/react-query": "^5.104.5",
 		"ai": "^7.0.159",
