@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LoadError } from '@/components/load-error';
 import { Button } from '@/components/ui/button';
 import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
-import { useOpenChats } from '@/features/tutor/hooks';
+import { useOpenChats } from '@/features/tutor/use-open-chats';
 import { apiErrorMessage } from '@/lib/api';
 import { topicStudyRoute } from '@/lib/routes';
 import type {

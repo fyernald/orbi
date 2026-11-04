@@ -20,7 +20,8 @@ import {
 	type TutorUIMessage,
 } from '../../chat';
 import type { ComposerTopic } from '../../composer';
-import { useEarlierMessages, useModels, useTutorChat } from '../../hooks';
+import { useEarlierMessages, useModels } from '../../hooks';
+import { useTutorChat } from '../../use-tutor-chat';
 import {
 	NoteComposer,
 	type ComposerDraft,
