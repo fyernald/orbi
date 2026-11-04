@@ -35,6 +35,7 @@ export function MiniAppsSection({ apps, collapsed }: MiniAppsSectionProps) {
 					active={pathname.startsWith(app.href)}
 					collapsed={collapsed}
 					inPanel
+					soon={app.soon}
 				/>
 			))}
 		</section>

@@ -28,7 +28,7 @@ export function sendBlockedReason({
 		return parsed.error.issues[0]?.message ?? 'Check the form first.';
 	}
 	const action = composerActions[parsed.data.action];
-	if (action.beta) return `${action.label} is coming soon.`;
+	if (action.soon) return `${action.label} is coming soon.`;
 	if (!parsed.data.topicId) {
 		if (!allowWholeCourse) return 'Choose a topic first.';
 		// questions are saved to one topic

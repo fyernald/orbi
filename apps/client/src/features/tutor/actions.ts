@@ -21,8 +21,8 @@ export type ComposerAction = {
 	// null when the action works without text or files
 	emptyHint: string | null;
 	note: string;
-	// shown until the AI behind it is connected; such an action cannot be sent yet
-	beta: boolean;
+	// shown in the menus, but not built yet: it cannot be picked or sent
+	soon: boolean;
 	// what the chat shows as the student's message when they send without writing one
 	defaultMessage: ((topicName: string) => string) | null;
 };
@@ -40,7 +40,7 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		submitLabel: 'Send',
 		emptyHint: 'Write a message first.',
 		note: 'Orbi answers from your notes first and tells you when it goes beyond them.',
-		beta: false,
+		soon: false,
 		defaultMessage: null,
 	},
 	questions: {
@@ -55,7 +55,7 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		submitLabel: 'Generate questions',
 		emptyHint: null,
 		note: 'Orbi writes questions only from your saved notes, and you approve each one.',
-		beta: false,
+		soon: false,
 		defaultMessage: (topicName) =>
 			`Make practice questions from my notes on ${topicName}`,
 	},
@@ -71,7 +71,7 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		submitLabel: 'Make flashcards',
 		emptyHint: 'Add notes or attach a file first.',
 		note: 'Flashcards come only from your notes, and you can edit each one.',
-		beta: true,
+		soon: true,
 		defaultMessage: (topicName) =>
 			`Make flashcards from my notes on ${topicName}`,
 	},
@@ -87,7 +87,7 @@ export const composerActions: Record<TutorAction, ComposerAction> = {
 		submitLabel: 'Start mock exam',
 		emptyHint: null,
 		note: 'The exam uses questions you already approved for this topic.',
-		beta: true,
+		soon: true,
 		defaultMessage: (topicName) => `Start a mock exam on ${topicName}`,
 	},
 };
