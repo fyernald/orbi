@@ -71,6 +71,11 @@ export function createNoteRoutes({
 					body: z.instanceof(Uint8Array, { error: 'Attach a PDF file.' }),
 					response: { 200: pdfUploadResult, 201: pdfUploadResult },
 				},
+				// checked before the body is read, so a request without a login cannot
+				// make the server hold a whole file in memory
+				onRequest: async (request) => {
+					await requireUser(request);
+				},
 			},
 			async (request, reply) => {
 				const userId = await requireUser(request);

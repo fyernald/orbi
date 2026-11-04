@@ -299,6 +299,19 @@ describe('uploading a PDF', () => {
 		expect(response.statusCode).toBe(413);
 	});
 
+	it('refuses a request without a login before reading the file', async () => {
+		const { notesUrl } = await createTopic(ada);
+
+		// a file over the limit answers 413 once it is read, so 401 shows it was not
+		const response = await uploadPdf(
+			'',
+			notesUrl,
+			new Uint8Array(PDF_MAX_SIZE + 1)
+		);
+
+		expect(response.statusCode).toBe(401);
+	});
+
 	it("answers 404 for another user's topic", async () => {
 		const { notesUrl } = await createTopic(ada);
 
