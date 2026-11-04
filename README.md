@@ -34,7 +34,7 @@ The AI only **creates content** (questions and explanations). The decision of **
 - Progress dashboard and charts
 - AI explanations for wrong answers
 - Study plan by exam date
-- PDF upload, streaks, reminders, sharing
+- PDF upload (done), streaks, reminders, sharing
 
 The full list is on our [project board](https://github.com/users/fyernald/projects/2).
 
@@ -73,7 +73,7 @@ orbi/
 │   ├── client/          # Next.js frontend (React, App Router)
 │   └── server/          # Fastify backend (Node.js), all routes under /api
 ├── packages/
-│   ├── core/            # Pure TypeScript business logic (mastery score, SM-2 scheduler, QuestionGenerator interface)
+│   ├── core/            # Pure TypeScript business logic (mastery score, SM-2 scheduler)
 │   └── shared/          # Types, constants, and small helpers used by client and server
 ├── deploy/              # Production Docker Compose and nginx config for the VPS
 ├── docs/
@@ -99,7 +99,7 @@ TypeScript everywhere, in a pnpm monorepo:
 
 - **Frontend:** Next.js, Tailwind CSS + shadcn/ui, TanStack Query
 - **Backend:** Fastify, PostgreSQL with Drizzle ORM, Better Auth, Zod
-- **AI:** Google Gemini API, server-side only, behind the `QuestionGenerator` interface (moving to several providers the user picks from, see [docs/decisions/02-app-patterns.md](docs/decisions/02-app-patterns.md))
+- **AI:** the AI SDK with several providers (Google Gemini, Anthropic Claude, DeepSeek), server-side only. The student picks the model from the catalog (see [docs/decisions/02-app-patterns.md](docs/decisions/02-app-patterns.md) and [docs/decisions/03-tutor-chat.md](docs/decisions/03-tutor-chat.md))
 - **Testing:** Vitest (unit), Playwright (e2e, Sprint 4)
 - **Hosting:** Docker Compose on the team VPS, behind nginx
 
@@ -205,6 +205,7 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `APP_ENV`: `local` or `production` (default). With `local`, sign-up logs you in without email confirmation and emails are printed in the server console instead of sent, so no mail server is needed. Never set `local` on the server
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server. Required in production, because sign-up, email confirmation, and password reset send mail. Not used with `APP_ENV=local`. `SMTP_USER` and `SMTP_PASSWORD` are only needed in production
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
+- `ANTHROPIC_API_KEY`: Anthropic API key (server only, optional). Claude models show in the model menu only when it is set
 - `DEEPSEEK_API_KEY`: DeepSeek API key (server only, optional). DeepSeek models show in the model menu only when it is set
 
 ## Deployment
