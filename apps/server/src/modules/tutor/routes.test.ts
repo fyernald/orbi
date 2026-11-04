@@ -694,16 +694,20 @@ describe('chats per topic', () => {
 });
 
 describe('replies at the same time', () => {
-	it('refuses a reply over the limit and frees the place when one ends', async () => {
-		const models = createScriptedModels();
-		const limited = await createTestApp(createMemoryMailer(), {
+	const models = createScriptedModels();
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let context: Context;
+
+	// a new app with its own in-memory database; slow to start, so it is made here
+	// and not inside the test, which has a much shorter timeout
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 			models: models.registry,
 			limiter: createReplyLimiter(1),
 		});
-		const cookie = await signUpTestUser(limited, 'mae@test.dev');
-		const post = (url: string, payload: object) =>
-			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		cookie = await signUpTestUser(limited, 'mae@test.dev');
 		const course = (
 			await post('/api/courses', {
 				name: 'Biology',
@@ -719,15 +723,26 @@ describe('replies at the same time', () => {
 				headers: { cookie },
 			})
 		).json();
-		const body = (text: string) => ({
-			courseId: course.id,
-			chatTopicId: null,
-			topicId: topic.id,
-			modelId: 'gemini-flash',
-			action: 'ask',
-			trigger: 'submit-message',
-			message: userMessage(text),
-		});
+		context = { courseId: course.id, topicId: topic.id };
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const post = (url: string, payload: object) =>
+		limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+
+	const body = (text: string) => ({
+		...context,
+		chatTopicId: null,
+		modelId: 'gemini-flash',
+		action: 'ask',
+		trigger: 'submit-message',
+		message: userMessage(text),
+	});
+
+	it('refuses a reply over the limit and frees the place when one ends', async () => {
 		models.script({ text: 'Slow answer.', delayMs: 300 }, { text: 'Next.' });
 
 		const [slow, refused] = await Promise.all([
@@ -740,7 +755,6 @@ describe('replies at the same time', () => {
 			`/api/chats/${randomUUID()}/messages`,
 			body('Third')
 		);
-		await limited.close();
 
 		expect(slow.statusCode).toBe(200);
 		expect(refused.statusCode).toBe(429);
@@ -1179,10 +1193,20 @@ describe('token use', () => {
 });
 
 describe('without an AI key', () => {
-	it('says the tutor is not set up', async () => {
-		const bare = await createTestApp(createMemoryMailer(), {
+	let bare: Awaited<ReturnType<typeof createTestApp>>;
+
+	// slow to start, so it is made here and not inside the test
+	beforeAll(async () => {
+		bare = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 		});
+	});
+
+	afterAll(async () => {
+		await bare.close();
+	});
+
+	it('says the tutor is not set up', async () => {
 		const cookie = await signUpTestUser(bare, 'nali@test.dev');
 		const course = (
 			await bare.inject({
@@ -1224,7 +1248,6 @@ describe('without an AI key', () => {
 				message: userMessage('Hi'),
 			},
 		});
-		await bare.close();
 
 		expect(models.json()).toEqual({ models: [], defaultModelId: null });
 		expect(response.statusCode).toBe(503);
