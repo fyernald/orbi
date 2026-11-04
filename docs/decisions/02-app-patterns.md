@@ -81,6 +81,7 @@ export const createCourseInput = z.object({
 ```
 
 - Unknown errors become `500` with a generic message. The details go to the log, never to the user.
+- The one exception is `/api/auth/*`. Better Auth answers its own `{ "code": "INVALID_EMAIL_OR_PASSWORD", "message": "..." }`, because its client library (`lib/auth-client.ts`) reads that shape. The client turns those codes into messages in `features/auth/errors.ts`.
 
 ### 6. AI: providers behind one interface, the user picks the model
 
