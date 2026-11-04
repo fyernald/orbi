@@ -2,6 +2,7 @@
 
 import {
 	course,
+	courseTopic,
 	topic,
 	type Course,
 	type CreateCourseInput,
@@ -13,7 +14,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-import { courseKey, coursesKey, topicsKey } from './query-keys';
+import { allTopicsKey, courseKey, coursesKey, topicsKey } from './query-keys';
 
 export function useCourses() {
 	return useQuery({
@@ -48,7 +49,17 @@ export function useCreateCourse() {
 				courses ? [...courses, created] : courses
 			);
 			queryClient.setQueryData(courseKey(created.id), created);
+			// its first topics
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
+	});
+}
+
+// every topic of the student, the one with the newest tutor chat first
+export function useAllTopics() {
+	return useQuery({
+		queryKey: allTopicsKey,
+		queryFn: () => api.get('/topics', z.array(courseTopic)),
 	});
 }
 
@@ -80,6 +91,7 @@ function useTopicsChanged(courseId: string) {
 			queryKey: courseKey(courseId),
 			exact: true,
 		});
+		void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 	};
 }
 
@@ -109,6 +121,8 @@ export function useRenameCourse(courseId: string) {
 				courses?.map((item) => (item.id === renamed.id ? renamed : item))
 			);
 			queryClient.setQueryData(courseKey(renamed.id), renamed);
+			// the topic lists show the course name
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }
@@ -156,6 +170,7 @@ export function useDeleteCourse() {
 			queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
 				courses?.filter((item) => item.id !== courseId)
 			);
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }

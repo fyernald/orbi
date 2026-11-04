@@ -1,18 +1,22 @@
 import type {
 	Course,
+	CourseTopic,
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
 } from '@orbi/shared';
 import { and, asc, count, countDistinct, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
-import { course, note, topic } from '../../db/schema';
+import { chat, course, note, topic } from '../../db/schema';
 
 export interface CourseRepository {
 	listCourses(userId: string): Promise<Course[]>;
 	findCourse(userId: string, courseId: string): Promise<Course | undefined>;
 	insertCourse(userId: string, input: CreateCourseInput): Promise<Course>;
 	listTopics(userId: string, courseId: string): Promise<Topic[]>;
+	// the topics of every course, the one with the newest tutor chat first; topics
+	// without a chat follow in course and topic order
+	listAllTopics(userId: string): Promise<CourseTopic[]>;
 	insertTopic(
 		userId: string,
 		courseId: string,
@@ -142,6 +146,32 @@ export function createCourseRepository(db: Db): CourseRepository {
 				.where(and(eq(topic.userId, userId), eq(topic.courseId, courseId)))
 				.groupBy(topic.id)
 				.orderBy(asc(topic.position), asc(topic.createdAt)),
+
+		listAllTopics: (userId) =>
+			db
+				.select({
+					id: topic.id,
+					courseId: topic.courseId,
+					courseName: course.name,
+					name: topic.name,
+				})
+				.from(topic)
+				.innerJoin(
+					course,
+					and(eq(course.userId, topic.userId), eq(course.id, topic.courseId))
+				)
+				.leftJoin(
+					chat,
+					and(eq(chat.userId, topic.userId), eq(chat.topicId, topic.id))
+				)
+				.where(eq(topic.userId, userId))
+				.groupBy(topic.id, course.id)
+				.orderBy(
+					sql`max(${chat.updatedAt}) desc nulls last`,
+					asc(course.createdAt),
+					asc(topic.position),
+					asc(topic.createdAt)
+				),
 
 		async insertTopic(userId, courseId, input) {
 			const [created] = await db

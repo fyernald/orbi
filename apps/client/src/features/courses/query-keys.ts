@@ -6,3 +6,5 @@ export const topicsKey = (courseId: string) =>
 	[...courseKey(courseId), 'topics'] as const;
 export const notesKey = (courseId: string, topicId: string) =>
 	[...topicsKey(courseId), topicId, 'notes'] as const;
+// every topic of every course, for the message box on Home
+export const allTopicsKey = [...coursesKey, 'all-topics'] as const;

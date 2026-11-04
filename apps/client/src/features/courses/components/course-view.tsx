@@ -1,6 +1,6 @@
 'use client';
 
-import type { TutorAction } from '@orbi/shared';
+import type { ComposerPreset } from '@/features/tutor/components/note-composer';
 import { ApiError, apiErrorMessage } from '@/lib/api';
 import { useCourse } from '../hooks';
 import { BackToCourses } from './back-to-courses';
@@ -11,7 +11,7 @@ import { LoadError } from '@/components/load-error';
 type CourseViewProps = {
 	courseId: string;
 	// what the tutor starts with when the page opens
-	start: { action?: TutorAction; message?: string };
+	start: Omit<ComposerPreset, 'version'>;
 };
 
 export function CourseView({ courseId, start }: CourseViewProps) {
