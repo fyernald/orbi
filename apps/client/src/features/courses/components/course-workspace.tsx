@@ -1,10 +1,10 @@
 'use client';
 
 import type { Course, TutorAction } from '@orbi/shared';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
 import { TopicQuestionsSheet } from '@/features/questions/components/topic-questions-sheet';
-import { COURSE_SCOPE, scopeOf } from '@/features/tutor/chat';
+import { scopeOf } from '@/features/tutor/chat';
 import type {
 	ComposerDraft,
 	ComposerPreset,
@@ -30,7 +30,8 @@ const columns = {
 // and study tools on the right. Phones show one pane at a time.
 type CourseWorkspaceProps = {
 	course: Course;
-	start: { action?: TutorAction; message?: string };
+	// what the tutor starts with: an action, a message, a topic's chat, a model
+	start: Omit<ComposerPreset, 'version'>;
 };
 
 export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
@@ -38,16 +39,25 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	const [topicsOpen, setTopicsOpen] = useState(true);
 	const [studyOpen, setStudyOpen] = useState(true);
 	const [mobilePane, setMobilePane] = useState<WorkspacePane>('tutor');
-	const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+	const [selectedTopicId, setSelectedTopicId] = useState<string | null>(
+		start.topicId ?? null
+	);
 	const notesSheet = useTopicSheet();
 	const questionsSheet = useTopicSheet();
 	// counts the requests to add a topic from outside the topics pane
 	const [addTopicRequest, setAddTopicRequest] = useState(0);
 	const [preset, setPreset] = useState<ScopedPreset | undefined>(() =>
-		start.action || start.message
-			? { version: 1, scope: COURSE_SCOPE, ...start }
+		Object.values(start).some((value) => value !== undefined)
+			? { version: 1, scope: scopeOf(start.topicId ?? null), ...start }
 			: undefined
 	);
+	// a link can name a topic that was deleted since: the course chat opens instead
+	useEffect(() => {
+		if (!topics.data || !selectedTopicId) return;
+		if (!topics.data.some((item) => item.id === selectedTopicId)) {
+			setSelectedTopicId(null);
+		}
+	}, [topics.data, selectedTopicId]);
 	// the chats with a reply running and the scope of each, for the limit on parallel
 	// replies and the topic list
 	const [busyChats, setBusyChats] = useState<ReadonlyMap<string, string>>(

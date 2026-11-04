@@ -1,5 +1,6 @@
 import type {
 	Course,
+	CourseTopic,
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
@@ -14,6 +15,7 @@ export interface CourseService {
 	getCourse(userId: string, courseId: string): Promise<Course>;
 	createCourse(userId: string, input: CreateCourseInput): Promise<Course>;
 	listTopics(userId: string, courseId: string): Promise<Topic[]>;
+	listAllTopics(userId: string): Promise<CourseTopic[]>;
 	createTopic(
 		userId: string,
 		courseId: string,
@@ -55,6 +57,8 @@ export function createCourseService({
 			await getCourse(userId, courseId);
 			return repo.listTopics(userId, courseId);
 		},
+
+		listAllTopics: (userId) => repo.listAllTopics(userId),
 
 		// a topic needs a course the user owns
 		async createTopic(userId, courseId, input) {

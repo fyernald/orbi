@@ -4,6 +4,7 @@ import {
 	type TutorAction,
 } from '@orbi/shared';
 import type { Metadata } from 'next';
+import { z } from 'zod';
 import { CourseView } from '@/features/courses/components/course-view';
 
 export const metadata: Metadata = { title: 'Course' };
@@ -11,16 +12,25 @@ export const metadata: Metadata = { title: 'Course' };
 const isTutorAction = (value: unknown): value is TutorAction =>
 	TUTOR_ACTIONS.includes(value as TutorAction);
 
-// ?tool= and ?ask= come from the shortcuts on the courses page
+const MODEL_ID_MAX_LENGTH = 100;
+
+// ?tool= and ?ask= come from the shortcuts on the courses page; ?topic=, ?model=
+// and ?think= come from the message box on Home
 export default async function CoursePage({
 	params,
 	searchParams,
 }: {
 	params: Promise<{ courseId: string }>;
-	searchParams: Promise<{ tool?: string; ask?: string }>;
+	searchParams: Promise<{
+		tool?: string;
+		ask?: string;
+		topic?: string;
+		model?: string;
+		think?: string;
+	}>;
 }) {
 	const { courseId } = await params;
-	const { tool, ask } = await searchParams;
+	const { tool, ask, topic, model, think } = await searchParams;
 
 	return (
 		<CourseView
@@ -31,6 +41,12 @@ export default async function CoursePage({
 					typeof ask === 'string'
 						? ask.slice(0, TUTOR_MESSAGE_MAX_LENGTH)
 						: undefined,
+				topicId: z.uuid().safeParse(topic).success ? topic : undefined,
+				modelId:
+					typeof model === 'string'
+						? model.slice(0, MODEL_ID_MAX_LENGTH)
+						: undefined,
+				thinking: think === '1' ? true : undefined,
 			}}
 		/>
 	);
