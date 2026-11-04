@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestPdf } from '../../pdf/testing';
-import { createTestApp, signUpTestUser } from '../../testing';
+import { createTestApp, signUpTestUser, TEST_ORIGIN } from '../../testing';
 import type { UsageLine } from '../../ai/usage';
 import { createReplyLimiter } from './reply-limiter';
 
@@ -914,6 +914,102 @@ describe('follow-up questions', () => {
 		expect(response.json().error.message).toBe(
 			'This model has reached its limit for now. Try again later, or pick another model.'
 		);
+	});
+});
+
+describe('follow-up questions and the reply limit', () => {
+	const places = createReplyLimiter(1);
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let userId: string;
+	let chatId: string;
+	let replyId: string;
+
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
+			requireEmailVerification: false,
+			models: ai.registry,
+			limiter: places,
+		});
+		cookie = await signUpTestUser(limited, 'katherine@test.dev');
+		const post = (url: string, payload: object) =>
+			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		const session = await limited.inject({
+			method: 'GET',
+			url: '/api/auth/get-session',
+			headers: { cookie, origin: TEST_ORIGIN },
+		});
+		userId = session.json().user.id;
+
+		const course = (
+			await post('/api/courses', {
+				name: 'Biology',
+				color: 'teal',
+				goal: 'keep_up',
+				topics: ['Mitosis'],
+			})
+		).json();
+		const [topic] = (
+			await limited.inject({
+				method: 'GET',
+				url: `/api/courses/${course.id}/topics`,
+				headers: { cookie },
+			})
+		).json();
+		chatId = randomUUID();
+		ai.script({ text: 'In anaphase the sister chromatids separate.' });
+		await post(`/api/chats/${chatId}/messages`, {
+			courseId: course.id,
+			chatTopicId: null,
+			topicId: topic.id,
+			modelId: 'gemini-flash',
+			action: 'ask',
+			trigger: 'submit-message',
+			message: userMessage('What happens in anaphase?'),
+		});
+		const thread = await limited.inject({
+			method: 'GET',
+			url: `/api/chats/${chatId}`,
+			headers: { cookie },
+		});
+		replyId = thread.json().messages[1].id;
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const refresh = () =>
+		limited.inject({
+			method: 'POST',
+			url: `/api/chats/${chatId}/messages/${replyId}/follow-ups`,
+			headers: { cookie },
+			payload: { exclude: ['What pulls the chromatids apart?'] },
+		});
+
+	it('refuses them while every place is taken, without asking the model', async () => {
+		const release = places.acquire(userId)!;
+
+		const response = await refresh();
+		release();
+
+		expect(response.statusCode).toBe(429);
+		expect(response.json().error.code).toBe('too_many_requests');
+		expect(ai.calls).toHaveLength(0);
+	});
+
+	it('frees the place when the questions come back', async () => {
+		const questions = { questions: ['Can you give me an example?'] };
+		ai.script(
+			{ tool: 'suggestFollowUps', input: questions },
+			{ tool: 'suggestFollowUps', input: questions }
+		);
+
+		const first = await refresh();
+		const second = await refresh();
+
+		expect(first.statusCode).toBe(200);
+		expect(second.statusCode).toBe(200);
 	});
 });
 
