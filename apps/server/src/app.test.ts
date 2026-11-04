@@ -21,13 +21,24 @@ describe('GET /api/health', () => {
 });
 
 describe('behind the proxy', () => {
-	// what Fastify made of the request's address and scheme
-	async function seenFrom(remoteAddress: string) {
-		const proxied = await createTestApp();
+	let proxied: Awaited<ReturnType<typeof createTestApp>>;
+
+	// its own app, because a route can only be added before the app starts;
+	// slow to start, so it is made here and not inside a test
+	beforeAll(async () => {
+		proxied = await createTestApp();
 		proxied.get('/seen', async (request) => ({
 			ip: request.ip,
 			protocol: request.protocol,
 		}));
+	});
+
+	afterAll(async () => {
+		await proxied.close();
+	});
+
+	// what Fastify made of the request's address and scheme
+	async function seenFrom(remoteAddress: string) {
 		const response = await proxied.inject({
 			method: 'GET',
 			url: '/seen',
@@ -38,7 +49,6 @@ describe('behind the proxy', () => {
 				'x-forwarded-proto': 'https',
 			},
 		});
-		await proxied.close();
 		return response.json();
 	}
 

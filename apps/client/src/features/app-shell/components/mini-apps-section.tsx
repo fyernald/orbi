@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { MiniApp } from '../mock-data';
+import type { MiniApp } from '../navigation';
 import { MiniAppIcon } from './mini-app-icon';
 import { SidebarLink } from './sidebar-link';
 import { SidebarSectionTitle } from './sidebar-section-title';
