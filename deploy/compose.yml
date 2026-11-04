@@ -32,6 +32,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # Exactly one: rate limits are kept in memory and it migrates the database on start
+  # (see "How it works" in docs/deployment.md).
   server:
     image: ghcr.io/fyernald/orbi-server:${IMAGE_TAG:-latest}
     restart: unless-stopped

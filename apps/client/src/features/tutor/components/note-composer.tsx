@@ -11,9 +11,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
 import { messageAttachments } from '../attachments';
-import { sendBlockedReason } from '../composer';
+import { sendBlockedReason, type ComposerTopic } from '../composer';
 import { useAttachments, useFileDrop, useModels } from '../hooks';
-import type { Topic } from '../mock-data';
 import { AttachmentList } from './attachment-list';
 import { ComposerContext } from './composer-context';
 import { ComposerNote } from './composer-note';
@@ -41,7 +40,7 @@ export type ComposerDraft = {
 };
 
 type NoteComposerProps = {
-	topics: Topic[];
+	topics: ComposerTopic[];
 	// attached PDFs are saved to the picked topic of this course; without it
 	// (Home, until it has real topics) files cannot be attached
 	courseId?: string;

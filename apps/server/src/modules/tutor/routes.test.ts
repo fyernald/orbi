@@ -5,7 +5,7 @@ import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestPdf } from '../../pdf/testing';
-import { createTestApp, signUpTestUser } from '../../testing';
+import { createTestApp, signUpTestUser, TEST_ORIGIN } from '../../testing';
 import type { UsageLine } from '../../ai/usage';
 import { createReplyLimiter } from './reply-limiter';
 
@@ -490,6 +490,44 @@ describe('tutor chat', () => {
 		expect(response.json().error.message).toBe('Write a message first.');
 	});
 
+	it("sends and saves only the text of the student's message", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		const file = Buffer.from('x'.repeat(5_000)).toString('base64');
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		const response = await ask(ada, chatId, context, {
+			message: {
+				id: randomUUID(),
+				role: 'user',
+				parts: [
+					{
+						type: 'text',
+						text: 'Explain anaphase.',
+						providerMetadata: { google: { anything: true } },
+					},
+					{
+						type: 'file',
+						mediaType: 'text/plain',
+						url: `data:text/plain;base64,${file}`,
+					},
+				],
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		const studentTurn = ai.calls[0]!.prompt.find(
+			(message) => message.role === 'user'
+		);
+		expect(studentTurn?.content).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[0].parts).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
+	});
+
 	it('needs a logged-in user', async () => {
 		const response = await app.inject({ method: 'GET', url: '/api/models' });
 
@@ -657,16 +695,20 @@ describe('chats per topic', () => {
 });
 
 describe('replies at the same time', () => {
-	it('refuses a reply over the limit and frees the place when one ends', async () => {
-		const models = createScriptedModels();
-		const limited = await createTestApp(createMemoryMailer(), {
+	const models = createScriptedModels();
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let context: Context;
+
+	// a new app with its own in-memory database; slow to start, so it is made here
+	// and not inside the test, which has a much shorter timeout
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 			models: models.registry,
 			limiter: createReplyLimiter(1),
 		});
-		const cookie = await signUpTestUser(limited, 'mae@test.dev');
-		const post = (url: string, payload: object) =>
-			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		cookie = await signUpTestUser(limited, 'mae@test.dev');
 		const course = (
 			await post('/api/courses', {
 				name: 'Biology',
@@ -682,15 +724,26 @@ describe('replies at the same time', () => {
 				headers: { cookie },
 			})
 		).json();
-		const body = (text: string) => ({
-			courseId: course.id,
-			chatTopicId: null,
-			topicId: topic.id,
-			modelId: 'gemini-flash',
-			action: 'ask',
-			trigger: 'submit-message',
-			message: userMessage(text),
-		});
+		context = { courseId: course.id, topicId: topic.id };
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const post = (url: string, payload: object) =>
+		limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+
+	const body = (text: string) => ({
+		...context,
+		chatTopicId: null,
+		modelId: 'gemini-flash',
+		action: 'ask',
+		trigger: 'submit-message',
+		message: userMessage(text),
+	});
+
+	it('refuses a reply over the limit and frees the place when one ends', async () => {
 		models.script({ text: 'Slow answer.', delayMs: 300 }, { text: 'Next.' });
 
 		const [slow, refused] = await Promise.all([
@@ -703,7 +756,6 @@ describe('replies at the same time', () => {
 			`/api/chats/${randomUUID()}/messages`,
 			body('Third')
 		);
-		await limited.close();
 
 		expect(slow.statusCode).toBe(200);
 		expect(refused.statusCode).toBe(429);
@@ -997,6 +1049,102 @@ describe('follow-up questions', () => {
 	});
 });
 
+describe('follow-up questions and the reply limit', () => {
+	const places = createReplyLimiter(1);
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let userId: string;
+	let chatId: string;
+	let replyId: string;
+
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
+			requireEmailVerification: false,
+			models: ai.registry,
+			limiter: places,
+		});
+		cookie = await signUpTestUser(limited, 'katherine@test.dev');
+		const post = (url: string, payload: object) =>
+			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		const session = await limited.inject({
+			method: 'GET',
+			url: '/api/auth/get-session',
+			headers: { cookie, origin: TEST_ORIGIN },
+		});
+		userId = session.json().user.id;
+
+		const course = (
+			await post('/api/courses', {
+				name: 'Biology',
+				color: 'teal',
+				goal: 'keep_up',
+				topics: ['Mitosis'],
+			})
+		).json();
+		const [topic] = (
+			await limited.inject({
+				method: 'GET',
+				url: `/api/courses/${course.id}/topics`,
+				headers: { cookie },
+			})
+		).json();
+		chatId = randomUUID();
+		ai.script({ text: 'In anaphase the sister chromatids separate.' });
+		await post(`/api/chats/${chatId}/messages`, {
+			courseId: course.id,
+			chatTopicId: null,
+			topicId: topic.id,
+			modelId: 'gemini-flash',
+			action: 'ask',
+			trigger: 'submit-message',
+			message: userMessage('What happens in anaphase?'),
+		});
+		const thread = await limited.inject({
+			method: 'GET',
+			url: `/api/chats/${chatId}`,
+			headers: { cookie },
+		});
+		replyId = thread.json().messages[1].id;
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const refresh = () =>
+		limited.inject({
+			method: 'POST',
+			url: `/api/chats/${chatId}/messages/${replyId}/follow-ups`,
+			headers: { cookie },
+			payload: { exclude: ['What pulls the chromatids apart?'] },
+		});
+
+	it('refuses them while every place is taken, without asking the model', async () => {
+		const release = places.acquire(userId)!;
+
+		const response = await refresh();
+		release();
+
+		expect(response.statusCode).toBe(429);
+		expect(response.json().error.code).toBe('too_many_requests');
+		expect(ai.calls).toHaveLength(0);
+	});
+
+	it('frees the place when the questions come back', async () => {
+		const questions = { questions: ['Can you give me an example?'] };
+		ai.script(
+			{ tool: 'suggestFollowUps', input: questions },
+			{ tool: 'suggestFollowUps', input: questions }
+		);
+
+		const first = await refresh();
+		const second = await refresh();
+
+		expect(first.statusCode).toBe(200);
+		expect(second.statusCode).toBe(200);
+	});
+});
+
 describe('token use', () => {
 	// what the model was sent besides the instructions
 	const chatSent = (call = 0) =>
@@ -1125,10 +1273,20 @@ describe('token use', () => {
 });
 
 describe('without an AI key', () => {
-	it('says the tutor is not set up', async () => {
-		const bare = await createTestApp(createMemoryMailer(), {
+	let bare: Awaited<ReturnType<typeof createTestApp>>;
+
+	// slow to start, so it is made here and not inside the test
+	beforeAll(async () => {
+		bare = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 		});
+	});
+
+	afterAll(async () => {
+		await bare.close();
+	});
+
+	it('says the tutor is not set up', async () => {
 		const cookie = await signUpTestUser(bare, 'nali@test.dev');
 		const course = (
 			await bare.inject({
@@ -1170,7 +1328,6 @@ describe('without an AI key', () => {
 				message: userMessage('Hi'),
 			},
 		});
-		await bare.close();
 
 		expect(models.json()).toEqual({ models: [], defaultModelId: null });
 		expect(response.statusCode).toBe(503);

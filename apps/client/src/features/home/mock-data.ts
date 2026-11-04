@@ -1,15 +1,15 @@
 // mock data until the API is ready
 
-import type { Topic } from '@/features/tutor/mock-data';
+import type { ComposerTopic } from '@/features/tutor/composer';
 
-const biology = (id: string, name: string): Topic => ({
+const biology = (id: string, name: string): ComposerTopic => ({
 	id: `bio-${id}`,
 	course: 'Biology 101',
 	name,
 });
 
 // the first one is the topic the student studied last
-export const recentTopics: Topic[] = [
+export const recentTopics: ComposerTopic[] = [
 	biology('meiosis', 'Meiosis & crossing over'),
 	{ id: 'calc-series', course: 'Calculus II', name: 'Taylor series' },
 	biology('mitosis', 'Mitosis & the cell cycle'),

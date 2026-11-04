@@ -9,7 +9,7 @@ import {
 import { routes } from '@/lib/routes';
 import type { Tone } from '@/lib/tones';
 
-// mock data until the API is ready; replace with query hooks in hooks.ts
+// the links in the sidebar; page titles are found from them too
 
 export type NavLink = {
 	label: string;

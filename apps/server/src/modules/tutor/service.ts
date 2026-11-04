@@ -62,6 +62,7 @@ import {
 	messageText,
 	recentMessages,
 	skipUnansweredQuestions,
+	studentMessageFrom,
 	toChatMessage,
 	toStoredMessage,
 	toUIMessage,
@@ -219,6 +220,18 @@ export function createTutorService({
 		throw new ValidationError('Choose a model from the list.');
 	}
 
+	// Every model call takes one of the student's places, so neither replies nor
+	// follow-up questions can run past the limit; the caller frees it when done
+	function takePlace(userId: string) {
+		const release = limiter.acquire(userId);
+		if (!release) {
+			throw new TooManyRequestsError(
+				`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
+			);
+		}
+		return release;
+	}
+
 	async function requireChat(userId: string, chatId: string) {
 		const chat = await repo.findChat(userId, chatId);
 		if (!chat) throw new NotFoundError('Chat not found.');
@@ -306,7 +319,7 @@ export function createTutorService({
 			await repo.deleteMessages(userId, chatId, dropped);
 			return { messages: history.slice(0, sentBefore + 1) };
 		}
-		const studentMessage = { ...incoming, metadata } as TutorUIMessage;
+		const studentMessage = studentMessageFrom(incoming, metadata);
 		const text = messageText(studentMessage);
 		if (!text) throw new ValidationError('Write a message first.');
 		if (text.length > TUTOR_MESSAGE_MAX_LENGTH) {
@@ -392,12 +405,7 @@ export function createTutorService({
 			}
 
 			// taken before anything is saved, so a refused message leaves no trace
-			const release = limiter.acquire(userId);
-			if (!release) {
-				throw new TooManyRequestsError(
-					`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
-				);
-			}
+			const release = takePlace(userId);
 			// a reply ends by finishing, failing, or being stopped; each frees its place.
 			// Watched from here, because the student can stop while the reply is set up.
 			releaseOnAbort(release, abortSignal);
@@ -452,6 +460,7 @@ export function createTutorService({
 				? await repo.listNotes(userId, topic.id)
 				: await repo.listCourseNotes(userId, course.id);
 
+			const release = takePlace(userId);
 			let questions: string[];
 			try {
 				const result = await generateText({
@@ -487,6 +496,8 @@ export function createTutorService({
 			} catch (error) {
 				logError(error);
 				throw new ServiceUnavailableError(replyErrorMessage(error));
+			} finally {
+				release();
 			}
 			// also when there are none, so the model is not asked again
 			await repo.saveFollowUps(userId, chatId, reply.id, questions);

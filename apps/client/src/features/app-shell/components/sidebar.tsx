@@ -1,6 +1,6 @@
 import { useCourses } from '@/features/courses/hooks';
 import { cn } from '@/lib/utils';
-import { mainNav, miniApps } from '../mock-data';
+import { mainNav, miniApps } from '../navigation';
 import { AccountMenu } from './account-menu';
 import { AddNotesButton } from './add-notes-button';
 import { CoursesSection } from './courses-section';

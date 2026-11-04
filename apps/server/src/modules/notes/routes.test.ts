@@ -1,10 +1,12 @@
 import {
 	NOTE_CONTENT_MAX_LENGTH,
+	PDF_MAX_PAGES,
 	PDF_MAX_SIZE,
 	PDF_NOTE_MAX_LENGTH,
 } from '@orbi/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMemoryMailer } from '../../mail/testing';
+import { createPdfReader, type PdfReader } from '../../pdf/reader';
 import { createTestPdf } from '../../pdf/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
 
@@ -12,9 +14,20 @@ let app: Awaited<ReturnType<typeof createTestApp>>;
 let ada: string;
 let grace: string;
 
+// the real reader; a test can make it slower, so two uploads are read at once
+let readDelayMs = 0;
+const realReader = createPdfReader();
+const slowableReader: PdfReader = {
+	async readPages(data) {
+		await new Promise((resolve) => setTimeout(resolve, readDelayMs));
+		return realReader.readPages(data);
+	},
+};
+
 beforeAll(async () => {
 	app = await createTestApp(createMemoryMailer(), {
 		requireEmailVerification: false,
+		pdf: slowableReader,
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');
 	grace = await signUpTestUser(app, 'grace@test.dev');
@@ -207,6 +220,23 @@ describe('uploading a PDF', () => {
 		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
 	});
 
+	it('saves the same PDF once when it is sent twice at the same time', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const pdf = createTestPdf(['Mitosis']);
+		readDelayMs = 50;
+
+		const [first, second] = await Promise.all([
+			uploadPdf(ada, notesUrl, pdf),
+			uploadPdf(ada, notesUrl, pdf),
+		]).finally(() => {
+			readDelayMs = 0;
+		});
+
+		expect([first.statusCode, second.statusCode].sort()).toEqual([200, 201]);
+		expect(second.json().notes).toEqual(first.json().notes);
+		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
+	});
+
 	it('splits a long PDF into notes by pages, listed in page order', async () => {
 		const { notesUrl } = await createTopic(ada);
 		const third = Math.floor(PDF_NOTE_MAX_LENGTH / 2.5);
@@ -228,6 +258,19 @@ describe('uploading a PDF', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.json().error.message).toMatch(/no text Orbi can read/);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
+	});
+
+	it('refuses a PDF with too many pages before reading it', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const pages = Array.from({ length: PDF_MAX_PAGES + 1 }, () => 'Mitosis');
+
+		const response = await uploadPdf(ada, notesUrl, createTestPdf(pages));
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json().error.message).toBe(
+			`This PDF has more than ${PDF_MAX_PAGES} pages. Upload only the chapters you need.`
+		);
 		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
 	});
 
