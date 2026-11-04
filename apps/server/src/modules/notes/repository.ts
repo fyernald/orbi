@@ -1,5 +1,5 @@
 import type { Note } from '@orbi/shared';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
 import { note, topic } from '../../db/schema';
 
@@ -11,13 +11,15 @@ export interface NoteRepository {
 	): Promise<boolean>;
 	listNotes(userId: string, topicId: string): Promise<Note[]>;
 	insertNote(userId: string, topicId: string, input: NoteFields): Promise<Note>;
-	// all or none are saved; they list in the order given
-	insertNotes(
+	// all or none are saved; they list in the order given. When notes of the same
+	// PDF were saved on the topic in the meantime (the file sent twice at once),
+	// those are given back instead, with reused set
+	insertSourceNotes(
 		userId: string,
 		topicId: string,
 		inputs: NoteFields[],
 		source: NoteSource
-	): Promise<Note[]>;
+	): Promise<{ notes: Note[]; reused: boolean }>;
 	// the notes a PDF with this hash was saved as on the topic, in page order
 	listSourceNotes(
 		userId: string,
@@ -62,6 +64,28 @@ const toApi = ({ createdAt, updatedAt, ...saved }: NoteRow): Note => ({
 	updatedAt: updatedAt.toISOString(),
 });
 
+// the notes a PDF was saved as on the topic, newest (the first page) first;
+// takes the database or a transaction
+async function findSourceNotes(
+	db: Db,
+	userId: string,
+	topicId: string,
+	sourceHash: string
+) {
+	const rows = await db
+		.select(noteColumns)
+		.from(note)
+		.where(
+			and(
+				eq(note.userId, userId),
+				eq(note.topicId, topicId),
+				eq(note.sourceHash, sourceHash)
+			)
+		)
+		.orderBy(desc(note.createdAt), desc(note.id));
+	return rows.map(toApi);
+}
+
 export function createNoteRepository(db: Db): NoteRepository {
 	return {
 		async topicExists(userId, courseId, topicId) {
@@ -98,39 +122,36 @@ export function createNoteRepository(db: Db): NoteRepository {
 
 		// the notes are listed newest first, so each one is saved a millisecond
 		// newer than the next, and the first one ends up on top
-		async insertNotes(userId, topicId, inputs, source) {
-			const now = Date.now();
-			const created = await db
-				.insert(note)
-				.values(
-					inputs.map((input, index) => ({
-						userId,
-						topicId,
-						...input,
-						sourceName: source.name,
-						sourceHash: source.hash,
-						createdAt: new Date(now - index),
-						updatedAt: new Date(now - index),
-					}))
-				)
-				.returning(noteColumns);
-			return created.map(toApi);
-		},
+		insertSourceNotes: (userId, topicId, inputs, source) =>
+			db.transaction(async (tx) => {
+				// one save of the same file on a topic at a time; the second waits here,
+				// then finds the first one's notes. The lock ends with the transaction.
+				await tx.execute(
+					sql`select pg_advisory_xact_lock(hashtextextended(${`${topicId}:${source.hash}`}, 0))`
+				);
+				const saved = await findSourceNotes(tx, userId, topicId, source.hash);
+				if (saved.length > 0) return { notes: saved, reused: true };
 
-		async listSourceNotes(userId, topicId, sourceHash) {
-			const rows = await db
-				.select(noteColumns)
-				.from(note)
-				.where(
-					and(
-						eq(note.userId, userId),
-						eq(note.topicId, topicId),
-						eq(note.sourceHash, sourceHash)
+				const now = Date.now();
+				const created = await tx
+					.insert(note)
+					.values(
+						inputs.map((input, index) => ({
+							userId,
+							topicId,
+							...input,
+							sourceName: source.name,
+							sourceHash: source.hash,
+							createdAt: new Date(now - index),
+							updatedAt: new Date(now - index),
+						}))
 					)
-				)
-				.orderBy(desc(note.createdAt), desc(note.id));
-			return rows.map(toApi);
-		},
+					.returning(noteColumns);
+				return { notes: created.map(toApi), reused: false };
+			}),
+
+		listSourceNotes: (userId, topicId, sourceHash) =>
+			findSourceNotes(db, userId, topicId, sourceHash),
 
 		async updateNote(userId, topicId, noteId, input) {
 			const [updated] = await db
