@@ -40,6 +40,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Fails on a high or critical advisory in a package the apps ship with. Lower ones
+      # are read in Dependabot's pull requests (pnpm-workspace.yaml overrides fix some).
+      - name: Check the dependencies
+        run: pnpm audit --prod --audit-level=high
+
       - name: Check formatting
         run: pnpm format:check
 
