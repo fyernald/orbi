@@ -13,7 +13,7 @@ import {
 	withStudentAnswers,
 	type TutorUIMessage,
 } from './messages';
-import { replyErrorMessage, timeoutAsError } from './service';
+import { replyErrorMessage, timeoutAsError } from './reply-errors';
 
 const reply = (parts: unknown[]): TutorUIMessage => ({
 	id: 'reply-1',
