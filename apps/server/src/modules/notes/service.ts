@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
 	PDF_MAX_NOTES,
+	PDF_MAX_PAGES,
 	type CreateNoteInput,
 	type Note,
 	type PdfUploadResult,
@@ -53,6 +54,7 @@ const pdfMessages = {
 	noText:
 		'This PDF has no text Orbi can read. It may be a scan or photos of pages. Paste the text instead.',
 	tooLong: `This PDF has too much text for ${PDF_MAX_NOTES} notes. Split it into smaller files.`,
+	tooManyPages: `This PDF has more than ${PDF_MAX_PAGES} pages. Upload only the chapters you need.`,
 };
 
 export function createNoteService({
