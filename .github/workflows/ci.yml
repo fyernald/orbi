@@ -129,6 +129,10 @@ jobs:
           printf '%s' "$TOKEN" | ssh vps "docker login ghcr.io -u $ACTOR --password-stdin"
           ssh vps "cd orbi && export IMAGE_TAG=$IMAGE_TAG && docker compose pull && docker compose up -d --wait --wait-timeout 120 --remove-orphans"
 
+      # The VPS also runs other projects, so only Orbi's old images are removed:
+      # the ones with the source label the images job sets.
       - name: Clean up
         if: always()
-        run: ssh vps "docker logout ghcr.io; docker image prune -af" || true
+        env:
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: ssh vps "docker logout ghcr.io; docker image prune -af --filter label=org.opencontainers.image.source=$SOURCE" || true
