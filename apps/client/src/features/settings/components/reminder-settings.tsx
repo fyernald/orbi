@@ -6,6 +6,7 @@ import { CheckIcon } from 'lucide-react';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { FormError } from '@/components/form/form-error';
+import { SoonBadge } from '@/components/soon-badge';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -27,6 +28,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { apiErrorMessage } from '@/lib/api';
 import { useSaveReminder } from '../hooks';
+import { REMINDER_EMAILS_SENT } from '../reminder';
 
 type ReminderSettingsCardProps = {
 	saved: ReminderSettings;
@@ -46,14 +48,20 @@ export function ReminderSettingsCard({
 	const timeId = useId();
 	const enabled = form.watch('reminderEnabled');
 	const { isDirty } = form.formState;
+	// shown, but nothing can be changed until the emails go out
+	const locked = !REMINDER_EMAILS_SENT;
 
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Daily study reminder</CardTitle>
+				<CardTitle className="flex items-center gap-2">
+					Daily study reminder
+					{locked && <SoonBadge />}
+				</CardTitle>
 				<CardDescription>
 					An email on days you have not studied yet, with how many questions are
 					due.
+					{locked && ' Orbi does not send these emails yet.'}
 				</CardDescription>
 			</CardHeader>
 			<form
@@ -79,6 +87,7 @@ export function ReminderSettingsCard({
 									id={switchId}
 									checked={field.value}
 									onCheckedChange={field.onChange}
+									disabled={locked}
 								/>
 							</Field>
 						)}
@@ -87,13 +96,16 @@ export function ReminderSettingsCard({
 						control={form.control}
 						name="reminderTime"
 						render={({ field, fieldState }) => (
-							<Field data-disabled={!enabled} data-invalid={fieldState.invalid}>
+							<Field
+								data-disabled={locked || !enabled}
+								data-invalid={fieldState.invalid}
+							>
 								<FieldLabel htmlFor={timeId}>Time</FieldLabel>
 								<Input
 									{...field}
 									id={timeId}
 									type="time"
-									disabled={!enabled}
+									disabled={locked || !enabled}
 									aria-invalid={fieldState.invalid}
 									className="h-10 max-w-40"
 								/>
@@ -117,7 +129,7 @@ export function ReminderSettingsCard({
 					)}
 					<Button
 						type="submit"
-						disabled={!isDirty || save.isPending}
+						disabled={locked || !isDirty || save.isPending}
 						className="h-10 rounded-full px-4"
 					>
 						{save.isPending && <Spinner />}

@@ -29,16 +29,30 @@ describe('tutorStarters', () => {
 		expect(tutorStarters(course, [])).toEqual([]);
 	});
 
+	// as if every action were built
+	const allBuilt = () => true;
+
 	it('uses the topics of the course', () => {
-		expect(tutorStarters(course, topics).map((s) => s.label)).toEqual([
-			'Explain Mitosis simply',
-			'Quiz me on Genetics',
-			'Flashcards for Mitosis',
-		]);
+		expect(tutorStarters(course, topics, allBuilt).map((s) => s.label)).toEqual(
+			[
+				'Explain Mitosis simply',
+				'Quiz me on Genetics',
+				'Flashcards for Mitosis',
+			]
+		);
 	});
 
 	it('adds a mock exam when the course is for an exam', () => {
-		const starters = tutorStarters({ ...course, goal: 'exam_prep' }, topics);
+		const starters = tutorStarters(
+			{ ...course, goal: 'exam_prep' },
+			topics,
+			allBuilt
+		);
 		expect(starters.at(-1)?.action).toBe('mockExam');
+	});
+
+	it('leaves out actions that are not built yet', () => {
+		const starters = tutorStarters({ ...course, goal: 'exam_prep' }, topics);
+		expect(starters.map((s) => s.action)).toEqual(['ask', 'questions']);
 	});
 });

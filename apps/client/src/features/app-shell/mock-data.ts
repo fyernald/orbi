@@ -15,6 +15,8 @@ export type NavLink = {
 	label: string;
 	href: string;
 	icon: LucideIcon;
+	// shown, but not built yet: the link is not clickable until it is
+	soon?: boolean;
 };
 
 export type MiniApp = NavLink & {
@@ -24,7 +26,7 @@ export type MiniApp = NavLink & {
 export const mainNav: NavLink[] = [
 	{ label: 'Home', href: routes.app, icon: House },
 	{ label: 'Courses & notes', href: routes.courses, icon: BookOpen },
-	{ label: 'Progress', href: routes.progress, icon: ChartColumn },
+	{ label: 'Progress', href: routes.progress, icon: ChartColumn, soon: true },
 ];
 
 export const miniApps: MiniApp[] = [
@@ -33,11 +35,13 @@ export const miniApps: MiniApp[] = [
 		href: routes.mockExams,
 		icon: ClipboardCheck,
 		tone: 'teal',
+		soon: true,
 	},
 	{
 		label: 'Study Plan',
 		href: routes.studyPlan,
 		icon: CalendarDays,
 		tone: 'green',
+		soon: true,
 	},
 ];
