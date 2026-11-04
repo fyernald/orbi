@@ -489,6 +489,44 @@ describe('tutor chat', () => {
 		expect(response.json().error.message).toBe('Write a message first.');
 	});
 
+	it("sends and saves only the text of the student's message", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		const file = Buffer.from('x'.repeat(5_000)).toString('base64');
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		const response = await ask(ada, chatId, context, {
+			message: {
+				id: randomUUID(),
+				role: 'user',
+				parts: [
+					{
+						type: 'text',
+						text: 'Explain anaphase.',
+						providerMetadata: { google: { anything: true } },
+					},
+					{
+						type: 'file',
+						mediaType: 'text/plain',
+						url: `data:text/plain;base64,${file}`,
+					},
+				],
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		const studentTurn = ai.calls[0]!.prompt.find(
+			(message) => message.role === 'user'
+		);
+		expect(studentTurn?.content).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[0].parts).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
+	});
+
 	it('needs a logged-in user', async () => {
 		const response = await app.inject({ method: 'GET', url: '/api/models' });
 
