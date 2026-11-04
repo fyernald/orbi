@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { APICallError } from 'ai';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestPdf } from '../../pdf/testing';
@@ -762,6 +763,85 @@ describe('replies at the same time', () => {
 			'You can have 3 replies running at once. Wait for one to finish.'
 		);
 		expect(after.statusCode).toBe(200);
+	});
+});
+
+describe('the daily AI budget', () => {
+	const models = createScriptedModels();
+	let budgeted: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let context: Context;
+
+	// every mock model call uses 15 tokens (10 in, 5 out), so two calls pass and
+	// leave the student over the budget of 20
+	beforeAll(async () => {
+		budgeted = await createTestApp(createMemoryMailer(), {
+			requireEmailVerification: false,
+			models: models.registry,
+			budget: createTokenBudget({ dailyTokens: 20 }),
+		});
+		cookie = await signUpTestUser(budgeted, 'barbara@test.dev');
+		const course = (
+			await post('/api/courses', {
+				name: 'Biology',
+				color: 'teal',
+				goal: 'keep_up',
+				topics: ['Mitosis'],
+			})
+		).json();
+		const [topic] = (
+			await budgeted.inject({
+				method: 'GET',
+				url: `/api/courses/${course.id}/topics`,
+				headers: { cookie },
+			})
+		).json();
+		context = { courseId: course.id, topicId: topic.id };
+	});
+
+	afterAll(async () => {
+		await budgeted.close();
+	});
+
+	const post = (url: string, payload: object) =>
+		budgeted.inject({ method: 'POST', url, headers: { cookie }, payload });
+
+	const askIn = (chatId: string, text: string) =>
+		post(`/api/chats/${chatId}/messages`, {
+			...context,
+			chatTopicId: null,
+			modelId: 'gemini-flash',
+			action: 'ask',
+			trigger: 'submit-message',
+			message: userMessage(text),
+		});
+
+	it('refuses new model calls once the day is used up', async () => {
+		const chatId = randomUUID();
+		models.script({ text: 'One.' }, { text: 'Two.' });
+
+		const first = await askIn(chatId, 'First');
+		const second = await askIn(chatId, 'Second');
+		const third = await askIn(chatId, 'Third');
+		const thread = await budgeted.inject({
+			method: 'GET',
+			url: `/api/chats/${chatId}`,
+			headers: { cookie },
+		});
+		const followUps = await post(
+			`/api/chats/${chatId}/messages/${thread.json().messages.at(-1).id}/follow-ups`,
+			{ exclude: ['Why?'] }
+		);
+
+		expect(first.statusCode).toBe(200);
+		expect(second.statusCode).toBe(200);
+		expect(third.statusCode).toBe(429);
+		expect(third.json().error.message).toBe(
+			"You have used today's AI budget. It resets at midnight."
+		);
+		expect(followUps.statusCode).toBe(429);
+		// the third reply and the follow-up questions never reached the model
+		expect(models.calls).toHaveLength(2);
 	});
 });
 

@@ -28,6 +28,11 @@ import {
 	type InferUIMessageChunk,
 	type LanguageModelUsage,
 } from 'ai';
+import {
+	createTokenBudget,
+	DAILY_TOKENS_DEFAULT,
+	type TokenBudget,
+} from '../../ai/budget';
 import type {
 	ModelOptions,
 	ModelRegistry,
@@ -191,6 +196,7 @@ export function createTutorService({
 	repo,
 	models,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
+	budget = createTokenBudget({ dailyTokens: DAILY_TOKENS_DEFAULT }),
 	logError = (error) => console.error(error),
 	logUsage = () => {},
 	now = () => new Date(),
@@ -198,6 +204,7 @@ export function createTutorService({
 	repo: TutorRepository;
 	models: ModelRegistry;
 	limiter?: ReplyLimiter;
+	budget?: TokenBudget;
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
 	now?: () => Date;
@@ -231,13 +238,42 @@ export function createTutorService({
 		return chat;
 	}
 
-	// one log line after every model call, with its token counts
-	const logStep =
-		(modelId: string, action: UsageAction) =>
-		(step: { stepNumber: number; usage: LanguageModelUsage }) =>
+	// A student whose daily AI budget is used up gets no new model call. Gives the
+	// student's time zone, since their day decides when the budget starts again.
+	async function requireBudget(userId: string) {
+		const timeZone = await repo.findTimeZone(userId);
+		if (!budget.hasLeft(userId, timeZone)) {
+			throw new TooManyRequestsError(
+				"You have used today's AI budget. It resets at midnight."
+			);
+		}
+		return timeZone;
+	}
+
+	// one log line after every model call, with its token counts, which also come off
+	// the student's daily budget
+	const trackStep =
+		({
+			userId,
+			timeZone,
+			modelId,
+			action,
+		}: {
+			userId: string;
+			timeZone: string | null;
+			modelId: string;
+			action: UsageAction;
+		}) =>
+		(step: { stepNumber: number; usage: LanguageModelUsage }) => {
 			logUsage(
 				usageLine({ modelId, action, step: step.stepNumber, usage: step.usage })
 			);
+			budget.spend(
+				userId,
+				timeZone,
+				(step.usage.inputTokens ?? 0) + (step.usage.outputTokens ?? 0)
+			);
+		};
 
 	// the messages the model sees, and the student's new message to save first
 	async function nextMessages(
@@ -338,6 +374,7 @@ export function createTutorService({
 			const resolved = resolveModel(input.modelId, {
 				thinking: input.thinking,
 			});
+			const timeZone = await requireBudget(userId);
 
 			const course = await repo.findCourse(userId, input.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -382,6 +419,7 @@ export function createTutorService({
 					topic,
 					resolved,
 					rule,
+					timeZone,
 					abortSignal,
 					release,
 				});
@@ -410,6 +448,7 @@ export function createTutorService({
 			const resolved = resolveModel(reply.metadata?.modelId ?? '', {
 				thinking: false,
 			});
+			const timeZone = await requireBudget(userId);
 
 			const course = await repo.findCourse(userId, chat.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -446,7 +485,12 @@ export function createTutorService({
 					toolChoice: { type: 'tool', toolName: 'suggestFollowUps' },
 					timeout: FOLLOW_UPS_TIMEOUT_MS,
 					maxRetries: 1,
-					onStepEnd: logStep(resolved.entry.id, 'followUps'),
+					onStepEnd: trackStep({
+						userId,
+						timeZone,
+						modelId: resolved.entry.id,
+						action: 'followUps',
+					}),
 				});
 				questions = cleanFollowUps(result.toolCalls[0]?.input, exclude);
 			} catch (error) {
@@ -493,6 +537,7 @@ export function createTutorService({
 		topic,
 		resolved,
 		rule,
+		timeZone,
 		abortSignal,
 		release,
 	}: {
@@ -507,6 +552,7 @@ export function createTutorService({
 			(typeof actionRules)[keyof typeof actionRules],
 			{ available: true }
 		>;
+		timeZone: string | null;
 		abortSignal: AbortSignal;
 		release: () => void;
 	}): Promise<TutorStream> {
@@ -635,7 +681,12 @@ export function createTutorService({
 			abortSignal,
 			timeout: TIMEOUT,
 			maxRetries: 1,
-			onStepEnd: logStep(resolved.entry.id, input.action),
+			onStepEnd: trackStep({
+				userId,
+				timeZone,
+				modelId: resolved.entry.id,
+				action: input.action,
+			}),
 		});
 
 		// a millisecond after the student's message, so the two never swap places
