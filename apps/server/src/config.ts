@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DAILY_TOKENS_DEFAULT } from './ai/budget';
 import type { SmtpOptions } from './mail/mailer';
 
 const envSchema = z
@@ -25,6 +26,12 @@ const envSchema = z
 		GEMINI_API_KEY: z.string().optional(),
 		ANTHROPIC_API_KEY: z.string().optional(),
 		DEEPSEEK_API_KEY: z.string().optional(),
+		// how many AI tokens each student may use per day, input and output together
+		AI_DAILY_TOKENS_PER_STUDENT: z.coerce
+			.number()
+			.int()
+			.positive()
+			.default(DAILY_TOKENS_DEFAULT),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -55,6 +62,7 @@ export type Config = {
 	auth: { secret: string; baseURL: string };
 	smtp: SmtpOptions | null;
 	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
+	aiDailyTokens: number;
 };
 
 // fails at startup with every missing or wrong variable listed
@@ -88,5 +96,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			anthropic: vars.ANTHROPIC_API_KEY || undefined,
 			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
+		aiDailyTokens: vars.AI_DAILY_TOKENS_PER_STUDENT,
 	};
 }

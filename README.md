@@ -206,6 +206,7 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`: email server. Required in production, because sign-up, email confirmation, and password reset send mail. Not used with `APP_ENV=local`. `SMTP_USER` and `SMTP_PASSWORD` are only needed in production
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
 - `DEEPSEEK_API_KEY`: DeepSeek API key (server only, optional). DeepSeek models show in the model menu only when it is set
+- `AI_DAILY_TOKENS_PER_STUDENT`: how many AI tokens each student may use per day (default `1000000`). When they are used up, the tutor says so until the student's midnight
 
 ## Deployment
 

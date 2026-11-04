@@ -1,3 +1,4 @@
+import type { TokenBudget } from './ai/budget';
 import { createModelRegistry, type ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import { buildApp } from './app';
@@ -25,6 +26,8 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
+	// by default a student has the production budget of tokens per day
+	budget?: TokenBudget;
 	// gets the token counts of every model call
 	logUsage?: LogUsage;
 	// pass one to put rows in place that no route can make, like the tutor's questions
@@ -41,6 +44,7 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
+		budget,
 		logUsage,
 		db: givenDb,
 	}: TestAppOptions = {}
@@ -66,6 +70,7 @@ export async function createTestApp(
 		repo: createTutorRepository(db),
 		models,
 		limiter,
+		budget,
 		logError: () => {},
 		logUsage,
 	});

@@ -23,6 +23,7 @@ Two accepted rules do not fit a chat:
 - `generation_jobs` and `orbi-worker` stay for slow batch work that nobody watches live, for example a whole PDF turned into questions. Nothing uses them yet.
 - When the browser stops the request (Stop, or the tab closes), the server stops the model and saves what was finished.
 - A student can have at most 3 replies running at once, across all their chats. The server counts them in memory and answers `429` for a fourth; the composer says so before sending. With more than one API process, this count would have to move to the database.
+- Each student has a daily budget of AI tokens (input and output of every model call, follow-up questions included), `AI_DAILY_TOKENS_PER_STUDENT` in `.env`, 1,000,000 by default. When it is used up, a new reply or follow-up refresh answers `429` and asks no model. The day is the student's own (the profile's time zone), so it resets at their midnight. Like the reply count it is kept in memory, so a restart starts everyone's day again.
 - Text is passed through the AI SDK's `smoothStream`, so models that send a reply in a few large pieces (Gemini Flash-Lite) still show it word by word.
 - nginx does not buffer the stream because the route sends `X-Accel-Buffering: no`.
 
