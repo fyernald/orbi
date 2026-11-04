@@ -2,6 +2,13 @@ import { tutorRequestInput, type TutorRequestInput } from '@orbi/shared';
 import { composerActions } from './actions';
 import { attachmentSummary, type Attachment } from './attachments';
 
+// a topic as the composer shows it: the course name comes with it
+export type ComposerTopic = {
+	id: string;
+	course: string;
+	name: string;
+};
+
 type ComposerState = {
 	values: TutorRequestInput;
 	attachments: Attachment[];

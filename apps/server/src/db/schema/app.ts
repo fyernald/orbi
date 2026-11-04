@@ -204,6 +204,8 @@ export const chat = pgTable(
 		}).onDelete('cascade'),
 		unique('chat_user_id_id_key').on(t.userId, t.id),
 		index('chat_course_id_idx').on(t.courseId, t.updatedAt),
+		// deleting a topic finds its chats through this one
+		index('chat_topic_idx').on(t.userId, t.topicId),
 	]
 );
 
@@ -239,6 +241,8 @@ export const chatMessage = pgTable(
 			foreignColumns: [chat.userId, chat.id],
 		}).onDelete('cascade'),
 		index('chat_message_chat_id_idx').on(t.chatId, t.createdAt),
+		// deleting a topic unlinks its messages through this one
+		index('chat_message_topic_id_idx').on(t.topicId),
 	]
 );
 
@@ -312,6 +316,9 @@ export const answer = pgTable(
 			.on(t.questionId)
 			.where(sql`${t.context} = 'chat'`),
 		index('answer_user_id_idx').on(t.userId, t.answeredAt),
+		// deleting a question finds its answers through this one; the mastery score
+		// reads a question's answers in time order the same way
+		index('answer_question_idx').on(t.userId, t.questionId, t.answeredAt),
 	]
 );
 

@@ -41,6 +41,19 @@ describe('loadConfig', () => {
 		expect(config.smtp?.host).toBe('smtp.example.com');
 	});
 
+	it('gives each student a daily AI budget, 1,000,000 tokens unless set', () => {
+		const local = { ...base, APP_ENV: 'local' };
+
+		expect(loadConfig(local).aiDailyTokens).toBe(1_000_000);
+		expect(
+			loadConfig({ ...local, AI_DAILY_TOKENS_PER_STUDENT: '250000' })
+				.aiDailyTokens
+		).toBe(250_000);
+		expect(() =>
+			loadConfig({ ...local, AI_DAILY_TOKENS_PER_STUDENT: '0' })
+		).toThrow(/AI_DAILY_TOKENS_PER_STUDENT/);
+	});
+
 	it('treats an empty AI key as not set', () => {
 		const config = loadConfig({
 			...base,

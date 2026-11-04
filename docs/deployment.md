@@ -19,6 +19,15 @@ The VPS also hosts other projects, so Orbi shares the existing nginx web server:
 | `server`   | The Fastify API, on `127.0.0.1:3101`                                                                        |
 | `postgres` | The database. It is not reachable from outside the containers                                               |
 
+Run exactly **one** `server` container. Four things assume there is only one API process:
+
+- the limit of 3 tutor replies at once per student is counted in memory ([decision 0003](decisions/03-tutor-chat.md)),
+- each student's daily AI token budget is counted in memory (same decision),
+- Better Auth's login rate limit is counted in memory,
+- the server applies new migrations when it starts, and two starting at once would race.
+
+To run more than one, move these limits to the database first (Better Auth: `rateLimit.storage: 'database'`) and run the migrations as a separate step.
+
 ## One-time setup
 
 You do this once. After that, deploys happen by themselves.

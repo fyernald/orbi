@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { routes } from '@/lib/routes';
-import type { NavLink } from '../mock-data';
+import type { NavLink } from '../navigation';
 import { SidebarLink } from './sidebar-link';
 
 type MainNavProps = {

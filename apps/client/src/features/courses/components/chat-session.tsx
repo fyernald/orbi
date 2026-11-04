@@ -8,8 +8,8 @@ import type {
 	ComposerDraft,
 	ComposerPreset,
 } from '@/features/tutor/components/note-composer';
+import type { ComposerTopic } from '@/features/tutor/composer';
 import { useChatThread } from '@/features/tutor/hooks';
-import type { Topic as ComposerTopic } from '@/features/tutor/mock-data';
 import type { OpenChat } from '@/features/tutor/open-chats';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';

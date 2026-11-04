@@ -72,6 +72,15 @@ export const topic = z.object({
 	noteCount: z.int(),
 });
 
+// a topic with the name of its course, for places that list the topics of every
+// course at once, like the message box on Home
+export const courseTopic = z.object({
+	id: z.uuid(),
+	courseId: z.uuid(),
+	courseName: z.string(),
+	name: z.string(),
+});
+
 export type CourseColor = (typeof COURSE_COLORS)[number];
 export type CourseGoal = (typeof COURSE_GOALS)[number];
 export type CreateCourseInput = z.infer<typeof createCourseInput>;
@@ -80,3 +89,4 @@ export type UpdateCourseInput = z.infer<typeof updateCourseInput>;
 export type UpdateTopicInput = z.infer<typeof updateTopicInput>;
 export type Course = z.infer<typeof course>;
 export type Topic = z.infer<typeof topic>;
+export type CourseTopic = z.infer<typeof courseTopic>;

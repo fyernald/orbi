@@ -1,3 +1,4 @@
+import type { TokenBudget } from './ai/budget';
 import { createModelRegistry, type ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import { buildApp } from './app';
@@ -9,7 +10,7 @@ import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
-import { createPdfReader } from './pdf/reader';
+import { createPdfReader, type PdfReader } from './pdf/reader';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
 import { createQuestionRepository } from './modules/questions/repository';
@@ -25,10 +26,14 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
+	// by default a student has the production budget of tokens per day
+	budget?: TokenBudget;
 	// gets the token counts of every model call
 	logUsage?: LogUsage;
 	// pass one to put rows in place that no route can make, like the tutor's questions
 	db?: TestDb;
+	// by default the real reader; a slower one lets tests send uploads at the same time
+	pdf?: PdfReader;
 };
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -41,8 +46,10 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
+		budget,
 		logUsage,
 		db: givenDb,
+		pdf = createPdfReader(),
 	}: TestAppOptions = {}
 ) {
 	const db = givenDb ?? (await createTestDb());
@@ -54,10 +61,7 @@ export async function createTestApp(
 		requireEmailVerification,
 	});
 	const courses = createCourseService({ repo: createCourseRepository(db) });
-	const notes = createNoteService({
-		repo: createNoteRepository(db),
-		pdf: createPdfReader(),
-	});
+	const notes = createNoteService({ repo: createNoteRepository(db), pdf });
 	const profiles = createProfileService({ repo: createProfileRepository(db) });
 	const questions = createQuestionService({
 		repo: createQuestionRepository(db),
@@ -66,6 +70,7 @@ export async function createTestApp(
 		repo: createTutorRepository(db),
 		models,
 		limiter,
+		budget,
 		logError: () => {},
 		logUsage,
 	});

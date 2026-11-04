@@ -95,6 +95,8 @@ export interface TutorRepository {
 		topicId: string
 	): Promise<TopicContext | undefined>;
 	findStudent(userId: string): Promise<StudentContext | undefined>;
+	// the student's IANA time zone from the profile, null before onboarding
+	findTimeZone(userId: string): Promise<string | null>;
 	listNotes(userId: string, topicId: string): Promise<NoteForTutor[]>;
 	// every note of the course, newest first, for the whole-course chat
 	listCourseNotes(userId: string, courseId: string): Promise<NoteForTutor[]>;
@@ -226,6 +228,14 @@ export function createTutorRepository(db: Db): TutorRepository {
 					)
 				);
 			return found;
+		},
+
+		async findTimeZone(userId) {
+			const [found] = await db
+				.select({ timezone: profile.timezone })
+				.from(profile)
+				.where(eq(profile.userId, userId));
+			return found?.timezone ?? null;
 		},
 
 		async findStudent(userId) {

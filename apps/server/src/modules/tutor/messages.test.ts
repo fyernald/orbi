@@ -6,6 +6,7 @@ import {
 	hasContent,
 	recentMessages,
 	skipUnansweredQuestions,
+	studentMessageFrom,
 	withAttachmentNames,
 	withoutEarlierThinking,
 	withoutUnfinishedTools,
@@ -123,6 +124,48 @@ describe('withStudentAnswers', () => {
 		expect(
 			withStudentAnswers(reply([answeredPart]), { parts: [answeredPart] })
 		).toBeUndefined();
+	});
+});
+
+describe('studentMessageFrom', () => {
+	const metadata = { topicId: null, createdAt: '2026-11-04T10:00:00.000Z' };
+
+	it('keeps only the text the student wrote', () => {
+		const message = studentMessageFrom(
+			{
+				id: 'message-1',
+				parts: [
+					{ type: 'text', text: 'Explain anaphase.' },
+					{
+						type: 'file',
+						mediaType: 'text/plain',
+						url: 'https://example.com/big.txt',
+					},
+					{
+						type: 'text',
+						text: 'Keep it short.',
+						providerMetadata: { google: { anything: true } },
+					},
+				],
+			},
+			metadata
+		);
+
+		expect(message).toEqual({
+			id: 'message-1',
+			role: 'user',
+			parts: [{ type: 'text', text: 'Explain anaphase.\nKeep it short.' }],
+			metadata,
+		});
+	});
+
+	it('gives an empty text when the student wrote nothing', () => {
+		const message = studentMessageFrom(
+			{ id: 'message-2', parts: [{ type: 'step-start' }] },
+			metadata
+		);
+
+		expect(message.parts).toEqual([{ type: 'text', text: '' }]);
 	});
 });
 

@@ -1,6 +1,7 @@
 import {
 	course,
 	courseParams,
+	courseTopic,
 	createCourseInput,
 	createTopicInput,
 	topic,
@@ -51,6 +52,13 @@ export function createCourseRoutes({
 			{ schema: { params: courseParams, response: { 200: z.array(topic) } } },
 			async (request) =>
 				courses.listTopics(await requireUser(request), request.params.courseId)
+		);
+
+		// the topics of every course, for Home's message box
+		api.get(
+			'/topics',
+			{ schema: { response: { 200: z.array(courseTopic) } } },
+			async (request) => courses.listAllTopics(await requireUser(request))
 		);
 
 		api.post(

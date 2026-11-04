@@ -61,6 +61,28 @@ export const messageText = (message: Pick<TutorUIMessage, 'parts'>) =>
 		.join('\n')
 		.trim();
 
+// The student's new message, made on the server from the text they wrote. The
+// browser could add other parts (a file with a URL, provider options), which the
+// model would read and the chat would keep; PDFs reach the tutor as notes instead,
+// through the message's attachments.
+export function studentMessageFrom(
+	sent: Pick<ChatMessage, 'id' | 'parts'>,
+	metadata: TutorMessageMetadata
+): TutorUIMessage {
+	const text = sent.parts
+		.flatMap((part) =>
+			part.type === 'text' && typeof part.text === 'string' ? [part.text] : []
+		)
+		.join('\n')
+		.trim();
+	return {
+		id: sent.id,
+		role: 'user',
+		parts: [{ type: 'text', text }],
+		metadata,
+	};
+}
+
 type Part = TutorUIMessage['parts'][number];
 
 // tools the student answers in the browser; a call to one waits for them

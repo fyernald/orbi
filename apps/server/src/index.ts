@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { createTokenBudget } from './ai/budget';
 import { createModelRegistry, createProviderFactories } from './ai/models';
 import { buildApp } from './app';
 import { createAuth } from './auth';
@@ -51,6 +52,7 @@ const tutor = createTutorService({
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
 	}),
+	budget: createTokenBudget({ dailyTokens: config.aiDailyTokens }),
 	logError: (error) => app.log.error(error),
 	logUsage: (line) => app.log.info(line, 'ai usage'),
 });
