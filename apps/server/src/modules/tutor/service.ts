@@ -57,6 +57,7 @@ import {
 	messageText,
 	recentMessages,
 	skipUnansweredQuestions,
+	studentMessageFrom,
 	toChatMessage,
 	toStoredMessage,
 	toUIMessage,
@@ -270,7 +271,7 @@ export function createTutorService({
 			await repo.deleteMessages(userId, chatId, dropped);
 			return { messages: history.slice(0, sentBefore + 1) };
 		}
-		const studentMessage = { ...incoming, metadata } as TutorUIMessage;
+		const studentMessage = studentMessageFrom(incoming, metadata);
 		const text = messageText(studentMessage);
 		if (!text) throw new ValidationError('Write a message first.');
 		if (text.length > TUTOR_MESSAGE_MAX_LENGTH) {
