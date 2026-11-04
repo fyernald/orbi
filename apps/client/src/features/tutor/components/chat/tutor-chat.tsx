@@ -19,8 +19,8 @@ import {
 	messageToSend,
 	type TutorUIMessage,
 } from '../../chat';
+import type { ComposerTopic } from '../../composer';
 import { useEarlierMessages, useModels, useTutorChat } from '../../hooks';
-import type { Topic } from '../../mock-data';
 import {
 	NoteComposer,
 	type ComposerDraft,
@@ -45,7 +45,7 @@ type TutorChatProps = {
 	// a long chat opens on its newest messages; older ones load when scrolled to
 	initialHasEarlier: boolean;
 	// the topics the composer offers; a topic's chat offers only its own
-	topics: Topic[];
+	topics: ComposerTopic[];
 	preset?: ComposerPreset;
 	// shown until the first message
 	emptyState: ReactNode;
