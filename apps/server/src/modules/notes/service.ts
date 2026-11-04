@@ -102,7 +102,8 @@ export function createNoteService({
 
 		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
 			await requireTopic(userId, courseId, topicId);
-			// a deleted note is not brought back: the parts still there are given back
+			// a deleted note is not brought back: the parts still there are given back.
+			// Checked here first, so a file sent again is not read again
 			const hash = createHash('sha256').update(data).digest('hex');
 			const saved = await repo.listSourceNotes(userId, topicId, hash);
 			if (saved.length > 0) return { notes: saved, reused: true };
@@ -112,11 +113,10 @@ export function createNoteService({
 			if (notes.length > PDF_MAX_NOTES) {
 				throw new ValidationError(pdfMessages.tooLong);
 			}
-			const created = await repo.insertNotes(userId, topicId, notes, {
+			return repo.insertSourceNotes(userId, topicId, notes, {
 				name: fileName,
 				hash,
 			});
-			return { notes: created, reused: false };
 		},
 
 		// a title cleared while editing is named after the first line again
