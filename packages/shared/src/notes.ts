@@ -35,6 +35,9 @@ export const PDF_MAX_SIZE = 20 * 1024 * 1024;
 export const PDF_MAX_SIZE_LABEL = '20 MB';
 export const PDF_NOTE_MAX_LENGTH = 6_000;
 export const PDF_MAX_NOTES = 100;
+// pdf.js reads every page on the server before Orbi can tell how much text there
+// is, so a file with more pages is refused before it is read
+export const PDF_MAX_PAGES = 300;
 
 // the PDF itself is the request body; its name comes in the address
 export const pdfUploadQuery = z.object({

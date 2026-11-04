@@ -1,5 +1,6 @@
 import {
 	NOTE_CONTENT_MAX_LENGTH,
+	PDF_MAX_PAGES,
 	PDF_MAX_SIZE,
 	PDF_NOTE_MAX_LENGTH,
 } from '@orbi/shared';
@@ -228,6 +229,19 @@ describe('uploading a PDF', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.json().error.message).toMatch(/no text Orbi can read/);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
+	});
+
+	it('refuses a PDF with too many pages before reading it', async () => {
+		const { notesUrl } = await createTopic(ada);
+		const pages = Array.from({ length: PDF_MAX_PAGES + 1 }, () => 'Mitosis');
+
+		const response = await uploadPdf(ada, notesUrl, createTestPdf(pages));
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json().error.message).toBe(
+			`This PDF has more than ${PDF_MAX_PAGES} pages. Upload only the chapters you need.`
+		);
 		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
 	});
 
