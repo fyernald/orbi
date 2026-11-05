@@ -43,6 +43,8 @@ export type StudentContext = {
 	locale: string | null;
 };
 
+export type NotesScope = { topicId: string } | { courseId: string };
+
 export type NoteForTutor = {
 	id: string;
 	title: string;
@@ -97,9 +99,14 @@ export interface TutorRepository {
 	findStudent(userId: string): Promise<StudentContext | undefined>;
 	// the student's IANA time zone from the profile, null before onboarding
 	findTimeZone(userId: string): Promise<string | null>;
-	listNotes(userId: string, topicId: string): Promise<NoteForTutor[]>;
-	// every note of the course, newest first, for the whole-course chat
-	listCourseNotes(userId: string, courseId: string): Promise<NoteForTutor[]>;
+	// The notes a reply can read, in a topic or (for the whole-course chat) a course:
+	// the attached ones, then the newest others, until about maxLength characters.
+	// total counts every note there, read or not.
+	listNotesForReply(
+		userId: string,
+		scope: NotesScope,
+		page: { maxLength: number; attachedIds: string[] }
+	): Promise<{ notes: NoteForTutor[]; total: number }>;
 	// the ids among these that are notes of the user in this course
 	ownNoteIds(
 		userId: string,
@@ -118,7 +125,11 @@ export interface TutorRepository {
 			title: string;
 		}
 	): Promise<ChatRecord | undefined>;
-	listMessages(userId: string, chatId: string): Promise<StoredMessage[]>;
+	messageExists(
+		userId: string,
+		chatId: string,
+		messageId: string
+	): Promise<boolean>;
 	// the newest messages before one message (or the newest of all), oldest first
 	listMessagePage(
 		userId: string,
@@ -192,22 +203,6 @@ export function createTutorRepository(db: Db): TutorRepository {
 			return found;
 		},
 
-		listCourseNotes(userId, courseId) {
-			return db
-				.select({
-					id: note.id,
-					title: note.title,
-					topicName: topic.name,
-					fileName: note.sourceName,
-					content: note.content,
-					createdAt: note.createdAt,
-				})
-				.from(note)
-				.innerJoin(topic, eq(topic.id, note.topicId))
-				.where(and(eq(note.userId, userId), eq(topic.courseId, courseId)))
-				.orderBy(desc(note.createdAt), desc(note.id));
-		},
-
 		async findTopic(userId, courseId, topicId) {
 			const [found] = await db
 				.select({
@@ -252,19 +247,72 @@ export function createTutorRepository(db: Db): TutorRepository {
 			return found;
 		},
 
-		// newest first, so the tutor keeps the latest notes when there are too many
-		listNotes(userId, topicId) {
-			return db
+		// Two runs of notes, each with its running length: the attached ones in the order
+		// given, and the others newest first. A note that starts after maxLength is
+		// dropped, and one that only fits in part is cut, so a long chat history of PDFs
+		// is never read whole. Attached notes are kept as titles even when they do not
+		// fit, so the tutor can say which ones it could not read.
+		async listNotesForReply(userId, scope, { maxLength, attachedIds }) {
+			const attached =
+				attachedIds.length > 0 ? inArray(note.id, attachedIds) : sql`false`;
+			const attachedOrder =
+				attachedIds.length > 0
+					? sql`array_position(array[${sql.join(
+							attachedIds.map((id) => sql`${id}`),
+							sql`, `
+						)}]::uuid[], ${note.id})`
+					: sql`0`;
+			const ranked = db
 				.select({
 					id: note.id,
 					title: note.title,
+					topicName: topic.name,
 					fileName: note.sourceName,
 					content: note.content,
 					createdAt: note.createdAt,
+					attached: sql<boolean>`${attached}`.as('attached'),
+					lengthBefore: sql<number>`coalesce(sum(length(${note.content})) over (
+						partition by ${attached}
+						order by ${attachedOrder}, ${note.createdAt} desc, ${note.id} desc
+						rows between unbounded preceding and 1 preceding
+					), 0)`.as('length_before'),
+					total: sql<number>`count(*) over ()`.as('total'),
 				})
 				.from(note)
-				.where(and(eq(note.userId, userId), eq(note.topicId, topicId)))
-				.orderBy(desc(note.createdAt), desc(note.id));
+				.innerJoin(
+					topic,
+					and(eq(topic.userId, note.userId), eq(topic.id, note.topicId))
+				)
+				.where(
+					and(
+						eq(note.userId, userId),
+						'topicId' in scope
+							? eq(note.topicId, scope.topicId)
+							: eq(topic.courseId, scope.courseId)
+					)
+				)
+				.as('ranked');
+			const rows = await db
+				.select({
+					id: ranked.id,
+					title: ranked.title,
+					topicName: ranked.topicName,
+					fileName: ranked.fileName,
+					content: sql<string>`left(${ranked.content}, greatest(${maxLength} - ${ranked.lengthBefore}, 0)::int)`,
+					createdAt: ranked.createdAt,
+					total: ranked.total,
+				})
+				.from(ranked)
+				.where(sql`${ranked.attached} or ${ranked.lengthBefore} < ${maxLength}`)
+				.orderBy(desc(ranked.createdAt), desc(ranked.id));
+			const total = Number(rows[0]?.total ?? 0);
+			return {
+				// the topic's name only helps in the whole-course chat
+				notes: rows.map(({ total: _, topicName, ...item }) =>
+					'topicId' in scope ? item : { ...item, topicName }
+				),
+				total,
+			};
 		},
 
 		async ownNoteIds(userId, courseId, ids) {
@@ -309,14 +357,18 @@ export function createTutorRepository(db: Db): TutorRepository {
 			return created;
 		},
 
-		listMessages(userId, chatId) {
-			return db
-				.select(messageColumns)
+		async messageExists(userId, chatId, messageId) {
+			const [found] = await db
+				.select({ id: chatMessage.id })
 				.from(chatMessage)
 				.where(
-					and(eq(chatMessage.userId, userId), eq(chatMessage.chatId, chatId))
-				)
-				.orderBy(asc(chatMessage.createdAt), asc(chatMessage.id));
+					and(
+						eq(chatMessage.userId, userId),
+						eq(chatMessage.chatId, chatId),
+						eq(chatMessage.id, messageId)
+					)
+				);
+			return found !== undefined;
 		},
 
 		async listMessagePage(userId, chatId, { beforeId, limit }) {
