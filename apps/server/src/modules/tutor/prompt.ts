@@ -25,7 +25,9 @@ export type NotesSelection = {
 export function selectNotes(
 	notes: NoteForTutor[],
 	maxLength = NOTES_CONTEXT_MAX_LENGTH,
-	attachedIds: string[] = []
+	attachedIds: string[] = [],
+	// every note there, when only some were loaded
+	total = notes.length
 ): NotesSelection {
 	const byId = new Map(notes.map((item) => [item.id, item]));
 	const attached = attachedIds.flatMap((id) => byId.get(id) ?? []);
@@ -44,7 +46,7 @@ export function selectNotes(
 	const pickedIds = new Set(picked.map(({ id }) => id));
 	return {
 		notes: picked,
-		total: notes.length,
+		total,
 		attachedCount: attached.length,
 		attachedLeftOut: attached
 			.filter(({ id }) => !pickedIds.has(id))

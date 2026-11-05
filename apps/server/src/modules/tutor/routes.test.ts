@@ -450,6 +450,27 @@ describe('tutor chat', () => {
 		expect(response.statusCode).toBe(409);
 	});
 
+	it('refuses an older message again after more messages than a reply loads', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		const first = userMessage('First question');
+		ai.script({ text: 'One.' });
+		await ask(ada, chatId, context, { message: first });
+		for (let round = 0; round < 16; round += 1) {
+			ai.script({ text: `Answer ${round}.` });
+			await ask(ada, chatId, context, {
+				message: userMessage(`Question ${round}?`),
+			});
+		}
+
+		ai.script({ text: 'One again.' });
+
+		const response = await ask(ada, chatId, context, { message: first });
+
+		expect(response.statusCode).toBe(409);
+		expect(ai.calls).toHaveLength(0);
+	});
+
 	it('shows a clear error when the AI service fails, and keeps the question', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();
