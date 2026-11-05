@@ -10,17 +10,20 @@ import {
 } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { routeLimit, type RateLimits } from '../../rate-limit';
 import type { RequireUser } from '../auth/session';
 import type { NoteService } from './service';
 
 type NoteRoutesDeps = {
 	notes: NoteService;
 	requireUser: RequireUser;
+	limits: RateLimits;
 };
 
 export function createNoteRoutes({
 	notes,
 	requireUser,
+	limits,
 }: NoteRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
 		// a PDF upload sends the file itself as the body, kept as bytes
@@ -71,6 +74,7 @@ export function createNoteRoutes({
 					body: z.instanceof(Uint8Array, { error: 'Attach a PDF file.' }),
 					response: { 200: pdfUploadResult, 201: pdfUploadResult },
 				},
+				config: routeLimit(limits.pdfUpload),
 				// checked before the body is read, so a request without a login cannot
 				// make the server hold a whole file in memory
 				onRequest: async (request) => {

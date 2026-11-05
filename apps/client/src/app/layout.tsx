@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Providers } from './providers';
@@ -20,7 +21,19 @@ export const viewport: Viewport = {
 	],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+// the nonce of this request's Content-Security-Policy, set by proxy.ts
+async function cspNonce() {
+	const policy =
+		(await headers()).get('content-security-policy-report-only') ?? '';
+	return policy.match(/'nonce-([^']+)'/)?.[1];
+}
+
+export default async function RootLayout({
+	children,
+}: {
+	children: ReactNode;
+}) {
+	const nonce = await cspNonce();
 	return (
 		// the theme script sets the dark class before React loads, so the server's html differs
 		<html
@@ -29,7 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 			suppressHydrationWarning
 		>
 			<body>
-				<Providers>{children}</Providers>
+				<Providers nonce={nonce}>{children}</Providers>
 			</body>
 		</html>
 	);
