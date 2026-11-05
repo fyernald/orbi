@@ -12,6 +12,8 @@ export const NOTES_CONTEXT_MAX_LENGTH = 100_000;
 export type NotesSelection = {
 	notes: NoteForTutor[];
 	total: number;
+	// the notes filled all the room, so the last one was read only in part
+	cut: boolean;
 	// how many notes come from PDFs attached in the chat, read first
 	attachedCount: number;
 	// titles of notes from PDFs attached in the chat that did not fit
@@ -47,6 +49,8 @@ export function selectNotes(
 	return {
 		notes: picked,
 		total,
+		// the database already cuts a note that does not fit, so a full room is the sign
+		cut: picked.length > 0 && room <= 0,
 		attachedCount: attached.length,
 		attachedLeftOut: attached
 			.filter(({ id }) => !pickedIds.has(id))

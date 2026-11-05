@@ -1,12 +1,13 @@
 'use client';
 
 import type { AiModel } from '@orbi/shared';
-import { BookOpen, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
 import { CopyButton } from './copy-button';
 import { Markdown } from './markdown';
 import { MessageAttachments } from './message-attachments';
+import { NotesReadLine } from './notes-read-line';
 import { ReasoningBlock } from './reasoning-block';
 import { Thinking } from './thinking';
 import { ToolView, type ChatActions } from './tool-views';
@@ -75,7 +76,6 @@ function OrbiMessage({
 	stopped,
 	onRetry,
 }: ChatMessageProps) {
-	const notesUsed = message.metadata?.notesUsed;
 	const topic = topicName(message.metadata?.topicId);
 	const text = message.parts
 		.map((part) => (part.type === 'text' ? part.text : ''))
@@ -87,14 +87,7 @@ function OrbiMessage({
 			<OrbiMark className="mt-0.5 size-6" />
 			<div className="flex min-w-0 flex-1 flex-col gap-3">
 				<h3 className="sr-only">Orbi replied</h3>
-				{notesUsed !== undefined && topic && (
-					<p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<BookOpen className="size-3.5" />
-						{notesUsed === 0
-							? `No notes on ${topic} yet`
-							: `Read ${notesUsed === 1 ? '1 note' : `${notesUsed} notes`} from ${topic}`}
-					</p>
-				)}
+				{topic && <NotesReadLine metadata={message.metadata} topic={topic} />}
 				{message.parts.map((part, index) => {
 					if (part.type === 'reasoning') {
 						if (!part.text.trim()) return null;
