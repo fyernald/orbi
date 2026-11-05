@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { scopeTopicId } from './chat';
 import { useCourseChats } from './hooks';
 import {
@@ -27,7 +27,7 @@ export function useOpenChats(courseId: string, scopes: string[]) {
 		picked[scope] ??
 		(list.data && startScope(list.data, scopeTopicId(scope), newIdFor(scope)));
 
-	useEffect(() => {
+	const pickMissing = useEffectEvent(() => {
 		if (!list.data) return;
 		const missing = scopes.filter((scope) => !picked[scope]);
 		if (missing.length === 0) return;
@@ -35,7 +35,11 @@ export function useOpenChats(courseId: string, scopes: string[]) {
 			...current,
 			...Object.fromEntries(missing.map((scope) => [scope, chatsOf(scope)!])),
 		}));
-	}, [list.data, scopes.join(), picked]);
+	});
+	const scopeKey = scopes.join();
+	useEffect(() => {
+		pickMissing();
+	}, [list.data, scopeKey, picked]);
 
 	const update = (scope: string, change: (state: ScopeChats) => ScopeChats) => {
 		const state = chatsOf(scope);

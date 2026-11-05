@@ -9,6 +9,8 @@ export function createAuthRoutes({ auth }: { auth: Auth }): FastifyPluginAsync {
 		api.route({
 			method: ['GET', 'POST'],
 			url: '/auth/*',
+			// Better Auth limits these itself, and answers in its own error shape
+			config: { rateLimit: false },
 			handler: async (request, reply) =>
 				sendWebResponse(reply, await auth.handler(toWebRequest(request))),
 		});

@@ -8,7 +8,7 @@ type Part = { from: number; to: number; text: string };
 // which Postgres cannot store (\u0000); line breaks stay
 export function cleanPageText(text: string): string {
 	return text
-		.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '')
+		.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '') // eslint-disable-line no-control-regex
 		.replace(/[^\S\n]+/g, ' ')
 		.replace(/ ?\n ?/g, '\n')
 		.replace(/\n{3,}/g, '\n\n')

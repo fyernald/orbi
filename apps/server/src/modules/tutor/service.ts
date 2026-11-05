@@ -282,9 +282,12 @@ export function createTutorService({
 			const topic = topicId
 				? await repo.findTopic(userId, course.id, topicId)
 				: undefined;
-			const notes = topic
-				? await repo.listNotes(userId, topic.id)
-				: await repo.listCourseNotes(userId, course.id);
+			const attachedIds = before ? attachedNoteIds([before]) : [];
+			const notes = await repo.listNotesForReply(
+				userId,
+				topic ? { topicId: topic.id } : { courseId: course.id },
+				{ maxLength: FOLLOW_UP_NOTES_MAX_LENGTH, attachedIds }
+			);
 
 			const release = takePlace(userId);
 			let questions: string[];
@@ -294,9 +297,10 @@ export function createTutorService({
 					instructions: followUpInstructions({
 						scopeName: topic?.name ?? course.name,
 						notes: selectNotes(
-							notes,
+							notes.notes,
 							FOLLOW_UP_NOTES_MAX_LENGTH,
-							before ? attachedNoteIds([before]) : []
+							attachedIds,
+							notes.total
 						),
 						exclude,
 					}),
