@@ -50,6 +50,8 @@ export function DatePicker({
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
+				{/* the button stands in for a date input, so it says when the date is wrong like one */}
+				{/* eslint-disable-next-line jsx-a11y/role-supports-aria-props */}
 				<button
 					ref={buttonRef}
 					id={id}
