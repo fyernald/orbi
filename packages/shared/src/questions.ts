@@ -65,6 +65,18 @@ export const question = z.object({
 	correctChoice: z.int(),
 	explanation: z.string().nullable(),
 	status: z.enum(QUESTION_STATUSES),
+	// the set the tutor made it in; null for one the student wrote
+	setId: z.uuid().nullable(),
+	createdAt: z.iso.datetime(),
+});
+
+// the questions one tutor reply made, for the course's Study pane
+export const questionSet = z.object({
+	id: z.uuid(),
+	topicId: z.uuid(),
+	topicName: z.string(),
+	// without the rejected ones
+	questionCount: z.int(),
 	createdAt: z.iso.datetime(),
 });
 
@@ -92,6 +104,7 @@ export const approveTopicQuestionsOutput = z.object({
 });
 
 export type Question = z.infer<typeof question>;
+export type QuestionSet = z.infer<typeof questionSet>;
 export type ReviewTopic = z.infer<typeof reviewTopic>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionInput>;
 

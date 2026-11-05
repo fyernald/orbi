@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { topicsKey } from '@/features/courses/query-keys';
 import { api } from '@/lib/api';
 import { reviewKey } from './hooks';
+import { questionSetsKey } from './set-hooks';
 
 // the questions of a topic live under the topic, like its notes
 export const topicQuestionsKey = (courseId: string, topicId: string) =>
@@ -80,14 +81,19 @@ export function useUpdateQuestion(courseId: string, topicId: string) {
 	});
 }
 
+// the set it came from counts one question less
 export function useDeleteQuestion(courseId: string, topicId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (id: string) =>
 			api.delete(`${questionsPath(courseId, topicId)}/${id}`),
-		onSuccess: (_, id) =>
+		onSuccess: (_, id) => {
 			updateTopicQuestions(queryClient, courseId, topicId, (questions) =>
 				questions.filter((saved) => saved.id !== id)
-			),
+			);
+			void queryClient.invalidateQueries({
+				queryKey: questionSetsKey(courseId),
+			});
+		},
 	});
 }

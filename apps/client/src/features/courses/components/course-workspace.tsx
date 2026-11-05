@@ -1,8 +1,9 @@
 'use client';
 
-import type { Course, TutorAction } from '@orbi/shared';
+import type { Course, QuestionSet, TutorAction } from '@orbi/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
+import { QuestionSetSheet } from '@/features/questions/components/question-set-sheet';
 import { TopicQuestionsSheet } from '@/features/questions/components/topic-questions-sheet';
 import { scopeOf } from '@/features/tutor/chat';
 import type {
@@ -44,6 +45,9 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	);
 	const notesSheet = useTopicSheet();
 	const questionsSheet = useTopicSheet();
+	// kept while the sheet closes, like the topic sheets
+	const [openedSet, setOpenedSet] = useState<QuestionSet>();
+	const [setSheetOpen, setSetSheetOpen] = useState(false);
 	// counts the requests to add a topic from outside the topics pane
 	const [addTopicRequest, setAddTopicRequest] = useState(0);
 	const [preset, setPreset] = useState<ScopedPreset | undefined>(() =>
@@ -180,7 +184,12 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					className={paneClass('tutor')}
 				/>
 				<StudyPane
+					courseId={course.id}
 					onStartTool={startTool}
+					onOpenSet={(set) => {
+						setOpenedSet(set);
+						setSetSheetOpen(true);
+					}}
 					className={paneClass('study', studyOpen)}
 				/>
 			</div>
@@ -195,6 +204,12 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 				topic={topicById(questionsSheet.topicId)}
 				open={questionsSheet.open}
 				onOpenChange={questionsSheet.setOpen}
+			/>
+			<QuestionSetSheet
+				courseId={course.id}
+				set={openedSet}
+				open={setSheetOpen}
+				onOpenChange={setSetSheetOpen}
 			/>
 		</div>
 	);

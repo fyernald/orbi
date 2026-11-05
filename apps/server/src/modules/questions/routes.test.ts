@@ -105,6 +105,7 @@ describe('questions for review', () => {
 						correctChoice: 1,
 						explanation: 'The chromosomes line up in metaphase.',
 						status: 'pending',
+						setId: expect.any(String),
 						createdAt: expect.any(String),
 					},
 				],

@@ -3,9 +3,11 @@ import {
 	approveTopicQuestionsOutput,
 	chatAnswer,
 	chatAnswersQuery,
+	courseParams,
 	question,
 	questionInput,
 	questionParams,
+	questionSet,
 	reportQuestionInput,
 	reviewTopic,
 	sessionAnswer,
@@ -141,6 +143,21 @@ export function createQuestionRoutes({
 					request.body.choice
 				);
 				return reply.status(201).send(saved);
+			}
+		);
+
+		// what the tutor made in the course, for its Study pane
+		api.get(
+			'/courses/:courseId/question-sets',
+			{
+				schema: {
+					params: courseParams,
+					response: { 200: z.array(questionSet) },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				return questions.listSets(userId, request.params.courseId);
 			}
 		);
 

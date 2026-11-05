@@ -2,11 +2,22 @@ import type {
 	ChatAnswer,
 	CourseColor,
 	Question,
+	QuestionSet,
 	QuestionStatus,
 	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
-import { and, asc, count, desc, eq, inArray, ne } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	min,
+	ne,
+} from 'drizzle-orm';
 import type { Db } from '../../db';
 import {
 	answer,
@@ -31,6 +42,9 @@ export interface QuestionRepository {
 		courseId: string,
 		topicId: string
 	): Promise<boolean>;
+	courseExists(userId: string, courseId: string): Promise<boolean>;
+	// the sets the tutor made in the course, newest first
+	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
 	listPending(userId: string): Promise<PendingQuestion[]>;
 	// undefined when the user has no such question
 	setStatus(
@@ -119,6 +133,7 @@ const questionColumns = {
 	correctChoice: question.correctChoice,
 	explanation: question.explanation,
 	status: question.status,
+	setId: question.chatMessageId,
 	createdAt: question.createdAt,
 };
 
@@ -150,6 +165,47 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 					)
 				);
 			return found !== undefined;
+		},
+
+		async courseExists(userId, courseId) {
+			const [found] = await db
+				.select({ id: course.id })
+				.from(course)
+				.where(and(eq(course.userId, userId), eq(course.id, courseId)));
+			return found !== undefined;
+		},
+
+		// a set whose questions were all rejected or deleted is gone
+		async listSets(userId, courseId) {
+			const createdAt = min(question.createdAt);
+			const rows = await db
+				.select({
+					id: question.chatMessageId,
+					topicId: topic.id,
+					topicName: topic.name,
+					questionCount: count(),
+					createdAt,
+				})
+				.from(question)
+				.innerJoin(
+					topic,
+					and(eq(topic.userId, question.userId), eq(topic.id, question.topicId))
+				)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(topic.courseId, courseId),
+						isNotNull(question.chatMessageId),
+						ne(question.status, 'rejected')
+					)
+				)
+				.groupBy(question.chatMessageId, topic.id, topic.name)
+				.orderBy(desc(createdAt));
+			return rows.map(({ id, createdAt, ...set }) => ({
+				...set,
+				id: id!,
+				createdAt: createdAt!.toISOString(),
+			}));
 		},
 
 		// the oldest set first, each in the order the AI wrote it
