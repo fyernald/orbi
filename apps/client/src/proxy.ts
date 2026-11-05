@@ -35,7 +35,7 @@ export const config = {
 		{
 			// every page, but not the API, built files, or link prefetches
 			source:
-				'/((?!api|health|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|webp|ico)$).*)',
+				'/((?!api|health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|webp|ico)$).*)',
 			missing: [
 				{ type: 'header', key: 'next-router-prefetch' },
 				{ type: 'header', key: 'purpose', value: 'prefetch' },
