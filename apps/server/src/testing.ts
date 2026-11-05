@@ -6,18 +6,9 @@ import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
 import type { Mailer } from './mail/mailer';
 import { createMemoryMailer } from './mail/testing';
-import { createCourseRepository } from './modules/courses/repository';
-import { createCourseService } from './modules/courses/service';
-import { createNoteRepository } from './modules/notes/repository';
-import { createNoteService } from './modules/notes/service';
-import { createPdfReader, type PdfReader } from './pdf/reader';
-import { createProfileRepository } from './modules/profile/repository';
-import { createProfileService } from './modules/profile/service';
-import { createQuestionRepository } from './modules/questions/repository';
-import { createQuestionService } from './modules/questions/service';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
-import { createTutorRepository } from './modules/tutor/repository';
-import { createTutorService } from './modules/tutor/service';
+import { createPdfReader, type PdfReader } from './pdf/reader';
+import { createServices } from './services';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
 
@@ -60,24 +51,16 @@ export async function createTestApp(
 		mailer,
 		requireEmailVerification,
 	});
-	const courses = createCourseService({ repo: createCourseRepository(db) });
-	const notes = createNoteService({ repo: createNoteRepository(db), pdf });
-	const profiles = createProfileService({ repo: createProfileRepository(db) });
-	const questions = createQuestionService({
-		repo: createQuestionRepository(db),
-	});
-	const tutor = createTutorService({
-		repo: createTutorRepository(db),
+	const services = createServices({
+		db,
+		pdf,
 		models,
 		limiter,
 		budget,
 		logError: () => {},
 		logUsage,
 	});
-	return buildApp({
-		auth,
-		services: { courses, notes, profiles, questions, tutor },
-	});
+	return buildApp({ auth, services });
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;
