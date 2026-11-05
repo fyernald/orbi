@@ -51,6 +51,8 @@ export function QuestionEditor({
 	};
 
 	return (
+		// the keys typed in the fields reach the form, which saves or cancels
+		// eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
 		<form
 			onSubmit={save}
 			onKeyDown={handleKeyDown}
