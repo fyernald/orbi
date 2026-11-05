@@ -1,6 +1,11 @@
 'use client';
 
-import { MAX_PARALLEL_REPLIES, type Course, type Topic } from '@orbi/shared';
+import {
+	MAX_PARALLEL_REPLIES,
+	type ChatSummary,
+	type Course,
+	type Topic,
+} from '@orbi/shared';
 import {
 	GraduationCap,
 	NotebookPen,
@@ -24,8 +29,10 @@ import type {
 import type { TutorStarter } from '../tutor-starters';
 import { ChatHistoryMenu } from './chat-history-menu';
 import { ChatLoading } from './chat-loading';
+import { DeleteChatDialog } from './delete-chat-dialog';
 import { PaneHeader } from './pane-header';
 import { PaneToggle } from './pane-toggle';
+import { RenameChatDialog } from './rename-chat-dialog';
 import { ScopeChat } from './scope-chat';
 
 // a preset for one chat: a topic id, or the whole-course scope
@@ -105,6 +112,20 @@ export function TutorPane({
 	const chats = useOpenChats(course.id, scopes);
 	const activeChats = chats.chatsOf(activeScope);
 	const savedChats = chats.savedChats(activeScope);
+	const currentChat = savedChats.find(
+		(chat) => chat.id === activeChats?.currentId
+	);
+	// kept while a dialog closes, so its text does not change mid-animation
+	const [editedChat, setEditedChat] = useState<ChatSummary>();
+	const [chatDialog, setChatDialog] = useState<'rename' | 'delete' | null>(
+		null
+	);
+	const openChatDialog = (dialog: 'rename' | 'delete') => {
+		setEditedChat(currentChat);
+		setChatDialog(dialog);
+	};
+	const dialogOpenChange = (dialog: 'rename' | 'delete') => (open: boolean) =>
+		setChatDialog(open ? dialog : null);
 	const atLimit = busyChats.size >= MAX_PARALLEL_REPLIES;
 	const limitReasonFor = (chatId: string) =>
 		atLimit && !busyChats.has(chatId)
@@ -175,6 +196,12 @@ export function TutorPane({
 								currentId={activeChats.currentId}
 								scopeName={selected ? selected.name : 'Whole course'}
 								onOpen={(chatId) => chats.open(activeScope, chatId)}
+								canEditCurrent={currentChat !== undefined}
+								canDeleteCurrent={
+									currentChat !== undefined && !busyChats.has(currentChat.id)
+								}
+								onRename={() => openChatDialog('rename')}
+								onDelete={() => openChatDialog('delete')}
 							/>
 						)}
 						{activeChats && withMessages[activeChats.currentId] && (
@@ -228,6 +255,23 @@ export function TutorPane({
 				))
 			) : (
 				<ChatLoading />
+			)}
+			{editedChat && (
+				<>
+					<RenameChatDialog
+						chat={editedChat}
+						open={chatDialog === 'rename'}
+						onOpenChange={dialogOpenChange('rename')}
+					/>
+					<DeleteChatDialog
+						chat={editedChat}
+						open={chatDialog === 'delete'}
+						onOpenChange={dialogOpenChange('delete')}
+						onDeleted={(chatId) =>
+							chats.close(scopeOf(editedChat.topicId), chatId)
+						}
+					/>
+				</>
 			)}
 		</section>
 	);
