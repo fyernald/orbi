@@ -7,7 +7,7 @@ import type {
 	MessageAttachment,
 	TutorAction,
 } from '@orbi/shared';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
 import {
 	chat,
