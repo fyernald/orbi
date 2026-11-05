@@ -163,6 +163,9 @@ export function withStudentAnswers(
 
 // how many of the newest messages a reply sends to the model
 export const MODEL_HISTORY_MAX = 20;
+// how many a reply loads: a few more, so the student's last message is still there
+// when the replies after it are tried again
+export const HISTORY_LOADED = MODEL_HISTORY_MAX + 10;
 
 // The newest messages, starting on one of the student's. A tool call and its result
 // are one part of the same message, so the cut never splits them.

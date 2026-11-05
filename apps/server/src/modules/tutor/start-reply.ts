@@ -21,6 +21,7 @@ import { chatTitle } from './chat-title';
 import {
 	attachedNoteIds,
 	hasContent,
+	HISTORY_LOADED,
 	messageText,
 	recentMessages,
 	toStoredMessage,
@@ -32,7 +33,11 @@ import {
 } from './messages';
 import { nextMessages } from './next-messages';
 import { ownAttachments } from './own-attachments';
-import { buildInstructions, selectNotes } from './prompt';
+import {
+	buildInstructions,
+	NOTES_CONTEXT_MAX_LENGTH,
+	selectNotes,
+} from './prompt';
 import { replyErrorMessage, timeoutAsError } from './reply-errors';
 import type {
 	ChatRecord,
@@ -101,9 +106,10 @@ export function createReplyStarter({
 		abortSignal: AbortSignal;
 		release: () => void;
 	}): Promise<TutorStream> {
-		const history = chat
-			? (await repo.listMessages(userId, chatId)).map(toUIMessage)
-			: [];
+		const page = chat
+			? await repo.listMessagePage(userId, chatId, { limit: HISTORY_LOADED })
+			: { messages: [], hasEarlier: false };
+		const history = page.messages.map(toUIMessage);
 
 		const startedAt = now();
 		const attachments = await ownAttachments(repo, userId, input);
@@ -112,7 +118,7 @@ export function createReplyStarter({
 			userId,
 			chatId,
 			input,
-			history,
+			{ messages: history, hasEarlier: page.hasEarlier },
 			{
 				topicId: topic?.id ?? null,
 				action: input.action,
@@ -121,16 +127,24 @@ export function createReplyStarter({
 			}
 		);
 
-		const allNotes = topic
-			? await repo.listNotes(userId, topic.id)
-			: await repo.listCourseNotes(userId, course.id);
+		const attachedIds = attachedNoteIds(messages);
+		const loaded = await repo.listNotesForReply(
+			userId,
+			topic ? { topicId: topic.id } : { courseId: course.id },
+			{ maxLength: NOTES_CONTEXT_MAX_LENGTH, attachedIds }
+		);
 		const scopeName = topic?.name ?? course.name;
-		if (rule.needsNotes && allNotes.length === 0) {
+		if (rule.needsNotes && loaded.total === 0) {
 			throw new ValidationError(
 				`Add notes to ${scopeName} first. Orbi makes questions from your notes.`
 			);
 		}
-		const notes = selectNotes(allNotes, undefined, attachedNoteIds(messages));
+		const notes = selectNotes(
+			loaded.notes,
+			NOTES_CONTEXT_MAX_LENGTH,
+			attachedIds,
+			loaded.total
+		);
 
 		const continuing = messages.at(-1)?.role === 'assistant';
 		const responseId = continuing ? messages.at(-1)!.id : randomUUID();
