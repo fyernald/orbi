@@ -8,6 +8,7 @@ import { loadConfig } from './config';
 import { createDb } from './db';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
+import { createBreachedPasswordCheck } from './modules/auth/breached-password';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
@@ -30,6 +31,10 @@ const auth = createAuth({
 	db,
 	mailer,
 	requireEmailVerification: config.env === 'production',
+	isPasswordBreached: createBreachedPasswordCheck({
+		onError: (error) =>
+			app.log.warn({ err: error }, 'breached password check failed'),
+	}),
 	...config.auth,
 });
 

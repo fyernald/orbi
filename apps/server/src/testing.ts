@@ -5,6 +5,7 @@ import { buildApp } from './app';
 import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
 import type { Mailer } from './mail/mailer';
+import type { BreachedPasswordCheck } from './modules/auth/breached-password';
 import { createMemoryMailer } from './mail/testing';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
@@ -34,6 +35,8 @@ type TestAppOptions = {
 	db?: TestDb;
 	// by default the real reader; a slower one lets tests send uploads at the same time
 	pdf?: PdfReader;
+	// by default no password is breached, and tests never call the real service
+	isPasswordBreached?: BreachedPasswordCheck;
 };
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -50,6 +53,7 @@ export async function createTestApp(
 		logUsage,
 		db: givenDb,
 		pdf = createPdfReader(),
+		isPasswordBreached = async () => false,
 	}: TestAppOptions = {}
 ) {
 	const db = givenDb ?? (await createTestDb());
@@ -59,6 +63,7 @@ export async function createTestApp(
 		baseURL: TEST_ORIGIN,
 		mailer,
 		requireEmailVerification,
+		isPasswordBreached,
 	});
 	const courses = createCourseService({ repo: createCourseRepository(db) });
 	const notes = createNoteService({ repo: createNoteRepository(db), pdf });
