@@ -5,6 +5,7 @@ import { RotateCcw, X } from 'lucide-react';
 import {
 	useCallback,
 	useEffect,
+	useEffectEvent,
 	useRef,
 	useState,
 	type ReactNode,
@@ -85,9 +86,13 @@ export function TutorChat({
 		presetVersion.current += 1;
 		setComposerPreset({ ...changes, version: presetVersion.current });
 	};
-	useEffect(() => {
+	const applyPagePreset = useEffectEvent(() => {
 		if (preset) applyPreset(preset);
-	}, [preset?.version]);
+	});
+	const pagePresetVersion = preset?.version;
+	useEffect(() => {
+		applyPagePreset();
+	}, [pagePresetVersion]);
 	const lastStudentMetadata = initialMessages
 		.filter(({ role }) => role === 'user')
 		.at(-1)?.metadata;
