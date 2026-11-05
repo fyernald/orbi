@@ -11,6 +11,7 @@ import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createPdfReader, type PdfReader } from './pdf/reader';
+import type { RateLimits } from './rate-limit';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
 import { createQuestionRepository } from './modules/questions/repository';
@@ -20,6 +21,13 @@ import { createTutorRepository } from './modules/tutor/repository';
 import { createTutorService } from './modules/tutor/service';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
+
+const NO_LIMITS: RateLimits = {
+	default: 1_000_000,
+	pdfUpload: 1_000_000,
+	followUps: 1_000_000,
+	sessionAnswer: 1_000_000,
+};
 
 type TestAppOptions = {
 	requireEmailVerification?: boolean;
@@ -34,6 +42,8 @@ type TestAppOptions = {
 	db?: TestDb;
 	// by default the real reader; a slower one lets tests send uploads at the same time
 	pdf?: PdfReader;
+	// by default high enough that no test reaches them
+	limits?: RateLimits;
 };
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -50,6 +60,7 @@ export async function createTestApp(
 		logUsage,
 		db: givenDb,
 		pdf = createPdfReader(),
+		limits = NO_LIMITS,
 	}: TestAppOptions = {}
 ) {
 	const db = givenDb ?? (await createTestDb());
@@ -77,6 +88,7 @@ export async function createTestApp(
 	return buildApp({
 		auth,
 		services: { courses, notes, profiles, questions, tutor },
+		limits,
 	});
 }
 
