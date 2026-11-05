@@ -29,6 +29,8 @@ Run exactly **one** `server` container. Five things assume there is only one API
 
 To run more than one, move these limits to the database first (Better Auth: `rateLimit.storage: 'database'`) and run the migrations as a separate step.
 
+Each container has a CPU and memory limit in `compose.yml` (the server: 2 CPUs and 1 GB, because it reads PDFs in worker threads; Postgres: 2 CPUs and 768 MB; the client: 1 CPU and 768 MB), so Orbi cannot starve the other projects on the VPS. A container that reaches its memory limit is restarted. Check how close they are with `docker stats --no-stream`, for example after a busy day, and change the limits in `compose.yml` if one stays near its limit.
+
 ## One-time setup
 
 You do this once. After that, deploys happen by themselves.
