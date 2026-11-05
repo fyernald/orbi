@@ -6,11 +6,19 @@ import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
 import type { Mailer } from './mail/mailer';
 import { createMemoryMailer } from './mail/testing';
+import type { RateLimits } from './rate-limit';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
 import { createPdfReader, type PdfReader } from './pdf/reader';
 import { createServices } from './services';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
+
+const NO_LIMITS: RateLimits = {
+	default: 1_000_000,
+	pdfUpload: 1_000_000,
+	followUps: 1_000_000,
+	sessionAnswer: 1_000_000,
+};
 
 type TestAppOptions = {
 	requireEmailVerification?: boolean;
@@ -25,6 +33,8 @@ type TestAppOptions = {
 	db?: TestDb;
 	// by default the real reader; a slower one lets tests send uploads at the same time
 	pdf?: PdfReader;
+	// by default high enough that no test reaches them
+	limits?: RateLimits;
 };
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -41,6 +51,7 @@ export async function createTestApp(
 		logUsage,
 		db: givenDb,
 		pdf = createPdfReader(),
+		limits = NO_LIMITS,
 	}: TestAppOptions = {}
 ) {
 	const db = givenDb ?? (await createTestDb());
@@ -60,7 +71,7 @@ export async function createTestApp(
 		logError: () => {},
 		logUsage,
 	});
-	return buildApp({ auth, services });
+	return buildApp({ auth, services, limits });
 }
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;

@@ -17,6 +17,7 @@
 		"@ai-sdk/anthropic": "^4.0.94",
 		"@ai-sdk/deepseek": "3.0.77",
 		"@ai-sdk/google": "^4.0.109",
+		"@fastify/rate-limit": "^11.2.1",
 		"@orbi/core": "workspace:*",
 		"@orbi/shared": "workspace:*",
 		"ai": "^7.0.159",
