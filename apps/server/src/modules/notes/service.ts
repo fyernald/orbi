@@ -10,6 +10,7 @@ import {
 import { NotFoundError, ValidationError } from '../../errors';
 import { PdfReadError, type PdfReader } from '../../pdf/reader';
 import { pdfNotes } from './pdf-notes';
+import { createUploadQueue, type UploadQueue } from './upload-queue';
 import type { NoteRepository } from './repository';
 import { noteTitle } from './title';
 
@@ -55,14 +56,18 @@ const pdfMessages = {
 		'This PDF has no text Orbi can read. It may be a scan or photos of pages. Paste the text instead.',
 	tooLong: `This PDF has too much text for ${PDF_MAX_NOTES} notes. Split it into smaller files.`,
 	tooManyPages: `This PDF has more than ${PDF_MAX_PAGES} pages. Upload only the chapters you need.`,
+	tooHeavy:
+		'This PDF took too long to read. Upload only the chapters you need.',
 };
 
 export function createNoteService({
 	repo,
 	pdf,
+	queue = createUploadQueue(),
 }: {
 	repo: NoteRepository;
 	pdf: PdfReader;
+	queue?: UploadQueue;
 }): NoteService {
 	async function readPdf(data: Uint8Array) {
 		try {
@@ -102,20 +107,22 @@ export function createNoteService({
 
 		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
 			await requireTopic(userId, courseId, topicId);
-			// a deleted note is not brought back: the parts still there are given back.
-			// Checked here first, so a file sent again is not read again
 			const hash = createHash('sha256').update(data).digest('hex');
-			const saved = await repo.listSourceNotes(userId, topicId, hash);
-			if (saved.length > 0) return { notes: saved, reused: true };
+			return queue.run(userId, async () => {
+				// a deleted note is not brought back: the parts still there are given back.
+				// Checked here first, so a file sent again is not read again
+				const saved = await repo.listSourceNotes(userId, topicId, hash);
+				if (saved.length > 0) return { notes: saved, reused: true };
 
-			const notes = pdfNotes(fileName, await readPdf(data));
-			if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
-			if (notes.length > PDF_MAX_NOTES) {
-				throw new ValidationError(pdfMessages.tooLong);
-			}
-			return repo.insertSourceNotes(userId, topicId, notes, {
-				name: fileName,
-				hash,
+				const notes = pdfNotes(fileName, await readPdf(data));
+				if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
+				if (notes.length > PDF_MAX_NOTES) {
+					throw new ValidationError(pdfMessages.tooLong);
+				}
+				return repo.insertSourceNotes(userId, topicId, notes, {
+					name: fileName,
+					hash,
+				});
 			});
 		},
 

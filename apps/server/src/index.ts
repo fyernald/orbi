@@ -12,7 +12,7 @@ import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
-import { createPdfReader } from './pdf/reader';
+import { createWorkerPdfReader } from './pdf/worker-reader';
 import { createProfileRepository } from './modules/profile/repository';
 import { createProfileService } from './modules/profile/service';
 import { createQuestionRepository } from './modules/questions/repository';
@@ -41,7 +41,7 @@ await migrate(db, {
 const courses = createCourseService({ repo: createCourseRepository(db) });
 const notes = createNoteService({
 	repo: createNoteRepository(db),
-	pdf: createPdfReader(),
+	pdf: createWorkerPdfReader(),
 });
 const profiles = createProfileService({ repo: createProfileRepository(db) });
 const questions = createQuestionService({
