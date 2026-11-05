@@ -13,8 +13,8 @@ x-logging: &logging
     max-file: "3"
 
 # Upper limits, so a runaway PDF read or a memory leak cannot starve the other projects on
-# the VPS. Idle, each service uses 40-150 MB. One CPU each, because Docker refuses a value
-# above the VPS's own CPU count. Check them with `docker stats` (see docs/deployment.md).
+# the VPS (12 CPUs, 47 GB). Idle, each service uses 40-80 MB (docker stats, 5 Nov 2026).
+# Check them again after a busy day (see docs/deployment.md).
 
 services:
   client:
@@ -46,10 +46,10 @@ services:
     restart: unless-stopped
     logging: *logging
     init: true
-    # more memory than the client: reading a 20 MB PDF holds the file and its text
+    # more memory and CPU than the client: it reads up to 2 PDFs at once in worker threads
     deploy:
       resources:
-        limits: { cpus: "1.0", memory: 1g }
+        limits: { cpus: "2.0", memory: 1g }
     env_file: .env
     environment:
       HOST: 0.0.0.0
@@ -73,7 +73,7 @@ services:
     logging: *logging
     deploy:
       resources:
-        limits: { cpus: "1.0", memory: 768m }
+        limits: { cpus: "2.0", memory: 768m }
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
