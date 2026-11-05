@@ -5,6 +5,7 @@ import { buildApp } from './app';
 import { createAuth } from './auth';
 import { createTestDb } from './db/testing';
 import type { Mailer } from './mail/mailer';
+import type { BreachedPasswordCheck } from './modules/auth/breached-password';
 import { createMemoryMailer } from './mail/testing';
 import type { RateLimits } from './rate-limit';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
@@ -33,6 +34,8 @@ type TestAppOptions = {
 	db?: TestDb;
 	// by default the real reader; a slower one lets tests send uploads at the same time
 	pdf?: PdfReader;
+	// by default no password is breached, and tests never call the real service
+	isPasswordBreached?: BreachedPasswordCheck;
 	// by default high enough that no test reaches them
 	limits?: RateLimits;
 };
@@ -51,6 +54,7 @@ export async function createTestApp(
 		logUsage,
 		db: givenDb,
 		pdf = createPdfReader(),
+		isPasswordBreached = async () => false,
 		limits = NO_LIMITS,
 	}: TestAppOptions = {}
 ) {
@@ -61,6 +65,7 @@ export async function createTestApp(
 		baseURL: TEST_ORIGIN,
 		mailer,
 		requireEmailVerification,
+		isPasswordBreached,
 	});
 	const services = createServices({
 		db,
