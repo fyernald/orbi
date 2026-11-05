@@ -9,7 +9,7 @@ import { createDb } from './db';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
 import { createBreachedPasswordCheck } from './modules/auth/breached-password';
-import { createPdfReader } from './pdf/reader';
+import { createWorkerPdfReader } from './pdf/worker-reader';
 import { createServices } from './services';
 
 // the only file that reads the environment and connects the parts
@@ -36,7 +36,7 @@ await migrate(db, {
 
 const services = createServices({
 	db,
-	pdf: createPdfReader(),
+	pdf: createWorkerPdfReader(),
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
 	}),
