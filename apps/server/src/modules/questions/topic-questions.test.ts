@@ -286,3 +286,89 @@ describe('deleting a question', () => {
 		expect(response.json().error.message).toBe('Question not found.');
 	});
 });
+
+describe("a course's question sets", () => {
+	const makeSet = async (topicId: string, texts: string[]) => {
+		const setId = randomUUID();
+		const ids = await tutor.insertQuestions(
+			await userIdOf(ada),
+			topicId,
+			texts.map((text) => ({
+				...mitosis,
+				text,
+				choices: ['Prophase', 'Metaphase', 'Anaphase', 'Telophase'],
+				aiProvider: 'google',
+				aiModel: 'gemini-test',
+				chatMessageId: setId,
+			}))
+		);
+		return { setId, ids };
+	};
+
+	it('lists each set the tutor made, newest first, without the rejected questions', async () => {
+		const { courseId, topicId, questions } = await createTopic(ada);
+		const older = await makeSet(topicId, ['One', 'Two', 'Three']);
+		const newer = await makeSet(topicId, ['Four', 'Five']);
+		await send(ada, 'PATCH', `/api/questions/${older.ids[0]}`, {
+			status: 'rejected',
+		});
+		// one the student writes is not part of a set
+		await send(ada, 'POST', questions, mitosis);
+
+		const response = await send(
+			ada,
+			'GET',
+			`/api/courses/${courseId}/question-sets`
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual([
+			expect.objectContaining({
+				id: newer.setId,
+				topicId,
+				topicName: 'Cell division',
+				questionCount: 2,
+			}),
+			expect.objectContaining({ id: older.setId, questionCount: 2 }),
+		]);
+	});
+
+	it('says which set each question of the topic belongs to', async () => {
+		const { topicId, questions } = await createTopic(ada);
+		const { setId } = await makeSet(topicId, ['From the tutor']);
+		await send(ada, 'POST', questions, mitosis);
+
+		const listed = (await send(ada, 'GET', questions)).json();
+
+		expect(listed.map(({ setId }: { setId: string | null }) => setId)).toEqual([
+			null,
+			setId,
+		]);
+	});
+
+	it('leaves out a set whose questions were all rejected', async () => {
+		const { courseId, topicId } = await createTopic(ada);
+		const { ids } = await makeSet(topicId, ['Only one']);
+		await send(ada, 'PATCH', `/api/questions/${ids[0]}`, {
+			status: 'rejected',
+		});
+
+		const listed = (
+			await send(ada, 'GET', `/api/courses/${courseId}/question-sets`)
+		).json();
+
+		expect(listed).toEqual([]);
+	});
+
+	it("cannot list another user's course", async () => {
+		const { courseId } = await createTopic(grace);
+
+		const response = await send(
+			ada,
+			'GET',
+			`/api/courses/${courseId}/question-sets`
+		);
+
+		expect(response.statusCode).toBe(404);
+	});
+});

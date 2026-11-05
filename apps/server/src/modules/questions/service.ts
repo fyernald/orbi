@@ -2,6 +2,7 @@ import type {
 	ChatAnswer,
 	Question,
 	QuestionInput,
+	QuestionSet,
 	QuestionStatus,
 	ReportQuestionInput,
 	ReviewTopic,
@@ -51,6 +52,7 @@ export interface QuestionService {
 		courseId: string,
 		topicId: string
 	): Promise<Question[]>;
+	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
 	// a question the student writes is approved at once, so it is studied right away
 	addQuestion(
 		userId: string,
@@ -217,6 +219,13 @@ export function createQuestionService({
 		async listForTopic(userId, courseId, topicId) {
 			await requireTopic(userId, courseId, topicId);
 			return repo.listForTopic(userId, topicId);
+		},
+
+		async listSets(userId, courseId) {
+			if (!(await repo.courseExists(userId, courseId))) {
+				throw new NotFoundError('Course not found.');
+			}
+			return repo.listSets(userId, courseId);
 		},
 
 		async addQuestion(userId, courseId, topicId, input) {

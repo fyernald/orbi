@@ -13,6 +13,7 @@ import {
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { questionSetsKey } from '@/features/questions/set-hooks';
 import { api } from '@/lib/api';
 import { allTopicsKey, courseKey, coursesKey, topicsKey } from './query-keys';
 
@@ -71,7 +72,8 @@ export function useTopics(courseId: string) {
 }
 
 // after a topic changes, the course list and the course load again, so their note
-// count and last activity come from the server; the topic count moves at once meanwhile
+// count and last activity come from the server; the topic count moves at once meanwhile.
+// The question sets show the topic's name and go with a deleted topic
 function useTopicsChanged(courseId: string) {
 	const queryClient = useQueryClient();
 	return (topicChange: number) => {
@@ -92,6 +94,7 @@ function useTopicsChanged(courseId: string) {
 			exact: true,
 		});
 		void queryClient.invalidateQueries({ queryKey: allTopicsKey });
+		void queryClient.invalidateQueries({ queryKey: questionSetsKey(courseId) });
 	};
 }
 

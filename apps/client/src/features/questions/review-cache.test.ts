@@ -17,6 +17,7 @@ const question = (id: string, topicId: string, status: Question['status']) =>
 		correctChoice: 0,
 		explanation: null,
 		status,
+		setId: null,
 		createdAt: '2026-11-01T10:00:00.000Z',
 	}) satisfies Question;
 

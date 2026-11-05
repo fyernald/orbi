@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { api, ApiError } from '@/lib/api';
 import { approveTopic, pendingCount, replaceQuestion } from './review-cache';
+import { allQuestionSetsKey } from './set-hooks';
 
 export const reviewKey = ['questions', 'review'] as const;
 
@@ -33,7 +34,7 @@ export function usePendingQuestionCount() {
 	return review.data && pendingCount(review.data);
 }
 
-// approve, reject, or pending again to undo
+// approve, reject, or pending again to undo; a set leaves out its rejected questions
 export function useSetQuestionStatus() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -44,6 +45,7 @@ export function useSetQuestionStatus() {
 				reviewKey,
 				(groups) => groups && replaceQuestion(groups, updated)
 			);
+			void queryClient.invalidateQueries({ queryKey: allQuestionSetsKey });
 		},
 	});
 }
@@ -77,6 +79,7 @@ export function useReportQuestion() {
 				reviewKey,
 				(groups) => groups && replaceQuestion(groups, rejected)
 			);
+			void queryClient.invalidateQueries({ queryKey: allQuestionSetsKey });
 		},
 	});
 }
