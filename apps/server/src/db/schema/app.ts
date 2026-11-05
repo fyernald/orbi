@@ -227,6 +227,8 @@ export const chatMessage = pgTable(
 		// the catalog id, for assistant messages
 		modelId: varchar('model_id', { length: 100 }),
 		notesUsed: integer('notes_used'),
+		notesTotal: integer('notes_total'),
+		notesCut: boolean('notes_cut'),
 		// how long each thinking part took, for assistant messages
 		thinkingMs: integer('thinking_ms').array(),
 		// the follow-up questions shown under an explanation, so a visit does not ask again

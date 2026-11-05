@@ -73,6 +73,8 @@ export type StoredMessage = {
 	action: TutorAction | null;
 	modelId: string | null;
 	notesUsed: number | null;
+	notesTotal: number | null;
+	notesCut: boolean | null;
 	thinkingMs: number[] | null;
 	followUps: string[] | null;
 	attachments: MessageAttachment[] | null;
@@ -174,6 +176,8 @@ const messageColumns = {
 	action: chatMessage.action,
 	modelId: chatMessage.modelId,
 	notesUsed: chatMessage.notesUsed,
+	notesTotal: chatMessage.notesTotal,
+	notesCut: chatMessage.notesCut,
 	thinkingMs: chatMessage.thinkingMs,
 	followUps: chatMessage.followUps,
 	attachments: chatMessage.attachments,

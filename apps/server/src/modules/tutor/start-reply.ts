@@ -256,6 +256,8 @@ export function createReplyStarter({
 			action: input.action,
 			modelId: resolved.entry.id,
 			notesUsed: notes.notes.length,
+			notesTotal: notes.total,
+			notesCut: notes.cut,
 			createdAt: continuing
 				? (messages.at(-1)!.metadata?.createdAt ?? replyAt)
 				: replyAt,

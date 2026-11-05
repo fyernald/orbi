@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { APICallError } from 'ai';
+import { NOTE_CONTENT_MAX_LENGTH } from '@orbi/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
@@ -158,6 +159,42 @@ describe('tutor chat', () => {
 			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
 		).json();
 		expect(chats.map((chat: { id: string }) => chat.id)).toEqual([chatId]);
+	});
+
+	it('saves how many of the notes the reply read when some did not fit', async () => {
+		const context = await createTopic(ada, 'An old short note.');
+		const notesUrl = `/api/courses/${context.courseId}/topics/${context.topicId}/notes`;
+		for (const title of ['Long 1', 'Long 2']) {
+			await send(ada, 'POST', notesUrl, {
+				title,
+				content: 'x'.repeat(NOTE_CONTENT_MAX_LENGTH),
+			});
+		}
+		const chatId = randomUUID();
+		ai.script({ text: 'Here is what the notes say.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Sum it up.') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 2,
+			notesTotal: 3,
+		});
+	});
+
+	it('saves that every note was read when they all fit', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Anaphase?') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 1,
+			notesTotal: 1,
+			notesCut: false,
+		});
 	});
 
 	it("streams the model's thinking with Think on and saves how long it took", async () => {
