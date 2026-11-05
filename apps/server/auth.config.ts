@@ -9,4 +9,6 @@ export const auth = createAuth({
 	secret: 'only-used-to-generate-the-schema-000000',
 	baseURL: 'http://localhost:3000',
 	mailer: createMemoryMailer(),
+	requireEmailVerification: false,
+	isPasswordBreached: async () => false,
 });

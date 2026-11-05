@@ -16,13 +16,21 @@ import type { TutorRepository } from './repository';
 
 // the messages the model sees, and the student's new message to save first
 export async function nextMessages(
-	repo: Pick<TutorRepository, 'deleteMessages' | 'saveMessage'>,
+	repo: Pick<
+		TutorRepository,
+		'deleteMessages' | 'saveMessage' | 'messageExists'
+	>,
 	userId: string,
 	chatId: string,
 	input: SendChatMessageInput,
-	history: TutorUIMessage[],
+	// the newest messages of the chat; hasEarlier when there are older ones
+	{
+		messages: loaded,
+		hasEarlier,
+	}: { messages: TutorUIMessage[]; hasEarlier: boolean },
 	metadata: TutorMessageMetadata
 ): Promise<{ messages: TutorUIMessage[]; studentMessage?: TutorUIMessage }> {
+	let history = loaded;
 	if (input.trigger === 'regenerate-message') {
 		const lastStudent = history.map(({ role }) => role).lastIndexOf('user');
 		if (lastStudent === -1) {
@@ -58,6 +66,9 @@ export async function nextMessages(
 		const dropped = history.slice(sentBefore + 1).map(({ id }) => id);
 		await repo.deleteMessages(userId, chatId, dropped);
 		return { messages: history.slice(0, sentBefore + 1) };
+	}
+	if (hasEarlier && (await repo.messageExists(userId, chatId, incoming.id))) {
+		throw new ConflictError('This message was already sent.');
 	}
 	const studentMessage = studentMessageFrom(incoming, metadata);
 	const text = messageText(studentMessage);

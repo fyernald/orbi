@@ -21,6 +21,7 @@ export function ReasoningText({
 		<div
 			ref={scrollRef}
 			// focusable, so the arrow keys scroll long thinking
+			// eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
 			tabIndex={0}
 			className="mt-2 max-h-72 overflow-y-auto rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
 		>
