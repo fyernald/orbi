@@ -13,11 +13,13 @@
 		"typecheck": "pnpm -r typecheck",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
 	},
 	"devDependencies": {
 		"@types/node": "^22.20.5",
+		"@vitest/coverage-v8": "5.0.5",
 		"prettier": "^3.9.10",
 		"typescript": "~6.0.3",
 		"vitest": "^5.0.5"

@@ -57,7 +57,7 @@ Create a branch from `main` for every task. Name it `type/issue-number-short-nam
 | Where                       | When                  | What                                                                                     |
 | --------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
 | Your computer (`.githooks`) | When you commit       | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB |
-| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests, and build                                                  |
+| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests (the server needs 90% line coverage), and build             |
 | GitHub (Repo checks)        | On every pull request | The same file checks, the PR title, and the issue link on `feat` and `fix` pull requests |
 | GitHub (secret scanning)    | When you push         | Blocks pushes that contain API keys or tokens (turned on in repository settings)         |
 
