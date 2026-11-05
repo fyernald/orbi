@@ -8,17 +8,8 @@ import { loadConfig } from './config';
 import { createDb } from './db';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
-import { createCourseRepository } from './modules/courses/repository';
-import { createCourseService } from './modules/courses/service';
-import { createNoteRepository } from './modules/notes/repository';
-import { createNoteService } from './modules/notes/service';
 import { createPdfReader } from './pdf/reader';
-import { createProfileRepository } from './modules/profile/repository';
-import { createProfileService } from './modules/profile/service';
-import { createQuestionRepository } from './modules/questions/repository';
-import { createQuestionService } from './modules/questions/service';
-import { createTutorRepository } from './modules/tutor/repository';
-import { createTutorService } from './modules/tutor/service';
+import { createServices } from './services';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
@@ -38,17 +29,9 @@ await migrate(db, {
 	migrationsFolder: fileURLToPath(new URL('../drizzle', import.meta.url)),
 });
 
-const courses = createCourseService({ repo: createCourseRepository(db) });
-const notes = createNoteService({
-	repo: createNoteRepository(db),
+const services = createServices({
+	db,
 	pdf: createPdfReader(),
-});
-const profiles = createProfileService({ repo: createProfileRepository(db) });
-const questions = createQuestionService({
-	repo: createQuestionRepository(db),
-});
-const tutor = createTutorService({
-	repo: createTutorRepository(db),
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
 	}),
@@ -57,10 +40,7 @@ const tutor = createTutorService({
 	logUsage: (line) => app.log.info(line, 'ai usage'),
 });
 
-const app: ReturnType<typeof buildApp> = buildApp({
-	auth,
-	services: { courses, notes, profiles, questions, tutor },
-});
+const app: ReturnType<typeof buildApp> = buildApp({ auth, services });
 app.addHook('onClose', () => db.$client.end());
 
 // a deploy stops the container with SIGTERM: finish the open requests first
