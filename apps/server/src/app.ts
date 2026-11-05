@@ -10,6 +10,7 @@ import { loggerOptions } from './log';
 import { createAuthRoutes } from './modules/auth/routes';
 import { createRequireUser } from './modules/auth/session';
 import { createCourseRoutes } from './modules/courses/routes';
+import { createCspReportRoutes } from './modules/csp-report/routes';
 import type { CourseService } from './modules/courses/service';
 import { createNoteRoutes } from './modules/notes/routes';
 import type { NoteService } from './modules/notes/service';
@@ -63,6 +64,7 @@ export function buildApp({ auth, services, limits = RATE_LIMITS }: AppDeps) {
 				app: APP_NAME,
 			}));
 			api.register(createAuthRoutes({ auth }));
+			api.register(createCspReportRoutes());
 			api.register(
 				createCourseRoutes({ courses: services.courses, requireUser })
 			);
