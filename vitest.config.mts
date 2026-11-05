@@ -16,7 +16,8 @@ export default defineConfig({
 		// pnpm test:coverage; CI fails when the server falls below the floor
 		coverage: {
 			provider: 'v8',
-			include: ['apps/*/src/**/*.{ts,tsx}', 'packages/*/src/**/*.ts'],
+			// components (.tsx) get their tests from Playwright (Sprint 4)
+			include: ['apps/*/src/**/*.ts', 'packages/*/src/**/*.ts'],
 			exclude: ['**/*.test.ts', '**/testing.ts', 'apps/server/src/index.ts'],
 			reporter: ['text-summary', 'json-summary', 'html'],
 			thresholds: {
