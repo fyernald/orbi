@@ -147,7 +147,7 @@ Every table also has `created_at` and `updated_at`.
 - **`interests` is a list** (`text[]`), not one text field, so the app can show and filter them one by one.
 - **`timezone` is text** with an IANA name like `Europe/Istanbul`, not a `time` value.
 - **`content_hash` is left out for now.** It belongs to the AI question cache and is added with that task, together with `review_items` and its `(user_id, due_at)` index in Sprint 3.
-- **Indexes:** `course(user_id, id)`, `topic(course_id, position)`, `topic(user_id, id)`, `note(topic_id)`, and `note(user_id)`. The two `(user_id, id)` indexes also back the ownership foreign keys. Postgres does not index the other side of a foreign key by itself, so every foreign key that deletes or unlinks rows has an index on its columns, for example `chat(user_id, topic_id)`, `chat_message(topic_id)`, and `answer(user_id, question_id, answered_at)`. Without one, deleting a topic or a question reads the whole table.
+- **Indexes:** `course(user_id, id)`, `topic(course_id, position)`, `topic(user_id, id)`, `note(topic_id, created_at desc)`, `note(user_id)`, and `question(user_id, status, created_at)`. The two `(user_id, id)` indexes also back the ownership foreign keys. A list's index has the columns it filters and sorts on, so the notes list and the review inbox read only the rows they show. Postgres does not index the other side of a foreign key by itself, so every foreign key that deletes or unlinks rows has an index on its columns, for example `chat(user_id, topic_id)`, `chat_message(topic_id)`, and `answer(user_id, question_id, answered_at)`. Without one, deleting a topic or a question reads the whole table.
 
 ## Changing the schema
 

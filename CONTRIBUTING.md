@@ -16,6 +16,8 @@ git config core.hooksPath .githooks
 
 Prettier formats the code (settings in `.prettierrc`). Run `pnpm format` before you push, or install the recommended VS Code extensions to format on save. CI fails if a file is not formatted; `pnpm format:check` runs the same check locally.
 
+ESLint checks the rest (settings in `eslint.config.mjs`): the React hook rules, accessibility in JSX, and which package may import which (0001 rule 1). Run `pnpm lint` before you push; CI runs it too. The recommended ESLint extension shows the problems in VS Code as you type. When a rule is wrong for one line, turn it off for that line only and say why in a comment above it.
+
 ## Commit messages
 
 Format: `type: short description`
@@ -57,7 +59,7 @@ Create a branch from `main` for every task. Name it `type/issue-number-short-nam
 | Where                       | When                  | What                                                                                     |
 | --------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
 | Your computer (`.githooks`) | When you commit       | Commit message format, no secret files (`.env`), no conflict markers, no files over 5 MB |
-| GitHub (CI)                 | On every pull request | Formatting, typecheck, tests, and build                                                  |
+| GitHub (CI)                 | On every pull request | Formatting, lint, typecheck, tests, and build                                            |
 | GitHub (Repo checks)        | On every pull request | The same file checks, the PR title, and the issue link on `feat` and `fix` pull requests |
 | GitHub (secret scanning)    | When you push         | Blocks pushes that contain API keys or tokens (turned on in repository settings)         |
 

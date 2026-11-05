@@ -16,17 +16,20 @@ import {
 } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { routeLimit, type RateLimits } from '../../rate-limit';
 import type { RequireUser } from '../auth/session';
 import type { QuestionService } from './service';
 
 type QuestionRoutesDeps = {
 	questions: QuestionService;
 	requireUser: RequireUser;
+	limits: RateLimits;
 };
 
 export function createQuestionRoutes({
 	questions,
 	requireUser,
+	limits,
 }: QuestionRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
 		// every question that waits for the student's review, by topic
@@ -128,6 +131,7 @@ export function createQuestionRoutes({
 					body: answerQuestionInput,
 					response: { 201: sessionAnswer },
 				},
+				config: routeLimit(limits.sessionAnswer),
 			},
 			async (request, reply) => {
 				const userId = await requireUser(request);

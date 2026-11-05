@@ -7,7 +7,7 @@ import {
 	type TutorAction,
 	type TutorRequestInput,
 } from '@orbi/shared';
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { composerActions } from '../actions';
 import { messageAttachments } from '../attachments';
@@ -106,7 +106,7 @@ export function NoteComposer({
 		}
 	}, [defaultModelId, form]);
 
-	useEffect(() => {
+	const applyPreset = useEffectEvent(() => {
 		if (!preset) return;
 		if (preset.action) form.setValue('action', preset.action);
 		if (preset.topicId) form.setValue('topicId', preset.topicId);
@@ -116,8 +116,12 @@ export function NoteComposer({
 		}
 		if (preset.message !== undefined) form.setValue('message', preset.message);
 		form.setFocus('message');
-		// only a new version applies the preset, not every render
-	}, [preset?.version]);
+	});
+	// only a new version applies the preset, not every render
+	const presetVersion = preset?.version;
+	useEffect(() => {
+		applyPreset();
+	}, [presetVersion]);
 
 	const action = composerActions[values.action];
 	const noModels = models.isSuccess && models.data.models.length === 0;
