@@ -65,6 +65,7 @@ A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 - `question` keeps each generated question with its status (pending, approved, rejected), its source (AI or manual), the provider and model, and the chat message that made it.
 - A chat opens on its newest 30 messages (`GET /api/chats/:chatId`), and older ones load in pages of 30 as the student scrolls up (`GET /api/chats/:chatId/messages?before=<message id>`). A skeleton holds their place while they load.
 - Messages loaded from the database are checked with `validateUIMessages` before they go back to the model.
+- A reply loads only what it can send: the chat's newest 30 messages (the model gets at most 20), and the notes that fit in its budget of 100,000 characters (4,000 for follow-up questions). The database stops at the budget, so a long chat or a topic with many PDFs costs the same as a short one. Notes of PDFs attached in those messages come first.
 
 ## Not used
 

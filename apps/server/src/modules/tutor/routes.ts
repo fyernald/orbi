@@ -14,17 +14,20 @@ import {
 import { createUIMessageStreamResponse } from 'ai';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { routeLimit, type RateLimits } from '../../rate-limit';
 import type { RequireUser } from '../auth/session';
 import type { TutorService } from './service';
 
 type TutorRoutesDeps = {
 	tutor: TutorService;
 	requireUser: RequireUser;
+	limits: RateLimits;
 };
 
 export function createTutorRoutes({
 	tutor,
 	requireUser,
+	limits,
 }: TutorRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
 		api.get(
@@ -81,6 +84,7 @@ export function createTutorRoutes({
 					body: followUpsInput,
 					response: { 200: followUps },
 				},
+				config: routeLimit(limits.followUps),
 			},
 			async (request) =>
 				tutor.suggestFollowUps(

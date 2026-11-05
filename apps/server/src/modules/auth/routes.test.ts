@@ -8,8 +8,13 @@ type Response = Awaited<ReturnType<App['inject']>>;
 const mailer = createMemoryMailer();
 let app: App;
 
+// the one password this test app treats as found in a data breach
+const breachedPassword = 'password1234';
+
 beforeAll(async () => {
-	app = await createTestApp(mailer);
+	app = await createTestApp(mailer, {
+		isPasswordBreached: async (tried) => tried === breachedPassword,
+	});
 });
 
 afterAll(async () => {
@@ -109,6 +114,22 @@ describe('sign up', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.json().code).toBe('VALIDATION_ERROR');
+	});
+
+	it('refuses a password from a data breach', async () => {
+		const response = await post('/sign-up/email', {
+			name: 'Ada',
+			email: 'breached@test.dev',
+			password: breachedPassword,
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toMatchObject({
+			code: 'VALIDATION_ERROR',
+			message:
+				'This password has appeared in a data breach. Choose another one.',
+		});
+		expect(emailsTo('breached@test.dev')).toHaveLength(0);
 	});
 
 	it('saves the input as the shared schema parsed it', async () => {
@@ -236,6 +257,20 @@ describe('password reset', () => {
 		expect((await getSession(oldCookie)).json()).toBeNull();
 		expect((await signIn('reset@test.dev')).statusCode).toBe(401);
 		expect((await signIn('reset@test.dev', newPassword)).statusCode).toBe(200);
+	});
+
+	it('refuses a new password from a data breach', async () => {
+		await signUpConfirmed('reset-breached@test.dev');
+		const token = await resetToken('reset-breached@test.dev');
+
+		const reset = await post('/reset-password', {
+			newPassword: breachedPassword,
+			token,
+		});
+
+		expect(reset.statusCode).toBe(400);
+		expect(reset.json().code).toBe('VALIDATION_ERROR');
+		expect((await signIn('reset-breached@test.dev')).statusCode).toBe(200);
 	});
 
 	it('does not accept the same link twice', async () => {

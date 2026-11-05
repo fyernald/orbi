@@ -1,6 +1,7 @@
 version: 2
 updates:
-  # Keeps the actions used in .github/workflows up to date.
+  # Keeps the actions used in .github/workflows up to date. Each action is pinned to a
+  # commit, with its version in a comment; Dependabot updates both.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
