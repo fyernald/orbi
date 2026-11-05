@@ -13,6 +13,7 @@ import type { ZodType } from 'zod';
 import type { Db } from './db';
 import * as schema from './db/schema';
 import type { Mailer } from './mail/mailer';
+import type { BreachedPasswordCheck } from './modules/auth/breached-password';
 import {
 	existingAccountEmail,
 	resetPasswordEmail,
@@ -26,6 +27,7 @@ export type AuthOptions = {
 	mailer: Mailer;
 	// off only for local runs, so you can sign up without opening an email
 	requireEmailVerification: boolean;
+	isPasswordBreached: BreachedPasswordCheck;
 };
 
 // the links in auth emails stop working after one hour
@@ -40,18 +42,34 @@ const inputSchemas: Record<string, ZodType> = {
 	'/reset-password': resetPasswordInput,
 };
 
-const validateInput = createAuthMiddleware(async (ctx) => {
-	const result = inputSchemas[ctx.path]?.safeParse(ctx.body);
-	if (!result) return;
-	if (!result.success) {
-		throw new APIError('BAD_REQUEST', {
-			code: 'VALIDATION_ERROR',
-			message: result.error.issues[0]?.message ?? 'Invalid input.',
-		});
-	}
-	// Better Auth gets the parsed values, so for example the name is saved trimmed
-	return { context: { body: result.data } };
-});
+// the routes that set a new password, and its field
+const newPasswordFields: Record<string, string> = {
+	'/sign-up/email': 'password',
+	'/reset-password': 'newPassword',
+};
+
+const validationError = (message: string) =>
+	new APIError('BAD_REQUEST', { code: 'VALIDATION_ERROR', message });
+
+const createInputCheck = (isPasswordBreached: BreachedPasswordCheck) =>
+	createAuthMiddleware(async (ctx) => {
+		const result = inputSchemas[ctx.path]?.safeParse(ctx.body);
+		if (!result) return;
+		if (!result.success) {
+			throw validationError(
+				result.error.issues[0]?.message ?? 'Invalid input.'
+			);
+		}
+		const field = newPasswordFields[ctx.path];
+		const password = field && (result.data as Record<string, unknown>)[field];
+		if (typeof password === 'string' && (await isPasswordBreached(password))) {
+			throw validationError(
+				'This password has appeared in a data breach. Choose another one.'
+			);
+		}
+		// Better Auth gets the parsed values, so for example the name is saved trimmed
+		return { context: { body: result.data } };
+	});
 
 // After changing this config, regenerate the login tables (see docs/database.md).
 export function createAuth({
@@ -60,6 +78,7 @@ export function createAuth({
 	baseURL,
 	mailer,
 	requireEmailVerification,
+	isPasswordBreached,
 }: AuthOptions) {
 	return betterAuth({
 		secret,
@@ -92,7 +111,7 @@ export function createAuth({
 			// send emails after answering, so the answer time never shows if an account exists
 			backgroundTasks: { handler: (promise) => void promise },
 		},
-		hooks: { before: validateInput },
+		hooks: { before: createInputCheck(isPasswordBreached) },
 	});
 }
 
