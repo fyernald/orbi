@@ -19,15 +19,18 @@ The VPS also hosts other projects, so Orbi shares the existing nginx web server:
 | `server`   | The Fastify API, on `127.0.0.1:3101`                                                                        |
 | `postgres` | The database. It is not reachable from outside the containers                                               |
 
-Run exactly **one** `server` container. Five things assume there is only one API process:
+Run exactly **one** `server` container. Six things assume there is only one API process:
 
 - the limit of 3 tutor replies at once per student is counted in memory ([decision 0003](decisions/03-tutor-chat.md)),
 - each student's daily AI token budget is counted in memory (same decision),
 - PDF uploads wait in a queue in memory: one read at a time per student and two on the whole server, each in its own worker thread (`src/pdf/worker-reader.ts`), stopped after 30 seconds or 256 MB,
+- the API's request rate limit is counted in memory (`src/rate-limit.ts`): 200 requests a minute per session, or per address without one, and lower for PDF uploads (10), follow-up questions (20), and study answers (60),
 - Better Auth's login rate limit is counted in memory,
 - the server applies new migrations when it starts, and two starting at once would race.
 
 To run more than one, move these limits to the database first (Better Auth: `rateLimit.storage: 'database'`) and run the migrations as a separate step.
+
+Each container has a CPU and memory limit in `compose.yml` (the server: 2 CPUs and 1 GB, because it reads PDFs in worker threads; Postgres: 2 CPUs and 768 MB; the client: 1 CPU and 768 MB), so Orbi cannot starve the other projects on the VPS. A container that reaches its memory limit is restarted. Check how close they are with `docker stats --no-stream`, for example after a busy day, and change the limits in `compose.yml` if one stays near its limit.
 
 ## One-time setup
 

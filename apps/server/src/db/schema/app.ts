@@ -154,7 +154,8 @@ export const note = pgTable(
 			columns: [t.userId, t.topicId],
 			foreignColumns: [topic.userId, topic.id],
 		}).onDelete('cascade'),
-		index('note_topic_id_idx').on(t.topicId),
+		// the notes list: a topic's notes, newest first
+		index('note_topic_created_at_idx').on(t.topicId, t.createdAt.desc()),
 		index('note_user_id_idx').on(t.userId),
 		index('note_source_hash_idx').on(t.topicId, t.sourceHash),
 		// at least one character that is not a space or a line break
@@ -277,7 +278,8 @@ export const question = pgTable(
 		}).onDelete('cascade'),
 		unique('question_user_id_id_key').on(t.userId, t.id),
 		index('question_topic_id_idx').on(t.topicId, t.status),
-		index('question_user_id_idx').on(t.userId),
+		// the review inbox: a student's pending questions, oldest first
+		index('question_user_status_idx').on(t.userId, t.status, t.createdAt),
 		check('question_text_not_empty', sql`${t.text} ~ '\\S'`),
 		check(
 			'question_correct_choice_in_range',
