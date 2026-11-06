@@ -37,7 +37,7 @@ beforeEach(() => {
 
 const send = (
 	cookie: string,
-	method: 'GET' | 'POST',
+	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	url: string,
 	payload?: object
 ) => app.inject({ method, url, headers: { cookie }, payload });
@@ -1460,5 +1460,101 @@ describe('attached PDFs', () => {
 		const prompt = JSON.stringify(ai.calls[0]!.prompt);
 		expect(prompt).toContain('attached \\"Lecture 3.pdf\\"');
 		expect(prompt).toContain('Solve 2x + 4 = 10');
+	});
+});
+
+describe('renaming and deleting a chat', () => {
+	// a topic with one saved chat
+	async function savedChat(cookie: string) {
+		const context = await createTopic(cookie, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+		await ask(cookie, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+		return { ...context, chatId };
+	}
+
+	it('renames a chat without moving it in the list', async () => {
+		const { courseId, chatId } = await savedChat(ada);
+		const before = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '  Anaphase basics  ',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			id: chatId,
+			title: 'Anaphase basics',
+			updatedAt: before.updatedAt,
+		});
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${courseId}/chats`)
+		).json();
+		expect(chats[0].title).toBe('Anaphase basics');
+	});
+
+	it('refuses an empty name', async () => {
+		const { chatId } = await savedChat(ada);
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '   ',
+		});
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('deletes a chat with its messages, and keeps the questions it made', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(
+			{ tool: 'createQuestions', input: { questions: fiveQuestions } },
+			{ text: 'Here are 5 questions.' }
+		);
+		await ask(ada, chatId, context, {
+			action: 'questions',
+			message: userMessage('Make questions from my notes'),
+		});
+
+		const response = await send(ada, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(response.statusCode).toBe(204);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
+		);
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
+		).json();
+		expect(chats).toEqual([]);
+		const questions = (
+			await send(
+				ada,
+				'GET',
+				`/api/courses/${context.courseId}/topics/${context.topicId}/questions`
+			)
+		).json();
+		expect(questions).toHaveLength(5);
+	});
+
+	it("answers 404 for another user's chat, and for one already deleted", async () => {
+		const { chatId } = await savedChat(ada);
+
+		const rename = await send(grace, 'PATCH', `/api/chats/${chatId}`, {
+			title: 'Mine now',
+		});
+		const remove = await send(grace, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(rename.statusCode).toBe(404);
+		expect(rename.json().error.message).toBe('Chat not found.');
+		expect(remove.statusCode).toBe(404);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			200
+		);
+
+		await send(ada, 'DELETE', `/api/chats/${chatId}`);
+		expect((await send(ada, 'DELETE', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
+		);
 	});
 });

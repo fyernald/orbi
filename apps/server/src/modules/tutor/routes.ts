@@ -9,6 +9,7 @@ import {
 	followUpParams,
 	followUps,
 	followUpsInput,
+	renameChatInput,
 	sendChatMessageInput,
 } from '@orbi/shared';
 import { createUIMessageStreamResponse } from 'ai';
@@ -56,6 +57,35 @@ export function createTutorRoutes({
 			{ schema: { params: chatParams, response: { 200: chatThread } } },
 			async (request) =>
 				tutor.getChat(await requireUser(request), request.params.chatId)
+		);
+
+		api.patch(
+			'/chats/:chatId',
+			{
+				schema: {
+					params: chatParams,
+					body: renameChatInput,
+					response: { 200: chatSummary },
+				},
+			},
+			async (request) =>
+				tutor.renameChat(
+					await requireUser(request),
+					request.params.chatId,
+					request.body
+				)
+		);
+
+		api.delete(
+			'/chats/:chatId',
+			{ schema: { params: chatParams } },
+			async (request, reply) => {
+				await tutor.deleteChat(
+					await requireUser(request),
+					request.params.chatId
+				);
+				return reply.status(204).send();
+			}
 		);
 
 		api.get(

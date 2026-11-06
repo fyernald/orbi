@@ -112,6 +112,20 @@ export const chatSummary = z.object({
 	updatedAt: z.iso.datetime(),
 });
 
+// a chat's name is the only thing the student can change about it
+export const renameChatInput = z.object({
+	title: z
+		.string()
+		.trim()
+		.min(1, 'Enter a chat name.')
+		.max(
+			CHAT_TITLE_MAX_LENGTH,
+			`Use at most ${CHAT_TITLE_MAX_LENGTH} characters.`
+		),
+});
+
+export type RenameChatInput = z.infer<typeof renameChatInput>;
+
 // a chat opens on its newest messages; older ones load as the student scrolls up
 export const CHAT_PAGE_SIZE = 30;
 

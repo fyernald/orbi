@@ -117,6 +117,14 @@ export interface TutorRepository {
 	): Promise<string[]>;
 	findChat(userId: string, chatId: string): Promise<ChatRecord | undefined>;
 	listChats(userId: string, courseId: string): Promise<ChatRecord[]>;
+	// undefined when the user has no such chat
+	renameChat(
+		userId: string,
+		chatId: string,
+		title: string
+	): Promise<ChatRecord | undefined>;
+	// false when the user has no such chat
+	deleteChat(userId: string, chatId: string): Promise<boolean>;
 	// undefined when the id is already taken, by any user
 	createChat(
 		userId: string,
@@ -350,6 +358,26 @@ export function createTutorRepository(db: Db): TutorRepository {
 				.where(and(eq(chat.userId, userId), eq(chat.courseId, courseId)))
 				.orderBy(desc(chat.updatedAt), desc(chat.id))
 				.limit(CHATS_LISTED);
+		},
+
+		// the list is sorted by the last message, so a new name does not move the chat
+		async renameChat(userId, chatId, title) {
+			const [renamed] = await db
+				.update(chat)
+				.set({ title, updatedAt: sql`${chat.updatedAt}` })
+				.where(and(eq(chat.userId, userId), eq(chat.id, chatId)))
+				.returning(chatColumns);
+			return renamed;
+		},
+
+		// its messages go with it (ON DELETE CASCADE); the questions it made stay with
+		// their topic
+		async deleteChat(userId, chatId) {
+			const deleted = await db
+				.delete(chat)
+				.where(and(eq(chat.userId, userId), eq(chat.id, chatId)))
+				.returning({ id: chat.id });
+			return deleted.length > 0;
 		},
 
 		async createChat(userId, input) {

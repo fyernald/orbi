@@ -1,6 +1,7 @@
 import type { ChatSummary } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
 import {
+	closeChat,
 	openChat,
 	scopeChatList,
 	startNewChat,
@@ -88,6 +89,47 @@ describe('startNewChat', () => {
 				{ id: 'b', isNew: true },
 			],
 			currentId: 'b',
+		});
+	});
+});
+
+describe('closeChat', () => {
+	const mitosis = scopeChatList(chats, 'mitosis');
+
+	it('opens the next newest chat when the one shown is deleted', () => {
+		const start = startScope(chats, 'mitosis', 'new');
+
+		expect(closeChat(start, 'mitosis-2', mitosis, 'new')).toEqual({
+			open: [{ id: 'mitosis-1', isNew: false }],
+			currentId: 'mitosis-1',
+		});
+	});
+
+	it('opens an empty chat when the deleted one was the last', () => {
+		const start = startScope(chats, null, 'unused');
+
+		expect(
+			closeChat(start, 'course-1', scopeChatList(chats, null), 'new')
+		).toEqual({ open: [{ id: 'new', isNew: true }], currentId: 'new' });
+	});
+
+	it('goes to a new chat that is already open instead of starting another', () => {
+		const withNew = openChat(
+			startNewChat(startScope(chats, null, 'unused'), 'empty'),
+			'course-1'
+		);
+
+		expect(
+			closeChat(withNew, 'course-1', scopeChatList(chats, null), 'other')
+		).toEqual({ open: [{ id: 'empty', isNew: true }], currentId: 'empty' });
+	});
+
+	it('keeps showing the current chat when another open one is deleted', () => {
+		const both = openChat(startScope(chats, 'mitosis', 'new'), 'mitosis-1');
+
+		expect(closeChat(both, 'mitosis-2', mitosis, 'new')).toEqual({
+			open: [{ id: 'mitosis-1', isNew: false }],
+			currentId: 'mitosis-1',
 		});
 	});
 });

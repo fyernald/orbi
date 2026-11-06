@@ -7,6 +7,7 @@ import {
 	type ChatThread,
 	type FollowUps,
 	type FollowUpsInput,
+	type RenameChatInput,
 	type SendChatMessageInput,
 } from '@orbi/shared';
 import { generateText } from 'ai';
@@ -64,6 +65,12 @@ export interface TutorService {
 	listChats(userId: string, courseId: string): Promise<ChatSummary[]>;
 	// the chat with its newest messages
 	getChat(userId: string, chatId: string): Promise<ChatThread>;
+	renameChat(
+		userId: string,
+		chatId: string,
+		input: RenameChatInput
+	): Promise<ChatSummary>;
+	deleteChat(userId: string, chatId: string): Promise<void>;
 	getEarlierMessages(
 		userId: string,
 		chatId: string,
@@ -183,6 +190,18 @@ export function createTutorService({
 				limit: CHAT_PAGE_SIZE,
 			});
 			return { ...toSummary(chat), ...toPage(page) };
+		},
+
+		async renameChat(userId, chatId, { title }) {
+			const renamed = await repo.renameChat(userId, chatId, title);
+			if (!renamed) throw new NotFoundError('Chat not found.');
+			return toSummary(renamed);
+		},
+
+		async deleteChat(userId, chatId) {
+			if (!(await repo.deleteChat(userId, chatId))) {
+				throw new NotFoundError('Chat not found.');
+			}
 		},
 
 		async getEarlierMessages(userId, chatId, beforeId) {
