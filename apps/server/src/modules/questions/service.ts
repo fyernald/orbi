@@ -9,12 +9,18 @@ import type {
 	SessionAnswer,
 	StudySession,
 } from '@orbi/shared';
+import {
+	createSm2Scheduler,
+	defaultRating,
+	type ReviewScheduler,
+} from '@orbi/core';
 import { ConflictError, NotFoundError, ValidationError } from '../../errors';
 import type {
 	AnswerKey,
 	PendingQuestion,
 	QuestionContent,
 	QuestionRepository,
+	Reschedule,
 } from './repository';
 
 export interface QuestionService {
@@ -132,9 +138,19 @@ export function groupByTopic(pending: PendingQuestion[]): ReviewTopic[] {
 
 export function createQuestionService({
 	repo,
+	scheduler = createSm2Scheduler(),
+	now = () => new Date(),
 }: {
 	repo: QuestionRepository;
+	scheduler?: ReviewScheduler;
+	now?: () => Date;
 }): QuestionService {
+	// every answer moves the question's next review, in the chat and in sessions
+	const rescheduleAfter =
+		(correct: boolean): Reschedule =>
+		(previous) =>
+			scheduler.next(previous, defaultRating(correct), now());
+
 	const requireTopic = async (
 		userId: string,
 		courseId: string,
@@ -167,11 +183,12 @@ export function createQuestionService({
 				await repo.findAnswerKey(userId, questionId),
 				choice
 			);
-			const saved = await repo.insertChatAnswer(userId, {
-				questionId,
-				choice,
-				correct: choice === key.correctChoice,
-			});
+			const correct = choice === key.correctChoice;
+			const saved = await repo.insertChatAnswer(
+				userId,
+				{ questionId, choice, correct },
+				rescheduleAfter(correct)
+			);
 			if (!saved) {
 				throw new ConflictError('You already answered this question.');
 			}
@@ -208,7 +225,11 @@ export function createQuestionService({
 				choice,
 				correct: choice === key.correctChoice,
 			};
-			await repo.insertSessionAnswer(userId, saved);
+			await repo.insertSessionAnswer(
+				userId,
+				saved,
+				rescheduleAfter(saved.correct)
+			);
 			return {
 				...saved,
 				correctChoice: key.correctChoice,

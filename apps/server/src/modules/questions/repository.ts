@@ -7,6 +7,7 @@ import type {
 	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
+import type { ReviewState } from '@orbi/core';
 import {
 	and,
 	asc,
@@ -24,6 +25,7 @@ import {
 	course,
 	question,
 	questionReport,
+	reviewItem,
 	topic,
 } from '../../db/schema';
 
@@ -58,10 +60,12 @@ export interface QuestionRepository {
 		userId: string,
 		questionId: string
 	): Promise<AnswerKey | undefined>;
-	// undefined when the question was already answered in the chat
+	// undefined when the question was already answered in the chat; the review
+	// schedule changes only when the answer is saved
 	insertChatAnswer(
 		userId: string,
-		saved: ChatAnswer
+		saved: ChatAnswer,
+		reschedule: Reschedule
 	): Promise<ChatAnswer | undefined>;
 	listChatAnswers(userId: string, questionIds: string[]): Promise<ChatAnswer[]>;
 	// undefined when the user has no such topic in that course
@@ -73,7 +77,11 @@ export interface QuestionRepository {
 	listApproved(userId: string, topicId: string): Promise<StudyQuestion[]>;
 	countPending(userId: string, topicId: string): Promise<number>;
 	// a session saves every try, so a question can be answered again in a later one
-	insertSessionAnswer(userId: string, saved: ChatAnswer): Promise<void>;
+	insertSessionAnswer(
+		userId: string,
+		saved: ChatAnswer,
+		reschedule: Reschedule
+	): Promise<void>;
 	// the topic's questions the student kept or still has to review
 	listForTopic(userId: string, topicId: string): Promise<Question[]>;
 	insertManual(
@@ -111,6 +119,10 @@ export type QuestionContent = {
 	explanation: string | null;
 };
 
+// where the question stands after the answer, from where it stood before;
+// previous is undefined for a question that was never answered
+export type Reschedule = (previous: ReviewState | undefined) => ReviewState;
+
 export type AnswerKey = {
 	choiceCount: number;
 	correctChoice: number;
@@ -136,6 +148,40 @@ const questionColumns = {
 	setId: question.chatMessageId,
 	createdAt: question.createdAt,
 };
+
+const reviewColumns = {
+	repetitions: reviewItem.repetitions,
+	intervalDays: reviewItem.intervalDays,
+	ease: reviewItem.ease,
+	dueAt: reviewItem.dueAt,
+};
+
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+// the row is locked, so two answers at once each build on the other's result
+async function saveReview(
+	tx: Tx,
+	userId: string,
+	questionId: string,
+	reschedule: Reschedule
+) {
+	const [previous] = await tx
+		.select(reviewColumns)
+		.from(reviewItem)
+		.where(
+			and(eq(reviewItem.userId, userId), eq(reviewItem.questionId, questionId))
+		)
+		.for('update');
+	const next = reschedule(previous);
+	if (next === previous) return;
+	await tx
+		.insert(reviewItem)
+		.values({ userId, questionId, ...next })
+		.onConflictDoUpdate({
+			target: [reviewItem.userId, reviewItem.questionId],
+			set: next,
+		});
+}
 
 type QuestionRow = Omit<Question, 'createdAt'> & { createdAt: Date };
 
@@ -280,13 +326,18 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 		},
 
 		// two clicks at once both get here; the unique index lets only one in
-		async insertChatAnswer(userId, saved) {
-			const [created] = await db
-				.insert(answer)
-				.values({ userId, context: 'chat', ...saved })
-				.onConflictDoNothing()
-				.returning(chatAnswerColumns);
-			return created;
+		async insertChatAnswer(userId, saved, reschedule) {
+			return db.transaction(async (tx) => {
+				const [created] = await tx
+					.insert(answer)
+					.values({ userId, context: 'chat', ...saved })
+					.onConflictDoNothing()
+					.returning(chatAnswerColumns);
+				if (created) {
+					await saveReview(tx, userId, saved.questionId, reschedule);
+				}
+				return created;
+			});
 		},
 
 		async listChatAnswers(userId, questionIds) {
@@ -353,8 +404,13 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 			return found?.pending ?? 0;
 		},
 
-		async insertSessionAnswer(userId, saved) {
-			await db.insert(answer).values({ userId, context: 'session', ...saved });
+		async insertSessionAnswer(userId, saved, reschedule) {
+			await db.transaction(async (tx) => {
+				await tx
+					.insert(answer)
+					.values({ userId, context: 'session', ...saved });
+				await saveReview(tx, userId, saved.questionId, reschedule);
+			});
 		},
 
 		// the newest set first, each in the order it was made
