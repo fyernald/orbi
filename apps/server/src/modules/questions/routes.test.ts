@@ -1,17 +1,20 @@
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { reviewItem } from '../../db/schema';
 import { createTestDb } from '../../db/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestApp, signUpTestUser } from '../../testing';
 import { createTutorRepository } from '../tutor/repository';
 
 let app: Awaited<ReturnType<typeof createTestApp>>;
+let db: Awaited<ReturnType<typeof createTestDb>>;
 let tutor: ReturnType<typeof createTutorRepository>;
 let ada: string;
 let grace: string;
 
 beforeAll(async () => {
-	const db = await createTestDb();
+	db = await createTestDb();
 	tutor = createTutorRepository(db);
 	app = await createTestApp(createMemoryMailer(), {
 		requireEmailVerification: false,
@@ -419,5 +422,80 @@ describe('study sessions', () => {
 		expect((await study(ada, other.courseId, topicIds[0]!)).statusCode).toBe(
 			404
 		);
+	});
+});
+
+describe('review schedule', () => {
+	const DAY_MS = 24 * 60 * 60 * 1000;
+	const inChat = (cookie: string, id: string, choice: number) =>
+		send(cookie, 'POST', `/api/questions/${id}/chat-answer`, { choice });
+	const inSession = (cookie: string, id: string, choice: number) =>
+		send(cookie, 'POST', `/api/questions/${id}/session-answer`, { choice });
+	const scheduleOf = async (id: string) =>
+		(
+			await db.select().from(reviewItem).where(eq(reviewItem.questionId, id))
+		)[0];
+
+	async function approvedQuestion(cookie: string) {
+		const { topicIds } = await createCourse(cookie, ['Cells']);
+		const [id] = (await addQuestions(cookie, topicIds[0]!, ['Q'])) as [string];
+		await send(cookie, 'PATCH', `/api/questions/${id}`, { status: 'approved' });
+		return id;
+	}
+
+	it('brings a question back the next day after a right chat answer', async () => {
+		const id = await approvedQuestion(ada);
+		const before = Date.now();
+
+		await inChat(ada, id, 1);
+
+		const schedule = await scheduleOf(id);
+		expect(schedule).toMatchObject({ repetitions: 1, intervalDays: 1 });
+		expect(schedule!.dueAt.getTime()).toBeGreaterThanOrEqual(before + DAY_MS);
+		expect(schedule!.dueAt.getTime()).toBeLessThanOrEqual(Date.now() + DAY_MS);
+	});
+
+	it('leaves the schedule alone when a second chat answer is refused', async () => {
+		const id = await approvedQuestion(ada);
+		await inChat(ada, id, 1);
+		const first = await scheduleOf(id);
+
+		expect((await inChat(ada, id, 0)).statusCode).toBe(409);
+
+		expect(await scheduleOf(id)).toEqual(first);
+	});
+
+	it('starts a question over after a wrong session answer', async () => {
+		const id = await approvedQuestion(ada);
+		await inSession(ada, id, 1);
+
+		await inSession(ada, id, 0);
+
+		expect(await scheduleOf(id)).toMatchObject({
+			repetitions: 0,
+			intervalDays: 1,
+			ease: 2.18,
+		});
+	});
+
+	it('keeps the schedule after a right answer before the question is due', async () => {
+		const id = await approvedQuestion(ada);
+		await inSession(ada, id, 1);
+		const first = await scheduleOf(id);
+
+		await inSession(ada, id, 1);
+
+		expect(await scheduleOf(id)).toEqual(first);
+	});
+
+	it('schedules nothing for an answer that is not saved', async () => {
+		const id = await approvedQuestion(ada);
+		const other = await approvedQuestion(grace);
+
+		await inSession(ada, id, 4);
+		await inChat(ada, other, 1);
+
+		expect(await scheduleOf(id)).toBeUndefined();
+		expect(await scheduleOf(other)).toBeUndefined();
 	});
 });
