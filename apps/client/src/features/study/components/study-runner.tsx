@@ -21,6 +21,8 @@ import { SessionSummary } from './session-summary';
 type StudyRunnerProps = {
 	courseId: string;
 	session: StudySession;
+	// the session came from today's study list
+	today: boolean;
 	// the questions load again for "Study again"
 	restarting: boolean;
 	onRestart: () => void;
@@ -30,6 +32,7 @@ type StudyRunnerProps = {
 export function StudyRunner({
 	courseId,
 	session,
+	today,
 	restarting,
 	onRestart,
 }: StudyRunnerProps) {
@@ -48,6 +51,7 @@ export function StudyRunner({
 				questions={questions}
 				answers={run.answers}
 				items={items}
+				today={today}
 				restarting={restarting}
 				onRestart={onRestart}
 			/>
