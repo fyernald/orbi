@@ -336,6 +336,7 @@ export function createQuestionService({
 				upcoming,
 				answeredToday: done.answered,
 				correctToday: done.correct,
+				questionsDoneToday: done.questions,
 				weakTopics,
 				emptyTopics,
 			};

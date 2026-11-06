@@ -48,16 +48,28 @@ const weekday = new Intl.DateTimeFormat('en-US', {
 	timeZone: 'UTC',
 });
 
-// "Tomorrow 4 · Sun 2 · Mon 7": the next days with something due
-export function upcomingLine(plan: TodayPlan, days = 3): string | null {
-	const tomorrow = nextDay(plan.date);
-	const parts = plan.upcoming
-		.slice(0, days)
-		.map(
-			({ date, count }) =>
-				`${date === tomorrow ? 'Tomorrow' : weekday.format(atNoon(date))} ${count}`
-		);
-	return parts.length > 0 ? parts.join(' · ') : null;
+export type ForecastDay = { date: string; label: string; count: number };
+
+// the next days from tomorrow, with 0 for a day with nothing due
+export function weekAhead(plan: TodayPlan, days = 7): ForecastDay[] {
+	const counts = new Map(plan.upcoming.map(({ date, count }) => [date, count]));
+	const forecast: ForecastDay[] = [];
+	let date = plan.date;
+	for (let i = 0; i < days; i += 1) {
+		date = nextDay(date);
+		forecast.push({
+			date,
+			label: i === 0 ? 'Tmrw' : weekday.format(atNoon(date)),
+			count: counts.get(date) ?? 0,
+		});
+	}
+	return forecast;
+}
+
+// questions done today against all of today's questions, done or not
+export function progress(plan: TodayPlan) {
+	const done = plan.questionsDoneToday;
+	return { done, total: done + planTotal(plan) };
 }
 
 // "14 answered · 79% right"

@@ -104,6 +104,7 @@ describe("today's study list", () => {
 			upcoming: [],
 			answeredToday: 0,
 			correctToday: 0,
+			questionsDoneToday: 0,
 			weakTopics: [],
 			emptyTopics: [],
 		});
@@ -143,6 +144,7 @@ describe("today's study list", () => {
 		expect(plan).toMatchObject({
 			answeredToday: 2,
 			correctToday: 1,
+			questionsDoneToday: 2,
 			upcoming: [{ date: tomorrow(), count: 2 }],
 		});
 	});

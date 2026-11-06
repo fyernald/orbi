@@ -4,9 +4,10 @@ import {
 	answeredLine,
 	masteryLabel,
 	planTotal,
+	progress,
 	todayState,
 	topicCounts,
-	upcomingLine,
+	weekAhead,
 } from './today';
 
 const topic = (counts: Partial<TodayTopic> = {}): TodayTopic => ({
@@ -27,6 +28,7 @@ const plan = (changes: Partial<TodayPlan> = {}): TodayPlan => ({
 	upcoming: [],
 	answeredToday: 0,
 	correctToday: 0,
+	questionsDoneToday: 0,
 	weakTopics: [],
 	emptyTopics: [],
 	...changes,
@@ -68,26 +70,38 @@ describe('counts', () => {
 	});
 });
 
-describe('upcomingLine', () => {
-	it('names tomorrow and then the weekdays', () => {
+describe('weekAhead', () => {
+	it('gives the next seven days, from tomorrow, with the empty ones', () => {
 		const upcoming = [
 			{ date: '2026-11-07', count: 4 },
-			{ date: '2026-11-08', count: 2 },
 			{ date: '2026-11-10', count: 7 },
-			{ date: '2026-11-11', count: 1 },
 		];
-		expect(upcomingLine(plan({ upcoming }))).toBe('Tomorrow 4 · Sun 2 · Tue 7');
+		expect(weekAhead(plan({ upcoming }))).toEqual([
+			{ date: '2026-11-07', label: 'Tmrw', count: 4 },
+			{ date: '2026-11-08', label: 'Sun', count: 0 },
+			{ date: '2026-11-09', label: 'Mon', count: 0 },
+			{ date: '2026-11-10', label: 'Tue', count: 7 },
+			{ date: '2026-11-11', label: 'Wed', count: 0 },
+			{ date: '2026-11-12', label: 'Thu', count: 0 },
+			{ date: '2026-11-13', label: 'Fri', count: 0 },
+		]);
 	});
 
 	it('crosses the end of a month', () => {
-		const upcoming = [{ date: '2026-12-01', count: 3 }];
-		expect(upcomingLine(plan({ date: '2026-11-30', upcoming }))).toBe(
-			'Tomorrow 3'
-		);
+		expect(weekAhead(plan({ date: '2026-11-30' }), 2)).toMatchObject([
+			{ date: '2026-12-01' },
+			{ date: '2026-12-02' },
+		]);
 	});
+});
 
-	it('gives nothing when nothing is coming', () => {
-		expect(upcomingLine(plan())).toBeNull();
+describe('progress', () => {
+	it('counts the questions done today with the ones left', () => {
+		const topics = [topic({ dueCount: 4, newCount: 2 })];
+		expect(progress(plan({ topics, questionsDoneToday: 3 }))).toEqual({
+			done: 3,
+			total: 9,
+		});
 	});
 });
 

@@ -16,3 +16,12 @@ export const toneTextClasses: Record<Tone, string> = {
 	amber: 'text-tone-amber-foreground',
 	red: 'text-tone-red-foreground',
 };
+
+// the tone as a background only, for a surface whose text stays the default colour
+export const toneSurfaceClasses: Record<Tone, string> = {
+	blue: 'bg-tone-blue',
+	teal: 'bg-tone-teal',
+	green: 'bg-tone-green',
+	amber: 'bg-tone-amber',
+	red: 'bg-tone-red',
+};

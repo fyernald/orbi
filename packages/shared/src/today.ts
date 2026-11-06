@@ -33,6 +33,8 @@ export const todayPlan = z.object({
 	upcoming: z.array(z.object({ date: z.iso.date(), count: z.int() })),
 	answeredToday: z.int(),
 	correctToday: z.int(),
+	// different questions answered today, for "6 of 18 done"
+	questionsDoneToday: z.int(),
 	// what to do once the list is empty: the weakest topics, and topics with no
 	// questions yet
 	weakTopics: z.array(topicOfCourse.extend({ mastery: z.int() })),

@@ -12,6 +12,7 @@ import {
 	and,
 	asc,
 	count,
+	countDistinct,
 	desc,
 	eq,
 	gte,
@@ -70,7 +71,7 @@ export interface QuestionRepository {
 	countAnswersSince(
 		userId: string,
 		since: Date
-	): Promise<{ answered: number; correct: number }>;
+	): Promise<{ answered: number; correct: number; questions: number }>;
 	// undefined when the user has no such question
 	setStatus(
 		userId: string,
@@ -450,10 +451,11 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 						sql<number>`count(*) filter (where ${answer.correct})`.mapWith(
 							Number
 						),
+					questions: countDistinct(answer.questionId),
 				})
 				.from(answer)
 				.where(and(eq(answer.userId, userId), gte(answer.answeredAt, since)));
-			return found ?? { answered: 0, correct: 0 };
+			return found ?? { answered: 0, correct: 0, questions: 0 };
 		},
 
 		// the oldest set first, each in the order the AI wrote it
