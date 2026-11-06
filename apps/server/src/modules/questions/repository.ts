@@ -7,7 +7,7 @@ import type {
 	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
-import type { ReviewState } from '@orbi/core';
+import type { ReviewState, ScoredAnswer } from '@orbi/core';
 import {
 	and,
 	asc,
@@ -48,6 +48,9 @@ export interface QuestionRepository {
 	// the sets the tutor made in the course, newest first
 	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
 	listPending(userId: string): Promise<PendingQuestion[]>;
+	// every topic of the course in course order, with the answers its questions got;
+	// a topic with no answers comes once, with answer null
+	listTopicAnswers(userId: string, courseId: string): Promise<TopicAnswer[]>;
 	// undefined when the user has no such question
 	setStatus(
 		userId: string,
@@ -118,6 +121,8 @@ export type QuestionContent = {
 	correctChoice: number;
 	explanation: string | null;
 };
+
+export type TopicAnswer = { topicId: string; answer: ScoredAnswer | null };
 
 // where the question stands after the answer, from where it stood before;
 // previous is undefined for a question that was never answered
@@ -251,6 +256,41 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 				...set,
 				id: id!,
 				createdAt: createdAt!.toISOString(),
+			}));
+		},
+
+		// a rejected question was a bad one, so its answers do not count
+		async listTopicAnswers(userId, courseId) {
+			const rows = await db
+				.select({
+					topicId: topic.id,
+					correct: answer.correct,
+					answeredAt: answer.answeredAt,
+				})
+				.from(topic)
+				.leftJoin(
+					question,
+					and(
+						eq(question.userId, topic.userId),
+						eq(question.topicId, topic.id),
+						ne(question.status, 'rejected')
+					)
+				)
+				.leftJoin(
+					answer,
+					and(
+						eq(answer.userId, question.userId),
+						eq(answer.questionId, question.id)
+					)
+				)
+				.where(and(eq(topic.userId, userId), eq(topic.courseId, courseId)))
+				.orderBy(asc(topic.position), asc(topic.createdAt));
+			return rows.map(({ topicId, correct, answeredAt }) => ({
+				topicId,
+				answer:
+					correct === null || answeredAt === null
+						? null
+						: { correct, answeredAt },
 			}));
 		},
 

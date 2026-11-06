@@ -499,3 +499,55 @@ describe('review schedule', () => {
 		expect(await scheduleOf(other)).toBeUndefined();
 	});
 });
+
+describe('mastery', () => {
+	const masteryOf = (cookie: string, courseId: string) =>
+		send(cookie, 'GET', `/api/courses/${courseId}/mastery`);
+	const inChat = (cookie: string, id: string, choice: number) =>
+		send(cookie, 'POST', `/api/questions/${id}/chat-answer`, { choice });
+
+	it('scores every topic of the course from its answers', async () => {
+		const { courseId, topicIds } = await createCourse(ada, [
+			'Cells',
+			'Genes',
+			'Organs',
+		]);
+		const [cells, genes, organs] = topicIds as [string, string, string];
+		const [right, wrong] = (await addQuestions(ada, cells, ['Q1', 'Q2'])) as [
+			string,
+			string,
+		];
+		const [one] = (await addQuestions(ada, genes, ['Q'])) as [string];
+		await addQuestions(ada, organs, ['Q']);
+		await inChat(ada, right, 1);
+		await inChat(ada, wrong, 0);
+		await inChat(ada, one, 1);
+
+		const response = await masteryOf(ada, courseId);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual([
+			{ topicId: cells, score: 33 },
+			{ topicId: genes, score: 50 },
+			{ topicId: organs, score: null },
+		]);
+	});
+
+	it('does not count the answers of a rejected question', async () => {
+		const { courseId, topicIds } = await createCourse(ada, ['Cells']);
+		const [id] = (await addQuestions(ada, topicIds[0]!, ['Q'])) as [string];
+		await inChat(ada, id, 0);
+
+		await send(ada, 'PATCH', `/api/questions/${id}`, { status: 'rejected' });
+
+		expect((await masteryOf(ada, courseId)).json()).toEqual([
+			{ topicId: topicIds[0], score: null },
+		]);
+	});
+
+	it("answers 404 for another user's course", async () => {
+		const { courseId } = await createCourse(grace, ['Cells']);
+
+		expect((await masteryOf(ada, courseId)).statusCode).toBe(404);
+	});
+});
