@@ -161,6 +161,15 @@ Every table also has `created_at` and `updated_at`.
 - **`review_item`, not `review_items`** as T-13 (#121) wrote it: every other table name is singular. It has no `id` of its own. A question has one review item, so `(user_id, question_id)` is the key.
 - **Indexes:** `course(user_id, id)`, `topic(course_id, position)`, `topic(user_id, id)`, `note(topic_id, created_at desc)`, `note(user_id)`, and `question(user_id, status, created_at)`. The two `(user_id, id)` indexes also back the ownership foreign keys. A list's index has the columns it filters and sorts on, so the notes list and the review inbox read only the rows they show. Postgres does not index the other side of a foreign key by itself, so every foreign key that deletes or unlinks rows has an index on its columns, for example `chat(user_id, topic_id)`, `chat_message(topic_id)`, and `answer(user_id, question_id, answered_at)`. Without one, deleting a topic or a question reads the whole table. `review_item(user_id, due_at)` finds what is due today, and its primary key backs its foreign key.
 
+## Today's study list
+
+`GET /api/today` (US-10) is worked out from `review_item` and `question` each time, in the student's time zone (`profile.timezone`, UTC when it is not set):
+
+- **Due:** every approved question whose `due_at` is before the student's next midnight, so a question due tonight is in today's list.
+- **New:** approved questions with no `review_item` yet, oldest first, at most 10 a day. A question answered for the first time today counts toward the 10 (`review_item.created_at`), so the list gets shorter as the student answers and approving 50 questions does not fill one day.
+- **Order:** the weakest topic first by mastery score, then topics with no answers yet.
+- A topic's session from the list (`?today=1`) asks only that topic's questions in the list.
+
 ## The mastery score is worked out, not saved
 
 T-13 (#121) asked to either save the mastery score of each topic or work it out from the saved answers. Orbi works it out from `answer`, in `packages/core` (US-08):

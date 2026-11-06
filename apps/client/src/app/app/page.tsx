@@ -3,6 +3,7 @@ import { HomeComposer } from '@/features/home/components/home-composer';
 import { HomeGreeting } from '@/features/home/components/home-greeting';
 import { SuggestionChips } from '@/features/home/components/suggestion-chips';
 import { getServerProfile } from '@/features/profile/server';
+import { TodayCard } from '@/features/today/components/today-card';
 
 export const metadata: Metadata = { title: 'Home' };
 
@@ -16,6 +17,7 @@ export default async function HomePage() {
 			<div className="flex w-full max-w-190 flex-col gap-6">
 				<HomeComposer />
 				<SuggestionChips />
+				<TodayCard />
 			</div>
 		</section>
 	);

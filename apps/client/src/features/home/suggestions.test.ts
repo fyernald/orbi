@@ -4,10 +4,6 @@ import { suggestionsFor } from './suggestions';
 
 describe('suggestionsFor', () => {
 	it('shows nothing to a student who is caught up', () => {
-		expect(suggestionsFor({ dueCount: 0, pendingApproval: 0 })).toEqual([]);
-	});
-
-	it('shows no review until the due count is known', () => {
 		expect(suggestionsFor({ pendingApproval: 0 })).toEqual([]);
 	});
 
@@ -18,13 +14,5 @@ describe('suggestionsFor', () => {
 		expect(suggestionsFor({ pendingApproval: 6 })[0]?.label).toBe(
 			'Approve 6 new questions'
 		);
-	});
-
-	it("puts today's review first", () => {
-		expect(
-			suggestionsFor({ dueCount: 3, pendingApproval: 2 }).map(
-				({ href }) => href
-			)
-		).toEqual([routes.studySession, routes.review]);
 	});
 });

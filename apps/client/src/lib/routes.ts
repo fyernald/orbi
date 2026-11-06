@@ -41,7 +41,16 @@ export function courseRoute(
 	return `${routes.courses}/${courseId}${search ? `?${search}` : ''}`;
 }
 
-// a study session with the approved questions of one topic
-export function topicStudyRoute(courseId: string, topicId: string): string {
-	return `${routes.courses}/${courseId}/topics/${topicId}/study`;
+// a study session with the approved questions of one topic; with today, only
+// the ones in today's study list
+export function topicStudyRoute(
+	courseId: string,
+	topicId: string,
+	{ today = false }: { today?: boolean } = {}
+): string {
+	const path = `${routes.courses}/${courseId}/topics/${topicId}/study`;
+	return today ? `${path}?today=1` : path;
 }
+
+// today's study list on Home
+export const todayListRoute = `${routes.app}#today`;

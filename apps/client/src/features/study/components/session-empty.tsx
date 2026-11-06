@@ -1,12 +1,14 @@
-import { CircleHelp, ListChecks } from 'lucide-react';
+import { Check, CircleHelp, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { courseRoute, routes } from '@/lib/routes';
+import { courseRoute, routes, todayListRoute } from '@/lib/routes';
 
 type SessionEmptyProps = {
 	courseId: string;
 	topicName: string;
 	pendingCount: number;
+	// opened from today's study list, which this topic has left since
+	today?: boolean;
 };
 
 // says what to do first: approve the questions that wait, or have the tutor write some
@@ -14,7 +16,24 @@ export function SessionEmpty({
 	courseId,
 	topicName,
 	pendingCount,
+	today = false,
 }: SessionEmptyProps) {
+	if (today) {
+		return (
+			<div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-14 text-center">
+				<span className="flex size-12 items-center justify-center rounded-2xl bg-tone-green text-tone-green-foreground">
+					<Check className="size-6" />
+				</span>
+				<h2 className="text-lg font-semibold">{topicName} is done for today</h2>
+				<p className="max-w-sm text-pretty text-muted-foreground">
+					Its questions come back when they are due.
+				</p>
+				<Button asChild className="mt-2 h-9 rounded-full px-4">
+					<Link href={todayListRoute}>Back to today's list</Link>
+				</Button>
+			</div>
+		);
+	}
 	const waiting = pendingCount > 0;
 	const Icon = waiting ? ListChecks : CircleHelp;
 

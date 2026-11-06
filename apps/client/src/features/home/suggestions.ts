@@ -10,21 +10,11 @@ export type Suggestion = {
 
 // only shows what needs doing, so a student who is caught up sees no chips
 export function suggestionsFor({
-	dueCount,
 	pendingApproval,
 }: {
-	// undefined until today's study list (US-10) gives the real count
-	dueCount?: number;
 	pendingApproval: number;
 }): Suggestion[] {
 	const suggestions: Suggestion[] = [];
-	if (dueCount) {
-		suggestions.push({
-			label: `Start today’s review · ${dueCount} due`,
-			href: routes.studySession,
-			tone: 'primary',
-		});
-	}
 	if (pendingApproval > 0) {
 		suggestions.push({
 			label: `Approve ${pendingApproval} new ${pendingApproval === 1 ? 'question' : 'questions'}`,

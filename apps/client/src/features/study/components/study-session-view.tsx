@@ -13,10 +13,16 @@ import { StudyRunner } from './study-runner';
 type StudySessionViewProps = {
 	courseId: string;
 	topicId: string;
+	// only the topic's questions in today's study list
+	today?: boolean;
 };
 
-export function StudySessionView({ courseId, topicId }: StudySessionViewProps) {
-	const session = useStudySession(courseId, topicId);
+export function StudySessionView({
+	courseId,
+	topicId,
+	today = false,
+}: StudySessionViewProps) {
+	const session = useStudySession(courseId, topicId, today);
 
 	if (session.isPending) return <SessionLoading />;
 	if (session.isError) {
@@ -39,6 +45,7 @@ export function StudySessionView({ courseId, topicId }: StudySessionViewProps) {
 					courseId={courseId}
 					topicName={topicName}
 					pendingCount={pendingCount}
+					today={today}
 				/>
 			</SessionLayout>
 		);
@@ -50,6 +57,7 @@ export function StudySessionView({ courseId, topicId }: StudySessionViewProps) {
 			key={session.dataUpdatedAt}
 			courseId={courseId}
 			session={session.data}
+			today={today}
 			restarting={session.isFetching}
 			onRestart={() => void session.refetch()}
 		/>
