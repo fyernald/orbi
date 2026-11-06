@@ -69,7 +69,7 @@ async function addApproved(cookie: string, topicId: string, count: number) {
 			text: `Q${i + 1}`,
 			choices: ['Prophase', 'Metaphase', 'Anaphase', 'Telophase'],
 			correctChoice: 1,
-			explanation: null,
+			explanation: 'The chromosomes line up in metaphase.',
 			aiProvider: 'google',
 			aiModel: 'gemini-test',
 			chatMessageId: randomUUID(),
