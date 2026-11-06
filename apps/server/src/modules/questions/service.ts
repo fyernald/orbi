@@ -8,11 +8,14 @@ import type {
 	ReviewTopic,
 	SessionAnswer,
 	StudySession,
+	TopicMastery,
 } from '@orbi/shared';
 import {
 	createSm2Scheduler,
 	defaultRating,
+	masteryScore,
 	type ReviewScheduler,
+	type ScoredAnswer,
 } from '@orbi/core';
 import { ConflictError, NotFoundError, ValidationError } from '../../errors';
 import type {
@@ -59,6 +62,8 @@ export interface QuestionService {
 		topicId: string
 	): Promise<Question[]>;
 	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
+	// every topic of the course, in course order
+	listMastery(userId: string, courseId: string): Promise<TopicMastery[]>;
 	// a question the student writes is approved at once, so it is studied right away
 	addQuestion(
 		userId: string,
@@ -235,6 +240,26 @@ export function createQuestionService({
 				correctChoice: key.correctChoice,
 				explanation: key.explanation,
 			};
+		},
+
+		async listMastery(userId, courseId) {
+			if (!(await repo.courseExists(userId, courseId))) {
+				throw new NotFoundError('Course not found.');
+			}
+			const byTopic = new Map<string, ScoredAnswer[]>();
+			for (const { topicId, answer } of await repo.listTopicAnswers(
+				userId,
+				courseId
+			)) {
+				const answers = byTopic.get(topicId) ?? [];
+				if (answer) answers.push(answer);
+				byTopic.set(topicId, answers);
+			}
+			const at = now();
+			return [...byTopic].map(([topicId, answers]) => ({
+				topicId,
+				score: masteryScore(answers, at),
+			}));
 		},
 
 		async listForTopic(userId, courseId, topicId) {

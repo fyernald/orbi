@@ -169,6 +169,8 @@ T-13 (#121) asked to either save the mastery score of each topic or work it out 
 - **There is one place to write.** Answering a question adds an `answer` row and updates the `review_item`. A saved score would be a third write that can drift from the other two.
 - **Reading it is cheap.** A topic's answers come in time order through `answer(user_id, question_id, answered_at)`, joined to `question` for the topic. A student has hundreds or a few thousand answers, not millions.
 
+How it is worked out (`masteryScore` in `packages/core/src/mastery.ts`): the share of right answers, where an answer counts half as much after two weeks and a quarter after four. One wrong answer is added at the start, so a single right answer gives 50, not 100, and a topic the student stops studying slowly goes down. Answers to rejected questions do not count, since those questions were bad. A topic with no answers has no score ("not started"). `GET /api/courses/:courseId/mastery` gives the score of every topic in a course.
+
 If it gets slow later, a cache table can be added then, filled from the same function.
 
 ## Changing the schema

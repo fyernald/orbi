@@ -236,6 +236,13 @@ export const sessionAnswer = chatAnswer.extend({
 	explanation: z.string().nullable(),
 });
 
+// how well the student knows a topic, from 0 to 100; null before its first answer
+export const topicMastery = z.object({
+	topicId: z.uuid(),
+	score: z.int().min(0).max(100).nullable(),
+});
+
 export type StudyQuestion = z.infer<typeof studyQuestion>;
+export type TopicMastery = z.infer<typeof topicMastery>;
 export type StudySession = z.infer<typeof studySession>;
 export type SessionAnswer = z.infer<typeof sessionAnswer>;
