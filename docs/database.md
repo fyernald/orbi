@@ -12,6 +12,7 @@ erDiagram
     topic ||--o{ note : contains
     topic ||--o{ question : "has practice"
     question ||--o{ answer : "answered in"
+    question ||--o| review_item : "comes back by"
     course ||--o{ chat : "has tutor"
     topic ||--o{ chat : "has tutor"
     chat ||--o{ chat_message : contains
@@ -113,6 +114,14 @@ erDiagram
         answer_context context
         timestamptz answered_at
     }
+    review_item {
+        text user_id PK,FK
+        uuid question_id PK,FK
+        integer repetitions
+        integer interval_days
+        double ease
+        timestamptz due_at
+    }
 ```
 
 Every table also has `created_at` and `updated_at`.
@@ -128,14 +137,16 @@ Every table also has `created_at` and `updated_at`.
 | `chat_message`                               | One message in a chat, in the AI SDK `UIMessage` shape: `parts` holds the text and the tool calls (for example the questions the tutor made). It also keeps the topic, the composer action, the model, how many notes the tutor read, the follow-up questions shown under an explanation, and the PDFs sent with a student's message (`attachments`: each file's name and the notes it was saved as). See [decision 0003](decisions/03-tutor-chat.md).               |
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                                                                                                                                                |
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                                                                                                                                                  |
+| `review_item`                                | When a question comes back for review (US-09). One row per question, with the SM-2 values: `repetitions` (right answers in a row), `interval_days`, `ease`, and `due_at`. The scheduler adds the row the first time the student answers the question and updates it after every answer, so a question with no row has not been scheduled yet. `updated_at` is the last review.                                                                                       |
 
 ## Rules the database enforces
 
-- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics, their notes and questions, and its chats. Deleting a topic deletes its notes, questions, and chats. Deleting a question deletes its answers. A chat message about a deleted topic stays, without the link.
+- **Deleting cascades.** Deleting a user deletes their profile, courses, topics, and notes. Deleting a course deletes its topics, their notes and questions, and its chats. Deleting a topic deletes its notes, questions, and chats. Deleting a question deletes its answers and its review item. A chat message about a deleted topic stays, without the link.
 - **Questions keep their chat message id without a foreign key.** A question is saved while its reply is still streaming, before the message exists, and deleting a chat should not delete the questions.
 - **A question is well formed.** Its text is not blank, `correct_choice` points at one of its `choices`, and an AI question always has `ai_provider` and `ai_model`.
 - **Ownership always matches.** `topic` and `note` keep a `user_id` so the server can check ownership with one simple `WHERE user_id = ...`. Their foreign keys include `user_id`, so a topic can only point at a course of the same user, and a note only at a topic of the same user. The server cannot get this wrong by mistake.
 - **A question in the chat is answered once.** A unique index allows one `chat` answer per question, so two clicks at the same time still save only one. Study sessions can add as many `session` answers as they need.
+- **A review item is well formed.** There is at most one per question (the primary key is `(user_id, question_id)`), `repetitions` and `interval_days` are never negative, and `ease` never goes below 1.3, the SM-2 minimum.
 - **One profile per user.** `profile.user_id` is the primary key.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).
 
@@ -146,8 +157,19 @@ Every table also has `created_at` and `updated_at`.
 - **`profile` has no separate `profile_id`.** `user_id` is the primary key, which also makes it unique.
 - **`interests` is a list** (`text[]`), not one text field, so the app can show and filter them one by one.
 - **`timezone` is text** with an IANA name like `Europe/Istanbul`, not a `time` value.
-- **`content_hash` is left out for now.** It belongs to the AI question cache and is added with that task, together with `review_items` and its `(user_id, due_at)` index in Sprint 3.
-- **Indexes:** `course(user_id, id)`, `topic(course_id, position)`, `topic(user_id, id)`, `note(topic_id, created_at desc)`, `note(user_id)`, and `question(user_id, status, created_at)`. The two `(user_id, id)` indexes also back the ownership foreign keys. A list's index has the columns it filters and sorts on, so the notes list and the review inbox read only the rows they show. Postgres does not index the other side of a foreign key by itself, so every foreign key that deletes or unlinks rows has an index on its columns, for example `chat(user_id, topic_id)`, `chat_message(topic_id)`, and `answer(user_id, question_id, answered_at)`. Without one, deleting a topic or a question reads the whole table.
+- **`content_hash` is left out for now.** It belongs to the AI question cache and is added with that task.
+- **`review_item`, not `review_items`** as T-13 (#121) wrote it: every other table name is singular. It has no `id` of its own. A question has one review item, so `(user_id, question_id)` is the key.
+- **Indexes:** `course(user_id, id)`, `topic(course_id, position)`, `topic(user_id, id)`, `note(topic_id, created_at desc)`, `note(user_id)`, and `question(user_id, status, created_at)`. The two `(user_id, id)` indexes also back the ownership foreign keys. A list's index has the columns it filters and sorts on, so the notes list and the review inbox read only the rows they show. Postgres does not index the other side of a foreign key by itself, so every foreign key that deletes or unlinks rows has an index on its columns, for example `chat(user_id, topic_id)`, `chat_message(topic_id)`, and `answer(user_id, question_id, answered_at)`. Without one, deleting a topic or a question reads the whole table. `review_item(user_id, due_at)` finds what is due today, and its primary key backs its foreign key.
+
+## The mastery score is worked out, not saved
+
+T-13 (#121) asked to either save the mastery score of each topic or work it out from the saved answers. Orbi works it out from `answer`, in `packages/core` (US-08):
+
+- **A saved score goes out of date by itself.** Recent answers count more than old ones, so the score changes with the date even when the student does nothing. A saved score would need a job to keep it fresh.
+- **There is one place to write.** Answering a question adds an `answer` row and updates the `review_item`. A saved score would be a third write that can drift from the other two.
+- **Reading it is cheap.** A topic's answers come in time order through `answer(user_id, question_id, answered_at)`, joined to `question` for the topic. A student has hundreds or a few thousand answers, not millions.
+
+If it gets slow later, a cache table can be added then, filled from the same function.
 
 ## Changing the schema
 

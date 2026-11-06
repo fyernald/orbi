@@ -3,12 +3,14 @@ import {
 	boolean,
 	check,
 	date,
+	doublePrecision,
 	foreignKey,
 	index,
 	integer,
 	jsonb,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
 	time,
 	timestamp,
@@ -353,6 +355,42 @@ export const questionReport = pgTable(
 		// a question is reported once
 		uniqueIndex('question_report_question_id_idx').on(t.questionId),
 		index('question_report_user_id_idx').on(t.userId),
+	]
+);
+
+// When a question comes back for review (US-09). The SM-2 scheduler adds the row
+// the first time the student answers the question and updates it after every
+// answer; a question with no row has not been scheduled yet. The mastery score is
+// not saved anywhere: it is worked out from the answers (docs/database.md).
+export const reviewItem = pgTable(
+	'review_item',
+	{
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		// right answers in a row; a wrong answer sets it back to 0
+		repetitions: integer('repetitions').notNull().default(0),
+		intervalDays: integer('interval_days').notNull().default(0),
+		ease: doublePrecision('ease').notNull().default(2.5),
+		dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		// also the index the foreign key deletes through
+		primaryKey({
+			name: 'review_item_pkey',
+			columns: [t.userId, t.questionId],
+		}),
+		foreignKey({
+			name: 'review_item_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// what is due today
+		index('review_item_due_at_idx').on(t.userId, t.dueAt),
+		check('review_item_repetitions_min', sql`${t.repetitions} >= 0`),
+		check('review_item_interval_days_min', sql`${t.intervalDays} >= 0`),
+		// SM-2 never lets the ease go below 1.3
+		check('review_item_ease_min', sql`${t.ease} >= 1.3`),
 	]
 );
 
