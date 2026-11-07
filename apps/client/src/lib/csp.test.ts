@@ -13,6 +13,15 @@ describe('contentSecurityPolicy', () => {
 		expect(policy).toContain("frame-ancestors 'none'");
 	});
 
+	it('lets the browser send error reports only to the given address', () => {
+		expect(contentSecurityPolicy('abc123', false)).toContain(
+			"connect-src 'self';"
+		);
+		expect(
+			contentSecurityPolicy('abc123', false, 'https://o1.ingest.de.sentry.io')
+		).toContain("connect-src 'self' https://o1.ingest.de.sentry.io;");
+	});
+
 	it('allows eval in development only', () => {
 		expect(contentSecurityPolicy('abc123', true)).toContain(
 			"'strict-dynamic' 'unsafe-eval';"

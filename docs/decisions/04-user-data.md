@@ -81,7 +81,7 @@ The **Basis** column is the reason the law allows it:
 | API request log: method, path (tokens masked), IP address, errors without what the student wrote | Docker log files on the VPS (`apps/server/src/log.ts`) | Finding bugs and attacks              | At most 3 files of 10 MB per service, so a few days | Security |
 | nginx access log: IP address, path, browser, time                                                | `/var/log/nginx` on the VPS                            | Finding attacks and outages           | 14 days (Debian's logrotate)                        | Security |
 | Database backups (everything above in the database)                                              | The VPS, and an encrypted copy off the server (T-16)   | Getting the data back after a failure | 14 days on the VPS, 30 days off the server          | Security |
-| Error reports (planned, T-14): error, stack trace, page path, browser, the user id               | Sentry, EU region (Frankfurt)                          | Finding bugs students hit             | 30 days (Sentry's free plan)                        | Security |
+| Error reports (T-14): error, stack trace, API route or page path, browser                        | Sentry, EU region (Frankfurt)                          | Finding bugs students hit             | 30 days (Sentry's free plan)                        | Security |
 
 #### Browser
 
@@ -152,7 +152,7 @@ The student picks the model (0002, rule 6). Every model in `apps/server/src/ai/c
 | The email provider            | Name, email, and the email text                            | Sends confirmation and reset emails |
 | The off-server backup storage | Encrypted backups it cannot read                           | Keeps a copy if the VPS is lost     |
 | Google, Anthropic, DeepSeek   | What section 6 lists, only for the model the student picks | The tutor and practice questions    |
-| Sentry (planned)              | Error reports (section 3)                                  | Finding bugs                        |
+| Sentry                        | Error reports (section 3)                                  | Finding bugs                        |
 
 The privacy page names the hosting, email, and backup providers and their countries once the team has picked them.
 

@@ -32,6 +32,10 @@ const envSchema = z
 			.int()
 			.positive()
 			.default(DAILY_TOKENS_DEFAULT),
+		// error reports go to Sentry only in production, and only when this is set
+		SENTRY_DSN: z.url().optional().or(z.literal('')),
+		// the image tag, so a report says which deploy it came from
+		SENTRY_RELEASE: z.string().optional(),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -63,6 +67,7 @@ export type Config = {
 	smtp: SmtpOptions | null;
 	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
 	aiDailyTokens: number;
+	sentry: { dsn: string; release?: string } | null;
 };
 
 // fails at startup with every missing or wrong variable listed
@@ -97,5 +102,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
 		aiDailyTokens: vars.AI_DAILY_TOKENS_PER_STUDENT,
+		sentry:
+			vars.APP_ENV === 'production' && vars.SENTRY_DSN
+				? { dsn: vars.SENTRY_DSN, release: vars.SENTRY_RELEASE || undefined }
+				: null,
 	};
 }

@@ -54,6 +54,26 @@ describe('loadConfig', () => {
 		).toThrow(/AI_DAILY_TOKENS_PER_STUDENT/);
 	});
 
+	it('turns Sentry on only in production with a DSN', () => {
+		const production = {
+			...base,
+			APP_ENV: 'production',
+			SMTP_HOST: 'smtp.example.com',
+			SMTP_FROM: 'Orbi <no-reply@orbi.study>',
+		};
+		const dsn = 'https://key@o1.ingest.de.sentry.io/2';
+
+		expect(loadConfig(production).sentry).toBeNull();
+		expect(loadConfig({ ...production, SENTRY_DSN: '' }).sentry).toBeNull();
+		expect(
+			loadConfig({ ...base, APP_ENV: 'local', SENTRY_DSN: dsn }).sentry
+		).toBeNull();
+		expect(
+			loadConfig({ ...production, SENTRY_DSN: dsn, SENTRY_RELEASE: 'abc123' })
+				.sentry
+		).toEqual({ dsn, release: 'abc123' });
+	});
+
 	it('treats an empty AI key as not set', () => {
 		const config = loadConfig({
 			...base,

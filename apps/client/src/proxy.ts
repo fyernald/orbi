@@ -1,6 +1,7 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
 import { contentSecurityPolicy, createNonce } from '@/lib/csp';
+import { sentryOrigin } from '@/lib/monitoring';
 import { routes } from '@/lib/routes';
 
 // Report-Only for now: the browser reports what the policy would block to the API
@@ -21,7 +22,8 @@ export function proxy(request: NextRequest) {
 	// Next.js reads the nonce from the request's policy and puts it on its scripts
 	const policy = contentSecurityPolicy(
 		createNonce(),
-		process.env.NODE_ENV === 'development'
+		process.env.NODE_ENV === 'development',
+		sentryOrigin
 	);
 	const headers = new Headers(request.headers);
 	headers.set(CSP_HEADER, policy);

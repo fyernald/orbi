@@ -54,6 +54,8 @@ services:
     environment:
       HOST: 0.0.0.0
       SERVER_PORT: 3001
+      # error reports say which deploy they came from
+      SENTRY_RELEASE: ${IMAGE_TAG:-latest}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     ports:
       - "127.0.0.1:3101:3001"
