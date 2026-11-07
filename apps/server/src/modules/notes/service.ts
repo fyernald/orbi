@@ -60,6 +60,9 @@ const pdfMessages = {
 		'This PDF took too long to read. Upload only the chapters you need.',
 };
 
+// a topic of another user, or one deleted while a note was saved, answers the same
+const topicNotFound = () => new NotFoundError('Topic not found.');
+
 export function createNoteService({
 	repo,
 	pdf,
@@ -87,7 +90,7 @@ export function createNoteService({
 		topicId: string
 	) {
 		if (!(await repo.topicExists(userId, courseId, topicId))) {
-			throw new NotFoundError('Topic not found.');
+			throw topicNotFound();
 		}
 	}
 
@@ -99,10 +102,12 @@ export function createNoteService({
 
 		async createNote(userId, courseId, topicId, { title, content }) {
 			await requireTopic(userId, courseId, topicId);
-			return repo.insertNote(userId, topicId, {
+			const created = await repo.insertNote(userId, topicId, {
 				title: noteTitle(title, content),
 				content,
 			});
+			if (!created) throw topicNotFound();
+			return created;
 		},
 
 		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
@@ -119,10 +124,12 @@ export function createNoteService({
 				if (notes.length > PDF_MAX_NOTES) {
 					throw new ValidationError(pdfMessages.tooLong);
 				}
-				return repo.insertSourceNotes(userId, topicId, notes, {
+				const created = await repo.insertSourceNotes(userId, topicId, notes, {
 					name: fileName,
 					hash,
 				});
+				if (!created) throw topicNotFound();
+				return created;
 			});
 		},
 
