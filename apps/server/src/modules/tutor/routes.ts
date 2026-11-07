@@ -1,5 +1,7 @@
 import {
 	aiModels,
+	answerExplanation,
+	answerQuestionInput,
 	chatMessagesPage,
 	chatParams,
 	chatSummary,
@@ -9,6 +11,7 @@ import {
 	followUpParams,
 	followUps,
 	followUpsInput,
+	questionParams,
 	renameChatInput,
 	sendChatMessageInput,
 } from '@orbi/shared';
@@ -122,6 +125,26 @@ export function createTutorRoutes({
 					request.params.chatId,
 					request.params.messageId,
 					request.body
+				)
+		);
+
+		// why a wrong answer in a study session is wrong; a saved one comes back without
+		// asking the model again
+		api.post(
+			'/questions/:questionId/explanation',
+			{
+				schema: {
+					params: questionParams,
+					body: answerQuestionInput,
+					response: { 200: answerExplanation },
+				},
+				config: routeLimit(limits.explainAnswer),
+			},
+			async (request) =>
+				tutor.explainAnswer(
+					await requireUser(request),
+					request.params.questionId,
+					request.body.choice
 				)
 		);
 

@@ -13,6 +13,7 @@ erDiagram
     topic ||--o{ question : "has practice"
     question ||--o{ answer : "answered in"
     question ||--o| review_item : "comes back by"
+    question ||--o{ answer_explanation : "explained by"
     course ||--o{ chat : "has tutor"
     topic ||--o{ chat : "has tutor"
     chat ||--o{ chat_message : contains
@@ -122,6 +123,15 @@ erDiagram
         double ease
         timestamptz due_at
     }
+    answer_explanation {
+        uuid id PK
+        text user_id FK
+        uuid question_id FK
+        integer choice
+        text text
+        ai_provider ai_provider
+        varchar ai_model
+    }
 ```
 
 Every table also has `created_at` and `updated_at`.
@@ -138,6 +148,7 @@ Every table also has `created_at` and `updated_at`.
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                                                                                                                                                                                                                                              |
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                                                                                                                                                                                                                                                |
 | `review_item`                                | When a question comes back for review (US-09). One row per question, with the SM-2 values: `repetitions` (right answers in a row), `interval_days`, `ease`, and `due_at`. The scheduler adds the row the first time the student answers the question and updates it after every answer, so a question with no row has not been scheduled yet. Answers in the chat and in study sessions both count. A right answer before the question is due keeps its schedule (see `packages/core/src/review-scheduler.ts`), so `updated_at` is when the schedule last changed. |
+| `answer_explanation`                         | Why a wrong choice is wrong, written by the AI from the topic's notes when the student asks after a wrong answer in a study session (US-07). One row per question and choice, with the model that wrote it, so asking again reads it back instead of calling the AI.                                                                                                                                                                                                                                                                                               |
 
 ## Rules the database enforces
 
@@ -146,6 +157,7 @@ Every table also has `created_at` and `updated_at`.
 - **A question is well formed.** Its text is not blank, `correct_choice` points at one of its `choices`, and an AI question always has `ai_provider` and `ai_model`.
 - **Ownership always matches.** `topic` and `note` keep a `user_id` so the server can check ownership with one simple `WHERE user_id = ...`. Their foreign keys include `user_id`, so a topic can only point at a course of the same user, and a note only at a topic of the same user. The server cannot get this wrong by mistake.
 - **A question in the chat is answered once.** A unique index allows one `chat` answer per question, so two clicks at the same time still save only one. Study sessions can add as many `session` answers as they need.
+- **A wrong choice is explained once.** A unique index on `(user_id, question_id, choice)` keeps one explanation per choice, so two clicks at the same time still save only one. It also backs the foreign key to `question`, so deleting a question deletes its explanations.
 - **A review item is well formed.** There is at most one per question (the primary key is `(user_id, question_id)`), `repetitions` and `interval_days` are never negative, and `ease` never goes below 1.3, the SM-2 minimum.
 - **One profile per user.** `profile.user_id` is the primary key.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).

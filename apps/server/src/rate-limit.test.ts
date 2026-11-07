@@ -10,7 +10,13 @@ let grace: string;
 beforeAll(async () => {
 	app = await createTestApp(createMemoryMailer(), {
 		requireEmailVerification: false,
-		limits: { default: 3, pdfUpload: 1, followUps: 1, sessionAnswer: 1 },
+		limits: {
+			default: 3,
+			pdfUpload: 1,
+			followUps: 1,
+			sessionAnswer: 1,
+			explainAnswer: 1,
+		},
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');
 	grace = await signUpTestUser(app, 'grace@test.dev');

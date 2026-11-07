@@ -358,6 +358,36 @@ export const questionReport = pgTable(
 	]
 );
 
+// Why a wrong choice is wrong, written by the AI when the student asks after a wrong
+// answer (US-07). Saved once per question and choice, so asking again reads it back.
+export const answerExplanation = pgTable(
+	'answer_explanation',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		choice: integer('choice').notNull(),
+		text: text('text').notNull(),
+		aiProvider: aiProvider('ai_provider').notNull(),
+		aiModel: varchar('ai_model', { length: 100 }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'answer_explanation_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// also backs the foreign key, so deleting a question finds its explanations
+		uniqueIndex('answer_explanation_choice_idx').on(
+			t.userId,
+			t.questionId,
+			t.choice
+		),
+		check('answer_explanation_text_not_empty', sql`${t.text} ~ '\\S'`),
+	]
+);
+
 // When a question comes back for review (US-09). The SM-2 scheduler adds the row
 // the first time the student answers the question and updates it after every
 // answer; a question with no row has not been scheduled yet. The mastery score is

@@ -236,6 +236,14 @@ export const sessionAnswer = chatAnswer.extend({
 	explanation: z.string().nullable(),
 });
 
+// why a wrong choice is wrong, written by the AI from the topic's notes (US-07); the
+// same question and choice always give back the saved one
+export const answerExplanation = z.object({
+	questionId: z.uuid(),
+	choice: z.int(),
+	text: z.string(),
+});
+
 // how well the student knows a topic, from 0 to 100; null before its first answer
 export const topicMastery = z.object({
 	topicId: z.uuid(),
@@ -246,3 +254,4 @@ export type StudyQuestion = z.infer<typeof studyQuestion>;
 export type TopicMastery = z.infer<typeof topicMastery>;
 export type StudySession = z.infer<typeof studySession>;
 export type SessionAnswer = z.infer<typeof sessionAnswer>;
+export type AnswerExplanation = z.infer<typeof answerExplanation>;
