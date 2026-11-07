@@ -141,11 +141,11 @@ Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), s
 
 Unexpected errors go to [Sentry](https://sentry.io), so we hear about them before a student reports them. It runs only in production, and only when a DSN is set.
 
-| Where              | What is reported                                                                                                                 | Code                                                               |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| The API            | Every 500 answer, with its route (`POST /api/chats/:chatId/messages`), and errors the services log, such as a failed tutor reply | `src/error-reporter.ts`, used by `error-handler.ts` and `index.ts` |
-| The Next.js server | Errors while it renders a page                                                                                                   | `src/instrumentation.ts`                                           |
-| The browser        | Errors in the page, with its path                                                                                                | `src/instrumentation-client.ts`                                    |
+| Where              | What is reported                                                                                                                 | Code                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| The API            | Every 500 answer, with its route (`POST /api/chats/:chatId/messages`), and errors the services log, such as a failed tutor reply | `src/error-reporter.ts`, started by `src/instrument.ts`, used by `error-handler.ts` and `index.ts` |
+| The Next.js server | Errors while it renders a page                                                                                                   | `src/instrumentation.ts`                                                                           |
+| The browser        | Errors in the page, with its path                                                                                                | `src/instrumentation-client.ts`                                                                    |
 
 Sentry never gets cookies, headers, request bodies, query strings, IP addresses, the user, or anything the student wrote. AI errors are sent with their name only, failed queries without their values, and console lines and clicks are left out ([decision 0004](decisions/04-user-data.md), `lib/monitoring.ts` and `src/error-reporter.ts`).
 
@@ -165,6 +165,29 @@ The DSN is not a secret: the browser has to know it to send reports.
 Open the `orbi` project in Sentry and go to **Issues**. Each issue shows the error, its stack, the route or page, and the release (the commit that was deployed, from `SENTRY_RELEASE` in `compose.yml`). The client's stacks are not mapped to the source yet, because the build does not upload source maps.
 
 Sentry emails every member of the project for each new issue (its default alert rule). Add every team member to the project under **Settings > Teams** so the whole team gets them. The free plan keeps errors for 30 days.
+
+### Performance
+
+Sentry also traces a share of the traffic, to show what is slow. It is on whenever error reports are on.
+
+- **The API**: each request, with its route, the database queries in it (the SQL without its values), and AI calls (model, tokens and time, never the prompt or the reply). `src/instrument.ts` starts Sentry before the rest of the server loads (`node --import` in the Dockerfile), so it can trace the database.
+- **The browser**: page loads and navigations, the requests they make to `/api`, and Web Vitals (LCP, INP, CLS). Requests to `/api` carry the trace in their `sentry-trace` and `baggage` headers, so one trace shows the page and the API request behind it.
+- **The Next.js server**: the pages it renders.
+
+The health checks are never traced. Traces follow the same rules as errors: no query strings, the reset token masked, no user, IP address, headers, or bodies (`scrubSpan` in `src/error-reporter.ts` and `lib/monitoring.ts`).
+
+The share is 0.2 (1 request in 5) by default, so it fits the free plan. To change it, set a number from 0 to 1:
+
+- `SENTRY_TRACES_SAMPLE_RATE=` in `.env` on the VPS, for the API, then deploy again,
+- a repository variable `SENTRY_TRACES_SAMPLE_RATE`, for the browser. It is put into the client image when it is built, like the DSN.
+
+A request the browser traced is traced on the API too, whatever the API's share is.
+
+To see the traces, open the `orbi` project in Sentry:
+
+- **Insights > Backend** lists the API routes by how slow they are, and **Insights > Frontend** the pages,
+- **Insights > Web Vitals** gives each page a score from LCP, INP and CLS,
+- **Explore > Traces** shows single traces, from the page load to the database queries.
 
 ## Backups
 

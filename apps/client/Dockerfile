@@ -18,6 +18,9 @@ COPY apps/client apps/client
 # It is put into the build; empty turns Sentry off.
 ARG NEXT_PUBLIC_SENTRY_DSN=
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+# The share of page loads traced for performance, from 0 to 1; empty is 0.2.
+ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=
+ENV NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
 RUN pnpm --filter client build
 
 FROM node:22-alpine

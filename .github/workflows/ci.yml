@@ -91,8 +91,10 @@ jobs:
         with:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
-          # the browser's Sentry address is put into the client build; the server ignores it
-          build-args: NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+          # the browser's Sentry settings are put into the client build; the server ignores them
+          build-args: |
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=${{ vars.SENTRY_TRACES_SAMPLE_RATE }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/orbi-${{ matrix.app }}:${{ github.sha }}

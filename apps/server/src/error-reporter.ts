@@ -5,6 +5,7 @@ import type {
 	EventHint,
 	Exception,
 } from '@sentry/node';
+import type { SentryConfig } from './config';
 import { safeUrl, serializeError } from './log';
 
 // route is where it happened, for example "POST /api/chats/:chatId/messages"
@@ -22,9 +23,10 @@ export const noErrorReporter: ErrorReporter = {
 	flush: async () => {},
 };
 
-// What Sentry may collect (decision 0004): the error, its stack, and the route. No
-// cookies, headers, bodies, query strings, user, AI prompts or replies, query values, or
-// local variables, so nothing a student wrote leaves the server this way.
+// What Sentry may collect (decision 0004): the error, its stack, the route, and how long
+// each step of a request took. No cookies, headers, bodies, query strings, user, AI
+// prompts or replies, query values, or local variables, so nothing a student wrote
+// leaves the server this way.
 const dataCollection: NonNullable<Sentry.NodeOptions['dataCollection']> = {
 	userInfo: false,
 	cookies: false,
@@ -73,30 +75,90 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
 	return { ...breadcrumb, data: { ...breadcrumb.data, url: safeUrl(url) } };
 }
 
-export function createSentryReporter({
+type StreamedSpan = Parameters<
+	NonNullable<Sentry.NodeOptions['beforeSendSpan']>
+>[0];
+
+// a url or path, maybe after a method: "GET /api/notes?x=1" or "https://host/a?b"
+const urlLike = /^([A-Z]+ )?((?:https?:\/\/|\/)\S*)$/;
+
+const withSafeUrl = (text: string) => {
+	const match = urlLike.exec(text);
+	return match ? `${match[1] ?? ''}${safeUrl(match[2]!)}` : text;
+};
+
+// who sent the request, its query, headers and bodies
+const privateAttribute =
+	/^(user\.|client\.address$|http\.client_ip$|url\.query$|http\.query$)|header|body|cookie/;
+
+// AI spans keep the model, the token counts and the timing, never the prompt or reply
+const aiAttribute = /^(gen_ai|ai|vercel\.ai)\./;
+const safeAiAttribute =
+	/model|usage|tokens|operation|provider|system$|finish_reason|streaming|response\.id$|tool\.name$/;
+
+const attributeValue = (value: unknown) =>
+	value && typeof value === 'object' && 'value' in value ? value.value : value;
+
+// the Sentry settings already leave these out; this is a second check, as for errors
+export function scrubSpan(span: StreamedSpan): StreamedSpan {
+	const attributes: Record<string, unknown> = {};
+	for (const [key, raw] of Object.entries(span.attributes)) {
+		if (privateAttribute.test(key)) continue;
+		if (aiAttribute.test(key) && !safeAiAttribute.test(key)) continue;
+		const value = attributeValue(raw);
+		attributes[key] = typeof value === 'string' ? withSafeUrl(value) : raw;
+	}
+	return {
+		...span,
+		name: withSafeUrl(span.name),
+		attributes: attributes as StreamedSpan['attributes'],
+	};
+}
+
+type SamplingContext = Parameters<
+	NonNullable<Sentry.NodeOptions['tracesSampler']>
+>[0];
+
+// A request the browser traced stays traced, so one trace shows both. The Docker
+// health check runs every 10 seconds and would use up the free plan, so it never is.
+export const tracesSampler =
+	(rate: number) =>
+	({ attributes, normalizedRequest, inheritOrSampleWith }: SamplingContext) => {
+		const path =
+			attributeValue(attributes['url.path']) ?? normalizedRequest?.url;
+		if (typeof path === 'string' && safeUrl(path).endsWith('/api/health')) {
+			return 0;
+		}
+		return inheritOrSampleWith(rate);
+	};
+
+export function sentryOptions({
 	dsn,
 	release,
-}: {
-	dsn: string;
-	release?: string;
-}): ErrorReporter {
-	Sentry.init({
+	tracesSampleRate,
+}: SentryConfig): Sentry.NodeOptions {
+	return {
 		dsn,
 		release,
 		environment: 'production',
-		// errors only: no tracing, so no OpenTelemetry either
-		enableOpenTelemetrySetup: false,
+		tracesSampler: tracesSampler(tracesSampleRate),
 		dataCollection,
+		// error-handler.ts reports 500 answers already, with the route
+		integrations: [
+			Sentry.fastifyIntegration({ shouldHandleError: () => false }),
+		],
 		beforeSend: scrubEvent,
 		beforeBreadcrumb: scrubBreadcrumb,
-	});
-
-	return {
-		report(error, route) {
-			Sentry.captureException(error, route ? { tags: { route } } : undefined);
-		},
-		async flush() {
-			await Sentry.flush(2000);
-		},
+		beforeSendSpan: scrubSpan,
 	};
 }
+
+// Sentry itself is started by instrument.ts
+export const sentryReporter: ErrorReporter = {
+	report(error, route) {
+		Sentry.captureException(error, route ? { tags: { route } } : undefined);
+	},
+	async flush() {
+		await Sentry.flush(2000);
+	},
+};

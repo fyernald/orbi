@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
 		"build": "tsup",
-		"start": "node --env-file-if-exists=../../.env dist/index.js",
+		"start": "node --env-file-if-exists=../../.env --import ./dist/instrument.js dist/index.js",
 		"typecheck": "tsc --noEmit",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
