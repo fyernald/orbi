@@ -1,8 +1,9 @@
-import type {
-	ChatMessage,
-	TutorAction,
-	TutorMessageMetadata,
-	TutorTools,
+import {
+	isNonVisualToolPart,
+	type ChatMessage,
+	type TutorAction,
+	type TutorMessageMetadata,
+	type TutorTools,
 } from '@orbi/shared';
 import { APICallError, type UIMessage } from 'ai';
 import { composerActions } from './actions';
@@ -94,11 +95,11 @@ export function hasVisibleContent(
 	);
 }
 
-// follow-up questions go under an explanation, not under question sets or
-// Orbi's own questions to the student
+// follow-up questions go under an explanation (with or without a visual), not
+// under question sets or Orbi's own questions to the student
 export const canFollowUp = (message: TutorUIMessage) =>
 	message.role === 'assistant' &&
 	message.parts.some(
 		(part) => part.type === 'text' && part.text.trim().length > 0
 	) &&
-	!message.parts.some(isToolPart);
+	!message.parts.some((part) => isNonVisualToolPart(part.type));

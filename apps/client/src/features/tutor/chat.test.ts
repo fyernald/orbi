@@ -131,6 +131,26 @@ describe('canFollowUp', () => {
 		expect(canFollowUp(asking)).toBe(false);
 	});
 
+	it('follows an explanation with a diagram', () => {
+		const explained = reply([
+			{
+				type: 'tool-createDiagram',
+				toolCallId: 'call-3',
+				state: 'output-available',
+				input: {
+					title: 'Phases',
+					kind: 'flowchart',
+					mermaid: 'flowchart TD\n  A --> B',
+					description: 'The phases in order.',
+				},
+				output: { shown: true },
+			},
+			{ type: 'text', text: 'Prophase comes first.' },
+		]);
+
+		expect(canFollowUp(explained)).toBe(true);
+	});
+
 	it("does not follow the student's own message or an empty reply", () => {
 		expect(
 			canFollowUp({ ...reply([{ type: 'text', text: 'Hi' }]), role: 'user' })

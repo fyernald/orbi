@@ -641,6 +641,95 @@ describe('long chats', () => {
 	});
 });
 
+describe('diagrams', () => {
+	const diagram = (
+		title: string,
+		mermaid = 'flowchart TD\n  A[Prophase] --> B[Metaphase]'
+	) => ({
+		tool: 'createDiagram',
+		input: {
+			title,
+			kind: 'flowchart',
+			mermaid,
+			description: 'The phases of mitosis in order.',
+		},
+	});
+
+	it('draws a diagram in the reply and keeps follow-up questions for it', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(diagram('Phases of mitosis'), {
+			text: 'Prophase comes before metaphase.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Draw the phases of mitosis'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const reply = thread.messages[1];
+		const drawn = reply.parts.find(
+			(part: { type: string }) => part.type === 'tool-createDiagram'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.title).toBe('Phases of mitosis');
+
+		// a visual is part of an explanation, so the reply still gets follow-ups
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: { questions: ['What happens in anaphase?'] },
+		});
+		const followUps = await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+		expect(followUps.json().questions).toEqual(['What happens in anaphase?']);
+	});
+
+	it('gives the AI another try when its Mermaid breaks the rules', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			diagram('Phases', '```mermaid\nflowchart TD\n  A --> B\n```'),
+			diagram('Phases'),
+			{ text: 'Here they are.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw the phases'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		// the model reads what to fix; the student only sees that it is being redone
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain(
+			'without code fences'
+		);
+	});
+
+	it('stops a reply at two visuals', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(diagram('One'), diagram('Two'), diagram('Three'), {
+			text: 'That is enough diagrams.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+		expect(JSON.stringify(ai.calls[3]!.prompt)).toContain(
+			'already shows 2 visuals'
+		);
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -658,6 +747,7 @@ describe('the whole-course chat', () => {
 		// practice questions need a topic, so the model is not offered the tool
 		expect(ai.calls[0]!.tools?.map((tool) => tool.name)).toEqual([
 			'askStudent',
+			'createDiagram',
 		]);
 	});
 

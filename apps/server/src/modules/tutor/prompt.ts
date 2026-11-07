@@ -1,6 +1,8 @@
 import {
+	DIAGRAM_COLOUR_CLASSES,
 	QUESTIONS_PER_SET_MAX,
 	QUESTIONS_PER_SET_MIN,
+	VISUALS_PER_REPLY_MAX,
 	type ExplanationStyle,
 	type TutorAction,
 } from '@orbi/shared';
@@ -147,6 +149,12 @@ export type InstructionsInput = {
 	today: Date;
 };
 
+// short, so they add few tokens to every reply (T-72)
+const diagramRules = [
+	'- When the student asks to draw, show, map or visualize something, or when a structure, process or relation is much easier to see than to read, call createDiagram. Most replies need no diagram.',
+	`- Keep a diagram small (about 15 nodes at most) with short labels, and prefer top-down layouts, the chat is narrow. Write Mermaid only: no code fences, styles, colours or config. To set groups of flowchart or state nodes apart, give them the classes c1 to c${DIAGRAM_COLOUR_CLASSES} (A[Label]:::c2), the app colours them. Then explain in a few sentences what it shows, without repeating the Mermaid source. At most ${VISUALS_PER_REPLY_MAX} visuals in one reply.`,
+];
+
 // the system instructions for one reply
 export function buildInstructions({
 	course,
@@ -185,6 +193,7 @@ export function buildInstructions({
 			'- Keep replies short and clear: short paragraphs, lists when they help, **bold** for key terms. Write maths in LaTeX between double dollar signs, also inside a sentence (for example $$2^n$$), never single ones.',
 			'- Help the student think. When they ask you to check their understanding, ask them to explain it first.',
 			...questions,
+			...diagramRules,
 			'- If the request could mean very different things and the answer changes what you make, call askStudent once instead of guessing.',
 			'- If they ask for something unrelated to studying, answer briefly and steer back to the course.',
 		].join('\n'),

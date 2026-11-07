@@ -4,6 +4,7 @@ import type { AiModel } from '@orbi/shared';
 import { RotateCcw } from 'lucide-react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { isToolPart, type TutorUIMessage } from '../../chat';
+import { isHiddenVisualError } from '../../visuals/visual-parts';
 import { CopyButton } from './copy-button';
 import { Markdown } from './markdown';
 import { MessageAttachments } from './message-attachments';
@@ -114,12 +115,14 @@ function OrbiMessage({
 						);
 					}
 					if (isToolPart(part)) {
+						if (isHiddenVisualError(message.parts, index)) return null;
 						return (
 							<ToolView
 								key={index}
 								part={part}
 								interactive={interactive}
 								actions={actions}
+								onRetry={onRetry}
 							/>
 						);
 					}

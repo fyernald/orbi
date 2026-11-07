@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 import type { TutorPart } from '../../chat';
 import { AskStudentCard } from './ask-student-card';
 import { QuestionSetCard } from './question-set-card';
+import { DiagramView } from './visuals/diagram-view';
 
 type ToolName = keyof TutorTools;
 
@@ -23,6 +24,8 @@ export type ToolViewProps<Name extends ToolName> = {
 	// the student can act on it: the last reply, with nothing else running
 	interactive: boolean;
 	actions: ChatActions;
+	// asks Orbi for this reply again; only the last finished reply has it
+	onRetry?: () => void;
 };
 
 // One view per tool. A new tool in the shared TutorTools does not compile until
@@ -30,16 +33,19 @@ export type ToolViewProps<Name extends ToolName> = {
 const toolViews: { [Name in ToolName]: ComponentType<ToolViewProps<Name>> } = {
 	createQuestions: QuestionSetCard,
 	askStudent: AskStudentCard,
+	createDiagram: DiagramView,
 };
 
 export function ToolView({
 	part,
 	interactive,
 	actions,
+	onRetry,
 }: {
 	part: TutorPart;
 	interactive: boolean;
 	actions: ChatActions;
+	onRetry?: () => void;
 }) {
 	const name = part.type.slice('tool-'.length) as ToolName;
 	const View = toolViews[name] as ComponentType<ToolViewProps<ToolName>>;
@@ -56,6 +62,7 @@ export function ToolView({
 			part={part as ToolPart<ToolName>}
 			interactive={interactive}
 			actions={actions}
+			onRetry={onRetry}
 		/>
 	);
 }

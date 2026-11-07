@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { generatedQuestion } from './questions';
+import type { CreateDiagramInput, CreateDiagramOutput } from './visuals';
 
 // What the tutor's tools take and give back. The server checks the AI's input with
 // these, and the client draws each tool from them. A new tool starts here, then gets
@@ -44,9 +45,28 @@ export const askStudentOutput = z.object({
 	skipped: z.boolean(),
 });
 
-export const TUTOR_TOOL_NAMES = ['createQuestions', 'askStudent'] as const;
+// the tools that show a visual in the chat (US-42)
+export const VISUAL_TOOL_NAMES = ['createDiagram'] as const;
+
+export const TUTOR_TOOL_NAMES = [
+	'createQuestions',
+	'askStudent',
+	...VISUAL_TOOL_NAMES,
+] as const;
 
 export type TutorToolName = (typeof TUTOR_TOOL_NAMES)[number];
+export type VisualToolName = (typeof VISUAL_TOOL_NAMES)[number];
+
+export const isVisualToolName = (name: string): name is VisualToolName =>
+	(VISUAL_TOOL_NAMES as readonly string[]).includes(name);
+
+// A reply part that is a tool other than a visual: question sets and Orbi's
+// questions to the student. A reply with one gets no follow-up questions; a
+// visual is part of an explanation, so it keeps them.
+export const isNonVisualToolPart = (partType: string) =>
+	partType.startsWith('tool-') &&
+	!isVisualToolName(partType.slice('tool-'.length));
+
 export type CreateQuestionsInput = z.infer<typeof createQuestionsInput>;
 export type CreateQuestionsOutput = z.infer<typeof createQuestionsOutput>;
 export type AskStudentInput = z.infer<typeof askStudentInput>;
@@ -59,4 +79,5 @@ export type TutorTools = {
 		output: CreateQuestionsOutput;
 	};
 	askStudent: { input: AskStudentInput; output: AskStudentOutput };
+	createDiagram: { input: CreateDiagramInput; output: CreateDiagramOutput };
 };
