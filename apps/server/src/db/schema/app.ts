@@ -3,13 +3,16 @@ import {
 	boolean,
 	check,
 	date,
+	doublePrecision,
 	foreignKey,
 	index,
 	integer,
 	jsonb,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
+	time,
 	timestamp,
 	unique,
 	uniqueIndex,
@@ -30,6 +33,7 @@ import {
 	REPORT_REASONS,
 	STUDY_TIMES,
 	TUTOR_ACTIONS,
+	type MessageAttachment,
 } from '@orbi/shared';
 import { user } from './auth';
 
@@ -83,6 +87,9 @@ export const profile = pgTable('profile', {
 	explanationStyle: explanationStyle('explanation_style'),
 	dailyMinutes: integer('daily_minutes'),
 	studyTime: studyTime('study_time'),
+	// the daily study reminder email, sent at reminder_time in the user's time zone
+	reminderEnabled: boolean('reminder_enabled').notNull().default(false),
+	reminderTime: time('reminder_time'),
 	// set once every onboarding question is answered; the app stays closed until then
 	onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
 	...timestamps,
@@ -137,6 +144,10 @@ export const note = pgTable(
 		topicId: uuid('topic_id').notNull(),
 		title: varchar('title', { length: 255 }).notNull(),
 		content: text('content').notNull(),
+		// for a note taken from a PDF: the file's name, and a SHA-256 of its bytes so
+		// the same file uploaded again reuses its notes
+		sourceName: varchar('source_name', { length: 255 }),
+		sourceHash: varchar('source_hash', { length: 64 }),
 		...timestamps,
 	},
 	(t) => [
@@ -145,8 +156,10 @@ export const note = pgTable(
 			columns: [t.userId, t.topicId],
 			foreignColumns: [topic.userId, topic.id],
 		}).onDelete('cascade'),
-		index('note_topic_id_idx').on(t.topicId),
+		// the notes list: a topic's notes, newest first
+		index('note_topic_created_at_idx').on(t.topicId, t.createdAt.desc()),
 		index('note_user_id_idx').on(t.userId),
+		index('note_source_hash_idx').on(t.topicId, t.sourceHash),
 		// at least one character that is not a space or a line break
 		check('note_content_not_empty', sql`${t.content} ~ '\\S'`),
 	]
@@ -194,6 +207,8 @@ export const chat = pgTable(
 		}).onDelete('cascade'),
 		unique('chat_user_id_id_key').on(t.userId, t.id),
 		index('chat_course_id_idx').on(t.courseId, t.updatedAt),
+		// deleting a topic finds its chats through this one
+		index('chat_topic_idx').on(t.userId, t.topicId),
 	]
 );
 
@@ -214,10 +229,14 @@ export const chatMessage = pgTable(
 		// the catalog id, for assistant messages
 		modelId: varchar('model_id', { length: 100 }),
 		notesUsed: integer('notes_used'),
+		notesTotal: integer('notes_total'),
+		notesCut: boolean('notes_cut'),
 		// how long each thinking part took, for assistant messages
 		thinkingMs: integer('thinking_ms').array(),
 		// the follow-up questions shown under an explanation, so a visit does not ask again
 		followUps: text('follow_ups').array(),
+		// the PDFs sent with a student's message, and the notes each was saved as
+		attachments: jsonb('attachments').$type<MessageAttachment[]>(),
 		...timestamps,
 	},
 	(t) => [
@@ -227,6 +246,8 @@ export const chatMessage = pgTable(
 			foreignColumns: [chat.userId, chat.id],
 		}).onDelete('cascade'),
 		index('chat_message_chat_id_idx').on(t.chatId, t.createdAt),
+		// deleting a topic unlinks its messages through this one
+		index('chat_message_topic_id_idx').on(t.topicId),
 	]
 );
 
@@ -261,7 +282,8 @@ export const question = pgTable(
 		}).onDelete('cascade'),
 		unique('question_user_id_id_key').on(t.userId, t.id),
 		index('question_topic_id_idx').on(t.topicId, t.status),
-		index('question_user_id_idx').on(t.userId),
+		// the review inbox: a student's pending questions, oldest first
+		index('question_user_status_idx').on(t.userId, t.status, t.createdAt),
 		check('question_text_not_empty', sql`${t.text} ~ '\\S'`),
 		check(
 			'question_correct_choice_in_range',
@@ -300,6 +322,9 @@ export const answer = pgTable(
 			.on(t.questionId)
 			.where(sql`${t.context} = 'chat'`),
 		index('answer_user_id_idx').on(t.userId, t.answeredAt),
+		// deleting a question finds its answers through this one; the mastery score
+		// reads a question's answers in time order the same way
+		index('answer_question_idx').on(t.userId, t.questionId, t.answeredAt),
 	]
 );
 
@@ -330,6 +355,72 @@ export const questionReport = pgTable(
 		// a question is reported once
 		uniqueIndex('question_report_question_id_idx').on(t.questionId),
 		index('question_report_user_id_idx').on(t.userId),
+	]
+);
+
+// Why a wrong choice is wrong, written by the AI when the student asks after a wrong
+// answer (US-07). Saved once per question and choice, so asking again reads it back.
+export const answerExplanation = pgTable(
+	'answer_explanation',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		choice: integer('choice').notNull(),
+		text: text('text').notNull(),
+		aiProvider: aiProvider('ai_provider').notNull(),
+		aiModel: varchar('ai_model', { length: 100 }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'answer_explanation_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// also backs the foreign key, so deleting a question finds its explanations
+		uniqueIndex('answer_explanation_choice_idx').on(
+			t.userId,
+			t.questionId,
+			t.choice
+		),
+		check('answer_explanation_text_not_empty', sql`${t.text} ~ '\\S'`),
+	]
+);
+
+// When a question comes back for review (US-09). The SM-2 scheduler adds the row
+// the first time the student answers the question and updates it after every
+// answer; a question with no row has not been scheduled yet. The mastery score is
+// not saved anywhere: it is worked out from the answers (docs/database.md).
+export const reviewItem = pgTable(
+	'review_item',
+	{
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		// right answers in a row; a wrong answer sets it back to 0
+		repetitions: integer('repetitions').notNull().default(0),
+		intervalDays: integer('interval_days').notNull().default(0),
+		ease: doublePrecision('ease').notNull().default(2.5),
+		dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		// also the index the foreign key deletes through
+		primaryKey({
+			name: 'review_item_pkey',
+			columns: [t.userId, t.questionId],
+		}),
+		foreignKey({
+			name: 'review_item_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// what is due today
+		index('review_item_due_at_idx').on(t.userId, t.dueAt),
+		check('review_item_repetitions_min', sql`${t.repetitions} >= 0`),
+		check('review_item_interval_days_min', sql`${t.intervalDays} >= 0`),
+		// SM-2 never lets the ease go below 1.3
+		check('review_item_ease_min', sql`${t.ease} >= 1.3`),
 	]
 );
 

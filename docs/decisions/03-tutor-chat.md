@@ -22,7 +22,8 @@ Two accepted rules do not fit a chat:
 - Questions, and later flashcards and the rest, made inside the chat are tool calls in the same stream. They do not go through the worker.
 - `generation_jobs` and `orbi-worker` stay for slow batch work that nobody watches live, for example a whole PDF turned into questions. Nothing uses them yet.
 - When the browser stops the request (Stop, or the tab closes), the server stops the model and saves what was finished.
-- A student can have at most 3 replies running at once, across all their chats. The server counts them in memory and answers `429` for a fourth; the composer says so before sending. With more than one API process, this count would have to move to the database.
+- A student can have at most 3 replies running at once, across all their chats. The server counts them in memory and answers `429` for a fourth; the composer says so before sending. Follow-up questions (section 4) take a place too while the model writes them. With more than one API process, this count would have to move to the database.
+- Each student has a daily budget of AI tokens (input and output of every model call, follow-up questions included), `AI_DAILY_TOKENS_PER_STUDENT` in `.env`, 1,000,000 by default. When it is used up, a new reply or follow-up refresh answers `429` and asks no model. The day is the student's own (the profile's time zone), so it resets at their midnight. Like the reply count it is kept in memory, so a restart starts everyone's day again.
 - Text is passed through the AI SDK's `smoothStream`, so models that send a reply in a few large pieces (Gemini Flash-Lite) still show it word by word.
 - nginx does not buffer the stream because the route sends `X-Accel-Buffering: no`.
 
@@ -64,6 +65,7 @@ A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 - `question` keeps each generated question with its status (pending, approved, rejected), its source (AI or manual), the provider and model, and the chat message that made it.
 - A chat opens on its newest 30 messages (`GET /api/chats/:chatId`), and older ones load in pages of 30 as the student scrolls up (`GET /api/chats/:chatId/messages?before=<message id>`). A skeleton holds their place while they load.
 - Messages loaded from the database are checked with `validateUIMessages` before they go back to the model.
+- A reply loads only what it can send: the chat's newest 30 messages (the model gets at most 20), and the notes that fit in its budget of 100,000 characters (4,000 for follow-up questions). The database stops at the budget, so a long chat or a topic with many PDFs costs the same as a short one. Notes of PDFs attached in those messages come first.
 
 ## Not used
 

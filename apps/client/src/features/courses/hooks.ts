@@ -2,6 +2,7 @@
 
 import {
 	course,
+	courseTopic,
 	topic,
 	type Course,
 	type CreateCourseInput,
@@ -12,8 +13,9 @@ import {
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { questionSetsKey } from '@/features/questions/set-hooks';
 import { api } from '@/lib/api';
-import { courseKey, coursesKey, topicsKey } from './query-keys';
+import { allTopicsKey, courseKey, coursesKey, topicsKey } from './query-keys';
 
 export function useCourses() {
 	return useQuery({
@@ -48,7 +50,17 @@ export function useCreateCourse() {
 				courses ? [...courses, created] : courses
 			);
 			queryClient.setQueryData(courseKey(created.id), created);
+			// its first topics
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
+	});
+}
+
+// every topic of the student, the one with the newest tutor chat first
+export function useAllTopics() {
+	return useQuery({
+		queryKey: allTopicsKey,
+		queryFn: () => api.get('/topics', z.array(courseTopic)),
 	});
 }
 
@@ -60,7 +72,8 @@ export function useTopics(courseId: string) {
 }
 
 // after a topic changes, the course list and the course load again, so their note
-// count and last activity come from the server; the topic count moves at once meanwhile
+// count and last activity come from the server; the topic count moves at once meanwhile.
+// The question sets show the topic's name and go with a deleted topic
 function useTopicsChanged(courseId: string) {
 	const queryClient = useQueryClient();
 	return (topicChange: number) => {
@@ -80,6 +93,8 @@ function useTopicsChanged(courseId: string) {
 			queryKey: courseKey(courseId),
 			exact: true,
 		});
+		void queryClient.invalidateQueries({ queryKey: allTopicsKey });
+		void queryClient.invalidateQueries({ queryKey: questionSetsKey(courseId) });
 	};
 }
 
@@ -109,6 +124,8 @@ export function useRenameCourse(courseId: string) {
 				courses?.map((item) => (item.id === renamed.id ? renamed : item))
 			);
 			queryClient.setQueryData(courseKey(renamed.id), renamed);
+			// the topic lists show the course name
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }
@@ -156,6 +173,7 @@ export function useDeleteCourse() {
 			queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
 				courses?.filter((item) => item.id !== courseId)
 			);
+			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }

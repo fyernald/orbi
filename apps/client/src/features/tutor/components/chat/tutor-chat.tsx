@@ -1,10 +1,11 @@
 'use client';
 
-import type { TutorRequestInput } from '@orbi/shared';
+import type { MessageAttachment, TutorRequestInput } from '@orbi/shared';
 import { RotateCcw, X } from 'lucide-react';
 import {
 	useCallback,
 	useEffect,
+	useEffectEvent,
 	useRef,
 	useState,
 	type ReactNode,
@@ -19,8 +20,9 @@ import {
 	messageToSend,
 	type TutorUIMessage,
 } from '../../chat';
-import { useEarlierMessages, useModels, useTutorChat } from '../../hooks';
-import type { Topic } from '../../mock-data';
+import type { ComposerTopic } from '../../composer';
+import { useEarlierMessages, useModels } from '../../hooks';
+import { useTutorChat } from '../../use-tutor-chat';
 import {
 	NoteComposer,
 	type ComposerDraft,
@@ -45,7 +47,7 @@ type TutorChatProps = {
 	// a long chat opens on its newest messages; older ones load when scrolled to
 	initialHasEarlier: boolean;
 	// the topics the composer offers; a topic's chat offers only its own
-	topics: Topic[];
+	topics: ComposerTopic[];
 	preset?: ComposerPreset;
 	// shown until the first message
 	emptyState: ReactNode;
@@ -84,9 +86,13 @@ export function TutorChat({
 		presetVersion.current += 1;
 		setComposerPreset({ ...changes, version: presetVersion.current });
 	};
-	useEffect(() => {
+	const applyPagePreset = useEffectEvent(() => {
 		if (preset) applyPreset(preset);
-	}, [preset?.version]);
+	});
+	const pagePresetVersion = preset?.version;
+	useEffect(() => {
+		applyPagePreset();
+	}, [pagePresetVersion]);
 	const lastStudentMetadata = initialMessages
 		.filter(({ role }) => role === 'user')
 		.at(-1)?.metadata;
@@ -161,7 +167,10 @@ export function TutorChat({
 	const workingOn = topicName(working?.topicId);
 	const notesOf = workingOn ? `your ${workingOn} notes` : 'your notes';
 
-	const send = (request: TutorRequestInput) => {
+	const send = (
+		request: TutorRequestInput,
+		attachments: MessageAttachment[] = []
+	) => {
 		const text = messageToSend(
 			request.action,
 			request.message,
@@ -178,7 +187,8 @@ export function TutorChat({
 				thinking: request.thinking,
 				action: request.action,
 			},
-			request.message
+			request.message,
+			attachments
 		);
 	};
 
@@ -298,6 +308,7 @@ export function TutorChat({
 					)}
 					<NoteComposer
 						topics={topics}
+						courseId={courseId}
 						topicId={chatTopicId ?? ''}
 						wholeCourse={courseName}
 						onTopicChange={

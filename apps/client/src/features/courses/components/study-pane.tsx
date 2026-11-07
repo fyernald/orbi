@@ -1,16 +1,25 @@
 import type { ReactNode } from 'react';
-import { TUTOR_ACTIONS, type TutorAction } from '@orbi/shared';
+import {
+	TUTOR_ACTIONS,
+	type QuestionSet,
+	type TutorAction,
+} from '@orbi/shared';
+import { QuestionSetList } from '@/features/questions/components/question-set-list';
 import { PaneHeader } from './pane-header';
 import { StudyToolButton } from './study-tool-button';
 
 type StudyPaneProps = {
+	courseId: string;
 	onStartTool: (action: TutorAction) => void;
+	onOpenSet: (set: QuestionSet) => void;
 	className?: string;
 	studyPlan?: ReactNode;
 };
 
 export function StudyPane({
+	courseId,
 	onStartTool,
+	onOpenSet,
 	className,
 	studyPlan,
 }: StudyPaneProps) {
@@ -30,7 +39,6 @@ export function StudyPane({
 					))}
 				</ul>
 
-				{/* lists what was generated once the AI work lands in Sprint 2 */}
 				<section
 					aria-labelledby="made-title"
 					className="flex flex-col gap-2 px-1"
@@ -41,9 +49,7 @@ export function StudyPane({
 					>
 						Made for this course
 					</h3>
-					<p className="text-sm text-muted-foreground">
-						Questions, flashcards, and mock exams you make show up here.
-					</p>
+					<QuestionSetList courseId={courseId} onOpen={onOpenSet} />
 				</section>
 			</div>
 		</section>

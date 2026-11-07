@@ -1,9 +1,11 @@
+import { PDF_MAX_SIZE } from '@orbi/shared';
 import { describe, expect, it } from 'vitest';
 import {
+	acceptedFileTypes,
 	attachmentError,
 	attachmentKind,
 	formatFileSize,
-	maxAttachmentSize,
+	messageAttachments,
 } from './attachments';
 
 const fileOf = (name: string, size = 1024) =>
@@ -33,9 +35,16 @@ describe('attachmentError', () => {
 	it('rejects unsupported, empty and too large files', () => {
 		expect(attachmentError(fileOf('setup.exe'), null)).toBe('Not supported');
 		expect(attachmentError(fileOf('empty.pdf', 0), 'pdf')).toBe('Empty file');
-		expect(
-			attachmentError(fileOf('huge.pdf', maxAttachmentSize + 1), 'pdf')
-		).toBe('Over 20 MB');
+		expect(attachmentError(fileOf('huge.pdf', PDF_MAX_SIZE + 1), 'pdf')).toBe(
+			'Over 20 MB'
+		);
+	});
+
+	it('only takes PDFs for now', () => {
+		expect(attachmentError(fileOf('board.png'), 'image')).toBe(
+			'Only PDFs for now'
+		);
+		expect(acceptedFileTypes).toBe('.pdf');
 	});
 });
 
@@ -44,5 +53,24 @@ describe('formatFileSize', () => {
 		expect(formatFileSize(200)).toBe('1 KB');
 		expect(formatFileSize(512 * 1024)).toBe('512 KB');
 		expect(formatFileSize(2.5 * 1024 * 1024)).toBe('2.5 MB');
+	});
+});
+
+describe('messageAttachments', () => {
+	it('keeps the saved files with their notes', () => {
+		const base = { kind: 'pdf' as const, progress: 1 };
+		expect(
+			messageAttachments([
+				{
+					...base,
+					id: '1',
+					file: fileOf('a.pdf'),
+					status: 'ready',
+					noteIds: ['n1'],
+				},
+				{ ...base, id: '2', file: fileOf('b.pdf'), status: 'uploading' },
+				{ ...base, id: '3', file: fileOf('c.pdf'), status: 'error' },
+			])
+		).toEqual([{ fileName: 'a.pdf', noteIds: ['n1'] }]);
 	});
 });

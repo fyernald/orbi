@@ -1,7 +1,7 @@
 import { attachmentSummary, type Attachment } from '../attachments';
 
 // the short text after the file name: the percent while uploading, the reason
-// when it failed; a finished file shows nothing, the tooltip has its type and size
+// when it failed; a saved file says so, the tooltip has its type and size
 export function AttachmentStatus({ attachment }: { attachment: Attachment }) {
 	const { file, status, progress, error } = attachment;
 
@@ -25,5 +25,10 @@ export function AttachmentStatus({ attachment }: { attachment: Attachment }) {
 		);
 	}
 
-	return <span className="sr-only">{attachmentSummary(attachment)}</span>;
+	return (
+		<span className="shrink-0 text-muted-foreground">
+			Saved
+			<span className="sr-only">, {attachmentSummary(attachment)}</span>
+		</span>
+	);
 }

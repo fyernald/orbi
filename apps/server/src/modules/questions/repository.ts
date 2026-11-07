@@ -2,17 +2,30 @@ import type {
 	ChatAnswer,
 	CourseColor,
 	Question,
+	QuestionSet,
 	QuestionStatus,
 	ReportQuestionInput,
 	StudyQuestion,
 } from '@orbi/shared';
-import { and, asc, count, desc, eq, inArray, ne } from 'drizzle-orm';
+import type { ReviewState, ScoredAnswer } from '@orbi/core';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	min,
+	ne,
+} from 'drizzle-orm';
 import type { Db } from '../../db';
 import {
 	answer,
 	course,
 	question,
 	questionReport,
+	reviewItem,
 	topic,
 } from '../../db/schema';
 
@@ -31,7 +44,13 @@ export interface QuestionRepository {
 		courseId: string,
 		topicId: string
 	): Promise<boolean>;
+	courseExists(userId: string, courseId: string): Promise<boolean>;
+	// the sets the tutor made in the course, newest first
+	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
 	listPending(userId: string): Promise<PendingQuestion[]>;
+	// every topic of the course in course order, with the answers its questions got;
+	// a topic with no answers comes once, with answer null
+	listTopicAnswers(userId: string, courseId: string): Promise<TopicAnswer[]>;
 	// undefined when the user has no such question
 	setStatus(
 		userId: string,
@@ -44,10 +63,12 @@ export interface QuestionRepository {
 		userId: string,
 		questionId: string
 	): Promise<AnswerKey | undefined>;
-	// undefined when the question was already answered in the chat
+	// undefined when the question was already answered in the chat; the review
+	// schedule changes only when the answer is saved
 	insertChatAnswer(
 		userId: string,
-		saved: ChatAnswer
+		saved: ChatAnswer,
+		reschedule: Reschedule
 	): Promise<ChatAnswer | undefined>;
 	listChatAnswers(userId: string, questionIds: string[]): Promise<ChatAnswer[]>;
 	// undefined when the user has no such topic in that course
@@ -59,7 +80,11 @@ export interface QuestionRepository {
 	listApproved(userId: string, topicId: string): Promise<StudyQuestion[]>;
 	countPending(userId: string, topicId: string): Promise<number>;
 	// a session saves every try, so a question can be answered again in a later one
-	insertSessionAnswer(userId: string, saved: ChatAnswer): Promise<void>;
+	insertSessionAnswer(
+		userId: string,
+		saved: ChatAnswer,
+		reschedule: Reschedule
+	): Promise<void>;
 	// the topic's questions the student kept or still has to review
 	listForTopic(userId: string, topicId: string): Promise<Question[]>;
 	insertManual(
@@ -97,6 +122,12 @@ export type QuestionContent = {
 	explanation: string | null;
 };
 
+export type TopicAnswer = { topicId: string; answer: ScoredAnswer | null };
+
+// where the question stands after the answer, from where it stood before;
+// previous is undefined for a question that was never answered
+export type Reschedule = (previous: ReviewState | undefined) => ReviewState;
+
 export type AnswerKey = {
 	choiceCount: number;
 	correctChoice: number;
@@ -119,8 +150,43 @@ const questionColumns = {
 	correctChoice: question.correctChoice,
 	explanation: question.explanation,
 	status: question.status,
+	setId: question.chatMessageId,
 	createdAt: question.createdAt,
 };
+
+const reviewColumns = {
+	repetitions: reviewItem.repetitions,
+	intervalDays: reviewItem.intervalDays,
+	ease: reviewItem.ease,
+	dueAt: reviewItem.dueAt,
+};
+
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+// the row is locked, so two answers at once each build on the other's result
+async function saveReview(
+	tx: Tx,
+	userId: string,
+	questionId: string,
+	reschedule: Reschedule
+) {
+	const [previous] = await tx
+		.select(reviewColumns)
+		.from(reviewItem)
+		.where(
+			and(eq(reviewItem.userId, userId), eq(reviewItem.questionId, questionId))
+		)
+		.for('update');
+	const next = reschedule(previous);
+	if (next === previous) return;
+	await tx
+		.insert(reviewItem)
+		.values({ userId, questionId, ...next })
+		.onConflictDoUpdate({
+			target: [reviewItem.userId, reviewItem.questionId],
+			set: next,
+		});
+}
 
 type QuestionRow = Omit<Question, 'createdAt'> & { createdAt: Date };
 
@@ -150,6 +216,82 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 					)
 				);
 			return found !== undefined;
+		},
+
+		async courseExists(userId, courseId) {
+			const [found] = await db
+				.select({ id: course.id })
+				.from(course)
+				.where(and(eq(course.userId, userId), eq(course.id, courseId)));
+			return found !== undefined;
+		},
+
+		// a set whose questions were all rejected or deleted is gone
+		async listSets(userId, courseId) {
+			const createdAt = min(question.createdAt);
+			const rows = await db
+				.select({
+					id: question.chatMessageId,
+					topicId: topic.id,
+					topicName: topic.name,
+					questionCount: count(),
+					createdAt,
+				})
+				.from(question)
+				.innerJoin(
+					topic,
+					and(eq(topic.userId, question.userId), eq(topic.id, question.topicId))
+				)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(topic.courseId, courseId),
+						isNotNull(question.chatMessageId),
+						ne(question.status, 'rejected')
+					)
+				)
+				.groupBy(question.chatMessageId, topic.id, topic.name)
+				.orderBy(desc(createdAt));
+			return rows.map(({ id, createdAt, ...set }) => ({
+				...set,
+				id: id!,
+				createdAt: createdAt!.toISOString(),
+			}));
+		},
+
+		// a rejected question was a bad one, so its answers do not count
+		async listTopicAnswers(userId, courseId) {
+			const rows = await db
+				.select({
+					topicId: topic.id,
+					correct: answer.correct,
+					answeredAt: answer.answeredAt,
+				})
+				.from(topic)
+				.leftJoin(
+					question,
+					and(
+						eq(question.userId, topic.userId),
+						eq(question.topicId, topic.id),
+						ne(question.status, 'rejected')
+					)
+				)
+				.leftJoin(
+					answer,
+					and(
+						eq(answer.userId, question.userId),
+						eq(answer.questionId, question.id)
+					)
+				)
+				.where(and(eq(topic.userId, userId), eq(topic.courseId, courseId)))
+				.orderBy(asc(topic.position), asc(topic.createdAt));
+			return rows.map(({ topicId, correct, answeredAt }) => ({
+				topicId,
+				answer:
+					correct === null || answeredAt === null
+						? null
+						: { correct, answeredAt },
+			}));
 		},
 
 		// the oldest set first, each in the order the AI wrote it
@@ -224,13 +366,18 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 		},
 
 		// two clicks at once both get here; the unique index lets only one in
-		async insertChatAnswer(userId, saved) {
-			const [created] = await db
-				.insert(answer)
-				.values({ userId, context: 'chat', ...saved })
-				.onConflictDoNothing()
-				.returning(chatAnswerColumns);
-			return created;
+		async insertChatAnswer(userId, saved, reschedule) {
+			return db.transaction(async (tx) => {
+				const [created] = await tx
+					.insert(answer)
+					.values({ userId, context: 'chat', ...saved })
+					.onConflictDoNothing()
+					.returning(chatAnswerColumns);
+				if (created) {
+					await saveReview(tx, userId, saved.questionId, reschedule);
+				}
+				return created;
+			});
 		},
 
 		async listChatAnswers(userId, questionIds) {
@@ -297,8 +444,13 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 			return found?.pending ?? 0;
 		},
 
-		async insertSessionAnswer(userId, saved) {
-			await db.insert(answer).values({ userId, context: 'session', ...saved });
+		async insertSessionAnswer(userId, saved, reschedule) {
+			await db.transaction(async (tx) => {
+				await tx
+					.insert(answer)
+					.values({ userId, context: 'session', ...saved });
+				await saveReview(tx, userId, saved.questionId, reschedule);
+			});
 		},
 
 		// the newest set first, each in the order it was made

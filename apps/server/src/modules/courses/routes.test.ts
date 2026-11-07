@@ -244,6 +244,53 @@ describe('topics', () => {
 		]);
 	});
 
+	it('lists the topics of every course, the one with the newest chat first', async () => {
+		const katherine = await signUpTestUser(app, 'katherine@test.dev');
+		const post = (url: string, payload: object) =>
+			send(katherine, 'POST', url, payload);
+		const calculus = (
+			await post('/api/courses', newCourse({ name: 'Calculus II' }))
+		).json();
+		await post(`/api/courses/${calculus.id}/topics`, { name: 'Limits' });
+		await post(`/api/courses/${calculus.id}/topics`, { name: 'Series' });
+		const biology = (
+			await post(
+				'/api/courses',
+				newCourse({ name: 'Biology', topics: ['Cells'] })
+			)
+		).json();
+		await createCourse(grace, 'Not hers');
+
+		const byCourse = (await send(katherine, 'GET', '/api/topics')).json();
+		const cells = byCourse.find((t: { name: string }) => t.name === 'Cells');
+		await createTutorRepository(db).createChat(await userIdOf(katherine), {
+			id: randomUUID(),
+			courseId: biology.id,
+			topicId: cells.id,
+			title: 'What is a cell?',
+		});
+		const byChat = (await send(katherine, 'GET', '/api/topics')).json();
+
+		const names = (topics: { courseName: string; name: string }[]) =>
+			topics.map((t) => `${t.courseName} · ${t.name}`);
+		expect(names(byCourse)).toEqual([
+			'Calculus II · Limits',
+			'Calculus II · Series',
+			'Biology · Cells',
+		]);
+		expect(names(byChat)).toEqual([
+			'Biology · Cells',
+			'Calculus II · Limits',
+			'Calculus II · Series',
+		]);
+		expect(byChat[0]).toEqual({
+			id: cells.id,
+			courseId: biology.id,
+			courseName: 'Biology',
+			name: 'Cells',
+		});
+	});
+
 	it('answers 404 for a course that does not exist', async () => {
 		const response = await send(
 			ada,

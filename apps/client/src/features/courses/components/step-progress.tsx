@@ -12,8 +12,10 @@ type StepProgressProps = {
 export function StepProgress({ steps, current, onSelect }: StepProgressProps) {
 	const percent = ((current + 1) / steps.length) * 100;
 
+	// a plain block, not an <aside>: it is part of the form inside <main>, and a
+	// landmark there would be announced as a separate part of the page
 	return (
-		<aside className="flex flex-col gap-5 lg:w-64 lg:shrink-0">
+		<div className="flex flex-col gap-5 lg:w-64 lg:shrink-0">
 			<div className="flex flex-col gap-2">
 				<p className="text-sm font-medium">
 					Step {current + 1} of {steps.length}
@@ -90,6 +92,6 @@ export function StepProgress({ steps, current, onSelect }: StepProgressProps) {
 				<Lightbulb className="mt-0.5 size-4 shrink-0" />
 				{steps[current]!.tip}
 			</p>
-		</aside>
+		</div>
 	);
 }

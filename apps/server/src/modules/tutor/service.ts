@@ -1,47 +1,37 @@
-import { randomUUID } from 'node:crypto';
 import {
 	CHAT_PAGE_SIZE,
 	MAX_PARALLEL_REPLIES,
-	TUTOR_MESSAGE_MAX_LENGTH,
-	tutorMessageMetadata,
 	type AiModels,
+	type AnswerExplanation,
 	type ChatMessagesPage,
 	type ChatSummary,
 	type ChatThread,
 	type FollowUps,
 	type FollowUpsInput,
+	type RenameChatInput,
 	type SendChatMessageInput,
-	type TutorMessageMetadata,
 } from '@orbi/shared';
+import { generateText } from 'ai';
 import {
-	APICallError,
-	convertToModelMessages,
-	generateText,
-	isStepCount,
-	RetryError,
-	smoothStream,
-	streamText,
-	toUIMessageStream,
-	TypeValidationError,
-	validateUIMessages,
-	type InferUIMessageChunk,
-	type LanguageModelUsage,
-} from 'ai';
+	createTokenBudget,
+	DAILY_TOKENS_DEFAULT,
+	type TokenBudget,
+} from '../../ai/budget';
 import type {
 	ModelOptions,
 	ModelRegistry,
 	ResolvedModel,
 } from '../../ai/models';
-import { usageLine, type LogUsage, type UsageAction } from '../../ai/usage';
+import type { LogUsage } from '../../ai/usage';
 import {
-	ConflictError,
 	NotFoundError,
 	ServiceUnavailableError,
 	TooManyRequestsError,
 	ValidationError,
 } from '../../errors';
 import { actionRules } from './actions';
-import { chatTitle } from './chat-title';
+import { createAnswerExplainer } from './answer-explainer';
+import type { ExplanationRepository } from './explanation-repository';
 import {
 	cleanFollowUps,
 	FOLLOW_UP_NOTES_MAX_LENGTH,
@@ -50,37 +40,40 @@ import {
 	suggestFollowUpsTool,
 } from './follow-ups';
 import {
-	hasContent,
+	attachedNoteIds,
 	isExplanation,
 	messageText,
-	recentMessages,
-	skipUnansweredQuestions,
 	toChatMessage,
-	toStoredMessage,
 	toUIMessage,
-	withoutEarlierThinking,
-	withoutUnfinishedTools,
-	type TutorUIMessage,
+	withAttachmentNames,
 } from './messages';
-import { buildInstructions, selectNotes } from './prompt';
-import { createReplyLimiter, type ReplyLimiter } from './reply-limiter';
+import { selectNotes } from './prompt';
+import { replyErrorMessage } from './reply-errors';
+import {
+	createReplyLimiter,
+	releaseOnAbort,
+	type ReplyLimiter,
+} from './reply-limiter';
 import type {
 	ChatRecord,
-	CourseContext,
 	StoredMessage,
 	TopicContext,
 	TutorRepository,
 } from './repository';
-import { createThinkingClock, thinkingTimesOf } from './thinking-clock';
-import { createTutorTools } from './tools';
-
-export type TutorStream = ReadableStream<InferUIMessageChunk<TutorUIMessage>>;
+import { createReplyStarter, type TutorStream } from './start-reply';
+import { createStepTracker } from './step-tracker';
 
 export interface TutorService {
 	listModels(): AiModels;
 	listChats(userId: string, courseId: string): Promise<ChatSummary[]>;
 	// the chat with its newest messages
 	getChat(userId: string, chatId: string): Promise<ChatThread>;
+	renameChat(
+		userId: string,
+		chatId: string,
+		input: RenameChatInput
+	): Promise<ChatSummary>;
+	deleteChat(userId: string, chatId: string): Promise<void>;
 	getEarlierMessages(
 		userId: string,
 		chatId: string,
@@ -100,49 +93,15 @@ export interface TutorService {
 		messageId: string,
 		input: FollowUpsInput
 	): Promise<FollowUps>;
+	// why a wrong choice in a study session is wrong, from the topic's notes (US-07)
+	explainAnswer(
+		userId: string,
+		questionId: string,
+		choice: number
+	): Promise<AnswerExplanation>;
 }
-
-// a tool loop: the tool call, maybe a retry after a bad tool input, then a short wrap-up
-const MAX_STEPS = 4;
-
-const TIMEOUT = {
-	totalMs: 180_000,
-	// the first token can be slow with long notes
-	firstChunkMs: 60_000,
-	chunkMs: 45_000,
-};
 
 const FOLLOW_UPS_TIMEOUT_MS = 30_000;
-
-// Some models send a reply in a few large pieces; this lets it appear word by word,
-// with a short pause that only adds up when the model is faster than the reader
-const SMOOTH_DELAY_MS = 12;
-
-// the student sees this text; provider details go to the log only
-export function replyErrorMessage(error: unknown): string {
-	// after its retries the AI SDK wraps the provider's error
-	const cause = RetryError.isInstance(error) ? error.lastError : error;
-	if (
-		cause instanceof Error &&
-		['TimeoutError', 'AbortError'].includes(cause.name)
-	) {
-		return 'Orbi took too long to answer. Try again.';
-	}
-	if (APICallError.isInstance(cause)) {
-		const status = cause.statusCode ?? 0;
-		// a short rate limit and a used-up daily quota both answer 429
-		if (status === 429) {
-			return 'This model has reached its limit for now. Try again later, or pick another model.';
-		}
-		if (status === 403 || status === 404) {
-			return 'This model is not available right now. Pick another model.';
-		}
-		if (status >= 500) {
-			return 'The AI service is having problems. Try again in a minute.';
-		}
-	}
-	return 'Orbi could not answer. Try again.';
-}
 
 const toPage = ({
 	messages,
@@ -165,15 +124,19 @@ const toSummary = (chat: ChatRecord): ChatSummary => ({
 
 export function createTutorService({
 	repo,
+	explanations,
 	models,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
+	budget = createTokenBudget({ dailyTokens: DAILY_TOKENS_DEFAULT }),
 	logError = (error) => console.error(error),
 	logUsage = () => {},
 	now = () => new Date(),
 }: {
 	repo: TutorRepository;
+	explanations: ExplanationRepository;
 	models: ModelRegistry;
 	limiter?: ReplyLimiter;
+	budget?: TokenBudget;
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
 	now?: () => Date;
@@ -189,87 +152,54 @@ export function createTutorService({
 		throw new ValidationError('Choose a model from the list.');
 	}
 
+	// Every model call takes one of the student's places, so neither replies nor
+	// follow-up questions can run past the limit; the caller frees it when done
+	function takePlace(userId: string) {
+		const release = limiter.acquire(userId);
+		if (!release) {
+			throw new TooManyRequestsError(
+				`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
+			);
+		}
+		return release;
+	}
+
 	async function requireChat(userId: string, chatId: string) {
 		const chat = await repo.findChat(userId, chatId);
 		if (!chat) throw new NotFoundError('Chat not found.');
 		return chat;
 	}
 
-	// one log line after every model call, with its token counts
-	const logStep =
-		(modelId: string, action: UsageAction) =>
-		(step: { stepNumber: number; usage: LanguageModelUsage }) =>
-			logUsage(
-				usageLine({ modelId, action, step: step.stepNumber, usage: step.usage })
-			);
-
-	// the messages the model sees, and the student's new message to save first
-	async function nextMessages(
-		userId: string,
-		chatId: string,
-		input: SendChatMessageInput,
-		history: TutorUIMessage[],
-		metadata: TutorMessageMetadata
-	): Promise<{ messages: TutorUIMessage[]; studentMessage?: TutorUIMessage }> {
-		if (input.trigger === 'regenerate-message') {
-			const lastStudent = history.map(({ role }) => role).lastIndexOf('user');
-			if (lastStudent === -1) {
-				throw new ValidationError('There is nothing to try again.');
-			}
-			const dropped = history.slice(lastStudent + 1).map(({ id }) => id);
-			await repo.deleteMessages(userId, chatId, dropped);
-			return { messages: history.slice(0, lastStudent + 1) };
-		}
-
-		const incoming = input.message!;
-		if (incoming.role === 'assistant') {
-			// the last reply comes back with the student's answer to askStudent
-			const last = history.at(-1);
-			if (!last || last.id !== incoming.id || last.role !== 'assistant') {
-				throw new ValidationError('Only the last reply can go on.');
-			}
-			const continued = {
-				...incoming,
-				metadata: last.metadata,
-			} as TutorUIMessage;
-			return { messages: [...history.slice(0, -1), continued] };
-		}
-
-		const sentBefore = history.findIndex(({ id }) => id === incoming.id);
-		if (sentBefore !== -1) {
-			// the student's last message again, after a failed reply: try it again
-			const lastStudent = history.map(({ role }) => role).lastIndexOf('user');
-			if (sentBefore !== lastStudent) {
-				throw new ConflictError('This message was already sent.');
-			}
-			const dropped = history.slice(sentBefore + 1).map(({ id }) => id);
-			await repo.deleteMessages(userId, chatId, dropped);
-			return { messages: history.slice(0, sentBefore + 1) };
-		}
-		const studentMessage = { ...incoming, metadata } as TutorUIMessage;
-		const text = messageText(studentMessage);
-		if (!text) throw new ValidationError('Write a message first.');
-		if (text.length > TUTOR_MESSAGE_MAX_LENGTH) {
-			throw new ValidationError(
-				`Use at most ${TUTOR_MESSAGE_MAX_LENGTH.toLocaleString('en')} characters.`
+	// A student whose daily AI budget is used up gets no new model call. Gives the
+	// student's time zone, since their day decides when the budget starts again.
+	async function requireBudget(userId: string) {
+		const timeZone = await repo.findTimeZone(userId);
+		if (!budget.hasLeft(userId, timeZone)) {
+			throw new TooManyRequestsError(
+				"You have used today's AI budget. It resets at midnight."
 			);
 		}
-
-		const last = history.at(-1);
-		const skipped = last && skipUnansweredQuestions(last);
-		if (skipped) {
-			await repo.saveMessage(
-				userId,
-				chatId,
-				toStoredMessage(skipped, new Date(metadata.createdAt))
-			);
-			history = [...history.slice(0, -1), skipped];
-		}
-		return { messages: [...history, studentMessage], studentMessage };
+		return timeZone;
 	}
+
+	const trackStep = createStepTracker({ logUsage, budget });
+	const startReply = createReplyStarter({ repo, now, logError, trackStep });
+	const explainAnswer = createAnswerExplainer({
+		explanations,
+		repo,
+		// a study session has no model picker, and a few sentences need no thinking
+		resolveDefaultModel: () =>
+			resolveModel(models.list().defaultModelId ?? '', { thinking: false }),
+		requireBudget,
+		takePlace,
+		trackStep,
+		logError,
+	});
 
 	return {
 		listModels: () => models.list(),
+
+		explainAnswer,
 
 		async listChats(userId, courseId) {
 			if (!(await repo.courseExists(userId, courseId))) {
@@ -284,6 +214,18 @@ export function createTutorService({
 				limit: CHAT_PAGE_SIZE,
 			});
 			return { ...toSummary(chat), ...toPage(page) };
+		},
+
+		async renameChat(userId, chatId, { title }) {
+			const renamed = await repo.renameChat(userId, chatId, title);
+			if (!renamed) throw new NotFoundError('Chat not found.');
+			return toSummary(renamed);
+		},
+
+		async deleteChat(userId, chatId) {
+			if (!(await repo.deleteChat(userId, chatId))) {
+				throw new NotFoundError('Chat not found.');
+			}
 		},
 
 		async getEarlierMessages(userId, chatId, beforeId) {
@@ -301,6 +243,7 @@ export function createTutorService({
 			const resolved = resolveModel(input.modelId, {
 				thinking: input.thinking,
 			});
+			const timeZone = await requireBudget(userId);
 
 			const course = await repo.findCourse(userId, input.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -331,12 +274,10 @@ export function createTutorService({
 			}
 
 			// taken before anything is saved, so a refused message leaves no trace
-			const release = limiter.acquire(userId);
-			if (!release) {
-				throw new TooManyRequestsError(
-					`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
-				);
-			}
+			const release = takePlace(userId);
+			// a reply ends by finishing, failing, or being stopped; each frees its place.
+			// Watched from here, because the student can stop while the reply is set up.
+			releaseOnAbort(release, abortSignal);
 			try {
 				return await startReply({
 					userId,
@@ -347,6 +288,7 @@ export function createTutorService({
 					topic,
 					resolved,
 					rule,
+					timeZone,
 					abortSignal,
 					release,
 				});
@@ -375,6 +317,7 @@ export function createTutorService({
 			const resolved = resolveModel(reply.metadata?.modelId ?? '', {
 				thinking: false,
 			});
+			const timeZone = await requireBudget(userId);
 
 			const course = await repo.findCourse(userId, chat.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -382,251 +325,56 @@ export function createTutorService({
 			const topic = topicId
 				? await repo.findTopic(userId, course.id, topicId)
 				: undefined;
-			const notes = topic
-				? await repo.listNotes(userId, topic.id)
-				: await repo.listCourseNotes(userId, course.id);
+			const attachedIds = before ? attachedNoteIds([before]) : [];
+			const notes = await repo.listNotesForReply(
+				userId,
+				topic ? { topicId: topic.id } : { courseId: course.id },
+				{ maxLength: FOLLOW_UP_NOTES_MAX_LENGTH, attachedIds }
+			);
 
+			const release = takePlace(userId);
 			let questions: string[];
 			try {
 				const result = await generateText({
 					model: resolved.model,
 					instructions: followUpInstructions({
 						scopeName: topic?.name ?? course.name,
-						notes: selectNotes(notes, FOLLOW_UP_NOTES_MAX_LENGTH),
+						notes: selectNotes(
+							notes.notes,
+							FOLLOW_UP_NOTES_MAX_LENGTH,
+							attachedIds,
+							notes.total
+						),
 						exclude,
 					}),
 					prompt: followUpPrompt(
-						before?.role === 'user' ? messageText(before) : '',
+						// with the names of the PDFs the student sent, if any
+						before?.role === 'user'
+							? messageText(withAttachmentNames([before])[0]!)
+							: '',
 						messageText(reply)
 					),
 					tools: { suggestFollowUps: suggestFollowUpsTool },
 					toolChoice: { type: 'tool', toolName: 'suggestFollowUps' },
 					timeout: FOLLOW_UPS_TIMEOUT_MS,
 					maxRetries: 1,
-					onStepEnd: logStep(resolved.entry.id, 'followUps'),
+					onStepEnd: trackStep({
+						userId,
+						timeZone,
+						modelId: resolved.entry.id,
+						action: 'followUps',
+					}),
 				});
 				questions = cleanFollowUps(result.toolCalls[0]?.input, exclude);
 			} catch (error) {
 				logError(error);
 				throw new ServiceUnavailableError(replyErrorMessage(error));
+			} finally {
+				release();
 			}
 			// also when there are none, so the model is not asked again
 			await repo.saveFollowUps(userId, chatId, reply.id, questions);
 			return { questions };
 		},
 	};
-
-	async function startReply({
-		userId,
-		chatId,
-		input,
-		chat,
-		course,
-		topic,
-		resolved,
-		rule,
-		abortSignal,
-		release,
-	}: {
-		userId: string;
-		chatId: string;
-		input: SendChatMessageInput;
-		chat: ChatRecord | undefined;
-		course: CourseContext;
-		topic: TopicContext | null;
-		resolved: ResolvedModel;
-		rule: Extract<
-			(typeof actionRules)[keyof typeof actionRules],
-			{ available: true }
-		>;
-		abortSignal: AbortSignal;
-		release: () => void;
-	}): Promise<TutorStream> {
-		const history = chat
-			? (await repo.listMessages(userId, chatId)).map(toUIMessage)
-			: [];
-
-		const startedAt = now();
-		const { messages, studentMessage } = await nextMessages(
-			userId,
-			chatId,
-			input,
-			history,
-			{
-				topicId: topic?.id ?? null,
-				action: input.action,
-				createdAt: startedAt.toISOString(),
-			}
-		);
-
-		const allNotes = topic
-			? await repo.listNotes(userId, topic.id)
-			: await repo.listCourseNotes(userId, course.id);
-		const scopeName = topic?.name ?? course.name;
-		if (rule.needsNotes && allNotes.length === 0) {
-			throw new ValidationError(
-				`Add notes to ${scopeName} first. Orbi makes questions from your notes.`
-			);
-		}
-		const notes = selectNotes(allNotes);
-
-		const continuing = messages.at(-1)?.role === 'assistant';
-		const responseId = continuing ? messages.at(-1)!.id : randomUUID();
-		const tools = createTutorTools({
-			saveQuestions: (questions) => {
-				// the tool is only offered in a topic's chat
-				if (!topic) throw new Error('Questions need a topic.');
-				return repo.insertQuestions(
-					userId,
-					topic.id,
-					questions.map((item) => ({
-						...item,
-						aiProvider: resolved.entry.provider,
-						aiModel: resolved.entry.id,
-						chatMessageId: responseId,
-					}))
-				);
-			},
-		});
-
-		let validated: TutorUIMessage[];
-		try {
-			validated = await validateUIMessages<TutorUIMessage>({
-				messages,
-				tools,
-				metadataSchema: tutorMessageMetadata,
-			});
-		} catch (error) {
-			if (TypeValidationError.isInstance(error)) {
-				throw new ValidationError(
-					'This chat could not be read. Start a new chat.'
-				);
-			}
-			throw error;
-		}
-
-		// the student's message is kept even when the reply fails, so Try again works
-		if (!chat) {
-			const created = await repo.createChat(userId, {
-				id: chatId,
-				courseId: input.courseId,
-				topicId: input.chatTopicId,
-				title: chatTitle(messageText(studentMessage!), scopeName),
-			});
-			// the id belongs to another user's chat
-			if (!created) throw new NotFoundError('Chat not found.');
-		}
-		if (studentMessage) {
-			await repo.saveMessage(
-				userId,
-				chatId,
-				toStoredMessage(studentMessage, startedAt)
-			);
-		}
-
-		const forcedTool = continuing ? undefined : rule.tool;
-		const result = streamText({
-			model: resolved.model,
-			instructions: buildInstructions({
-				course,
-				topic,
-				student: await repo.findStudent(userId),
-				notes,
-				action: input.action,
-				today: startedAt,
-			}),
-			messages: await convertToModelMessages(
-				recentMessages(withoutEarlierThinking(validated)),
-				{ tools }
-			),
-			tools,
-			// practice questions belong to a topic, so the whole-course chat cannot make them
-			activeTools: topic ? undefined : ['askStudent'],
-			// a forced tool stays forced until it worked once, so a bad input gets a retry
-			prepareStep: forcedTool
-				? ({ steps }) => {
-						const done = steps.some((step) =>
-							step.toolResults.some(
-								(toolResult) => toolResult.toolName === forcedTool
-							)
-						);
-						return {
-							toolChoice: done
-								? 'none'
-								: { type: 'tool', toolName: forcedTool },
-						};
-					}
-				: undefined,
-			stopWhen: isStepCount(MAX_STEPS),
-			experimental_transform: smoothStream({
-				chunking: 'word',
-				delayInMs: SMOOTH_DELAY_MS,
-			}),
-			abortSignal,
-			timeout: TIMEOUT,
-			maxRetries: 1,
-			onStepEnd: logStep(resolved.entry.id, input.action),
-		});
-
-		// a millisecond after the student's message, so the two never swap places
-		const replyAt = new Date(startedAt.getTime() + 1).toISOString();
-		const replyMetadata: TutorMessageMetadata = {
-			topicId: topic?.id ?? null,
-			action: input.action,
-			modelId: resolved.entry.id,
-			notesUsed: notes.notes.length,
-			createdAt: continuing
-				? (messages.at(-1)!.metadata?.createdAt ?? replyAt)
-				: replyAt,
-		};
-		const thinking = createThinkingClock(
-			now,
-			continuing ? thinkingTimesOf(messages.at(-1)!) : []
-		);
-		const currentMetadata = (): TutorMessageMetadata => ({
-			...replyMetadata,
-			thinkingMs: thinking.times(),
-		});
-
-		// a reply ends by finishing, failing, or being stopped; each frees its place
-		abortSignal.addEventListener('abort', release, { once: true });
-		const stream = toUIMessageStream<typeof tools, TutorUIMessage>({
-			stream: result.stream,
-			tools,
-			originalMessages: validated,
-			generateMessageId: () => responseId,
-			// with Think off nothing is shown, even from a model that cannot stop thinking
-			sendReasoning: input.thinking,
-			// sent again after each thinking part, so the student sees how long it took
-			messageMetadata: ({ part }) => {
-				thinking.track(part);
-				return part.type === 'start' || part.type === 'reasoning-end'
-					? currentMetadata()
-					: undefined;
-			},
-			onError: (error) => {
-				logError(error);
-				return replyErrorMessage(error);
-			},
-			// a stopped reply is kept up to where it got
-			onEnd: async ({ responseMessage }) => {
-				release();
-				const reply = withoutUnfinishedTools({
-					...responseMessage,
-					metadata: currentMetadata(),
-				});
-				if (!hasContent(reply)) return;
-				try {
-					await repo.saveMessage(
-						userId,
-						chatId,
-						toStoredMessage(reply, startedAt)
-					);
-				} catch (error) {
-					logError(error);
-				}
-			},
-		});
-		return stream.pipeThrough(new TransformStream({ flush: () => release() }));
-	}
 }

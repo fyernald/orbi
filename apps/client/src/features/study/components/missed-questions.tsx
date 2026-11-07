@@ -15,7 +15,16 @@ export function MissedQuestions({ questions, answers }: MissedQuestionsProps) {
 			? [{ question, answer, number: index + 1 }]
 			: [];
 	});
-	if (missed.length === 0) return null;
+	if (missed.length === 0) {
+		const answered = answers.some((answer) => answer !== null);
+		return (
+			<p className="rounded-2xl border border-dashed border-border px-6 py-10 text-center text-pretty text-muted-foreground">
+				{answered
+					? 'Nothing to look at again. Every answer was right.'
+					: 'No question was answered in this session.'}
+			</p>
+		);
+	}
 
 	return (
 		<section aria-labelledby="missed-title" className="flex flex-col gap-3">

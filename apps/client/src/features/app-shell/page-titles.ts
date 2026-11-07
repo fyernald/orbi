@@ -1,5 +1,5 @@
 import { courseRoute, routes } from '@/lib/routes';
-import { mainNav, miniApps } from './mock-data';
+import { mainNav, miniApps } from './navigation';
 
 // the top bar names the page from the same labels as the sidebar
 const titles: Record<string, string> = {

@@ -1,38 +1,33 @@
 'use client';
 
-import 'katex/dist/katex.min.css';
-import 'streamdown/styles.css';
-import { math } from '@streamdown/math';
-import { useMemo } from 'react';
-import { Streamdown } from 'streamdown';
+import { lazy, Suspense } from 'react';
 import { cn } from '@/lib/utils';
-import { normalizeMath } from '../../math';
+import type { MarkdownProps } from './markdown-renderer';
 
-const plugins = { math };
+export const markdownClassName =
+	'min-w-0 text-[15px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-3';
 
-// The AI's markdown. Streamdown copes with half-written markdown while it streams,
-// and removes raw HTML and unsafe links.
-export function Markdown({
-	text,
-	streaming,
-	className,
-}: {
-	text: string;
-	streaming: boolean;
-	className?: string;
-}) {
-	const markdown = useMemo(() => normalizeMath(text), [text]);
+// Streamdown, KaTeX and their styles are a large part of the chat's code, and a
+// course page has no reply to show at first. They load with the first reply, which
+// shows its text as written until they are there.
+const MarkdownRenderer = lazy(() => import('./markdown-renderer'));
+
+export function Markdown(props: MarkdownProps) {
 	return (
-		<Streamdown
-			plugins={plugins}
-			isAnimating={streaming}
-			animated
-			className={cn(
-				'min-w-0 text-[15px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-3',
-				className
-			)}
+		<Suspense
+			fallback={
+				<div
+					className={cn(
+						markdownClassName,
+						'whitespace-pre-wrap',
+						props.className
+					)}
+				>
+					{props.text}
+				</div>
+			}
 		>
-			{markdown}
-		</Streamdown>
+			<MarkdownRenderer {...props} />
+		</Suspense>
 	);
 }

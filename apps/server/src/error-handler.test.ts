@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { registerErrorHandler } from './error-handler';
 import {
 	ConflictError,
@@ -9,9 +9,10 @@ import {
 } from './errors';
 
 const app = Fastify();
+const reported: { error: unknown; route?: string }[] = [];
 
 beforeAll(async () => {
-	registerErrorHandler(app);
+	registerErrorHandler(app, (error, route) => reported.push({ error, route }));
 	app.get('/not-found', async () => {
 		throw new NotFoundError('Course not found.');
 	});
@@ -32,6 +33,10 @@ beforeAll(async () => {
 });
 
 afterAll(() => app.close());
+
+beforeEach(() => {
+	reported.length = 0;
+});
 
 describe('error handler', () => {
 	it.each([
@@ -68,6 +73,24 @@ describe('error handler', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.json().error.code).toBe('bad_request');
+	});
+
+	it('reports unknown errors with the route', async () => {
+		await app.inject({ method: 'GET', url: '/crash' });
+
+		expect(reported).toHaveLength(1);
+		expect(reported[0]?.route).toBe('GET /crash');
+		expect((reported[0]?.error as Error).message).toBe(
+			'connection refused at 10.0.0.5'
+		);
+	});
+
+	it('does not report errors the student caused', async () => {
+		await app.inject({ method: 'GET', url: '/not-found' });
+		await app.inject({ method: 'GET', url: '/invalid' });
+		await app.inject({ method: 'GET', url: '/nope' });
+
+		expect(reported).toHaveLength(0);
 	});
 
 	it('answers unknown routes with 404 in the same shape', async () => {

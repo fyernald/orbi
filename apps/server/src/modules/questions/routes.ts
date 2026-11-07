@@ -3,30 +3,36 @@ import {
 	approveTopicQuestionsOutput,
 	chatAnswer,
 	chatAnswersQuery,
+	courseParams,
 	question,
 	questionInput,
 	questionParams,
+	questionSet,
 	reportQuestionInput,
 	reviewTopic,
 	sessionAnswer,
 	studySession,
+	topicMastery,
 	topicParams,
 	topicQuestionParams,
 	updateQuestionInput,
 } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { routeLimit, type RateLimits } from '../../rate-limit';
 import type { RequireUser } from '../auth/session';
 import type { QuestionService } from './service';
 
 type QuestionRoutesDeps = {
 	questions: QuestionService;
 	requireUser: RequireUser;
+	limits: RateLimits;
 };
 
 export function createQuestionRoutes({
 	questions,
 	requireUser,
+	limits,
 }: QuestionRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
 		// every question that waits for the student's review, by topic
@@ -128,6 +134,7 @@ export function createQuestionRoutes({
 					body: answerQuestionInput,
 					response: { 201: sessionAnswer },
 				},
+				config: routeLimit(limits.sessionAnswer),
 			},
 			async (request, reply) => {
 				const userId = await requireUser(request);
@@ -137,6 +144,36 @@ export function createQuestionRoutes({
 					request.body.choice
 				);
 				return reply.status(201).send(saved);
+			}
+		);
+
+		// what the tutor made in the course, for its Study pane
+		api.get(
+			'/courses/:courseId/question-sets',
+			{
+				schema: {
+					params: courseParams,
+					response: { 200: z.array(questionSet) },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				return questions.listSets(userId, request.params.courseId);
+			}
+		);
+
+		// how well the student knows each topic of the course
+		api.get(
+			'/courses/:courseId/mastery',
+			{
+				schema: {
+					params: courseParams,
+					response: { 200: z.array(topicMastery) },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				return questions.listMastery(userId, request.params.courseId);
 			}
 		);
 

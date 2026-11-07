@@ -2,6 +2,8 @@
 
 import type { StudySession } from '@orbi/shared';
 import { useState } from 'react';
+import { SlideIn } from '@/components/slide-in';
+import { questionMap } from '../question-map';
 import {
 	isFinished,
 	nextQuestion,
@@ -9,7 +11,10 @@ import {
 	skipQuestion,
 	startRun,
 } from '../session';
+import { QuestionMap } from './question-map';
+import { SessionAside } from './session-aside';
 import { SessionHeader } from './session-header';
+import { SessionLayout } from './session-layout';
 import { SessionQuestion } from './session-question';
 import { SessionSummary } from './session-summary';
 
@@ -29,34 +34,46 @@ export function StudyRunner({
 	onRestart,
 }: StudyRunnerProps) {
 	const [run, setRun] = useState(startRun);
-	const { questions } = session;
+	const { questions, courseName, topicName } = session;
 	const total = questions.length;
-	const finished = isFinished(run, total);
+	const items = questionMap(run, total);
 	const question = questions[run.index];
 
+	if (isFinished(run, total) || !question) {
+		return (
+			<SessionSummary
+				courseId={courseId}
+				courseName={courseName}
+				topicName={topicName}
+				questions={questions}
+				answers={run.answers}
+				items={items}
+				restarting={restarting}
+				onRestart={onRestart}
+			/>
+		);
+	}
+
 	return (
-		<>
+		<SessionLayout
+			start={
+				<SessionAside
+					courseId={courseId}
+					courseName={courseName}
+					topicName={topicName}
+					progress={{ done: run.answers.length, total }}
+				/>
+			}
+			end={<QuestionMap items={items} />}
+		>
 			<SessionHeader
 				courseId={courseId}
-				courseName={session.courseName}
-				topicName={session.topicName}
-				progress={{
-					shown: Math.min(run.index + 1, total),
-					done: run.answers.length,
-					total,
-				}}
+				courseName={courseName}
+				topicName={topicName}
+				progress={{ shown: run.index + 1, items }}
 			/>
-			{finished || !question ? (
-				<SessionSummary
-					courseId={courseId}
-					questions={questions}
-					answers={run.answers}
-					restarting={restarting}
-					onRestart={onRestart}
-				/>
-			) : (
+			<SlideIn key={question.id}>
 				<SessionQuestion
-					key={question.id}
 					question={question}
 					// not the first one, which opens with the page
 					focusOnShow={run.index > 0}
@@ -68,7 +85,7 @@ export function StudyRunner({
 					onSkip={() => setRun(skipQuestion)}
 					onNext={() => setRun(nextQuestion)}
 				/>
-			)}
-		</>
+			</SlideIn>
+		</SessionLayout>
 	);
 }

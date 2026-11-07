@@ -66,6 +66,7 @@ export function NewCourseForm() {
 
 	return (
 		<form
+			method="post"
 			onSubmit={onSubmit}
 			noValidate
 			className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8"

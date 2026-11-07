@@ -1,8 +1,9 @@
 import type { TutorAction } from '@orbi/shared';
 import type { LanguageModelUsage } from 'ai';
 
-// what a model call is for: a tutor action, or the follow-up questions
-export type UsageAction = TutorAction | 'followUps';
+// what a model call is for: a tutor action, the follow-up questions, or explaining
+// a wrong answer in a study session
+export type UsageAction = TutorAction | 'followUps' | 'explainAnswer';
 
 // One log line per model call. Only names and counts, never the student's text (T-39).
 export type UsageLine = {

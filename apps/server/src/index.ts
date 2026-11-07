@@ -1,25 +1,21 @@
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { createTokenBudget } from './ai/budget';
 import { createModelRegistry, createProviderFactories } from './ai/models';
 import { buildApp } from './app';
 import { createAuth } from './auth';
 import { loadConfig } from './config';
 import { createDb } from './db';
+import { noErrorReporter, sentryReporter } from './error-reporter';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
-import { createCourseRepository } from './modules/courses/repository';
-import { createCourseService } from './modules/courses/service';
-import { createNoteRepository } from './modules/notes/repository';
-import { createNoteService } from './modules/notes/service';
-import { createProfileRepository } from './modules/profile/repository';
-import { createProfileService } from './modules/profile/service';
-import { createQuestionRepository } from './modules/questions/repository';
-import { createQuestionService } from './modules/questions/service';
-import { createTutorRepository } from './modules/tutor/repository';
-import { createTutorService } from './modules/tutor/service';
+import { createBreachedPasswordCheck } from './modules/auth/breached-password';
+import { createWorkerPdfReader } from './pdf/worker-reader';
+import { createServices } from './services';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
+const errors = config.sentry ? sentryReporter : noErrorReporter;
 const db = createDb(config.databaseUrl);
 const mailer = config.smtp
 	? createSmtpMailer(config.smtp)
@@ -28,6 +24,10 @@ const auth = createAuth({
 	db,
 	mailer,
 	requireEmailVerification: config.env === 'production',
+	isPasswordBreached: createBreachedPasswordCheck({
+		onError: (error) =>
+			app.log.warn({ err: error }, 'breached password check failed'),
+	}),
 	...config.auth,
 });
 
@@ -36,24 +36,24 @@ await migrate(db, {
 	migrationsFolder: fileURLToPath(new URL('../drizzle', import.meta.url)),
 });
 
-const courses = createCourseService({ repo: createCourseRepository(db) });
-const notes = createNoteService({ repo: createNoteRepository(db) });
-const profiles = createProfileService({ repo: createProfileRepository(db) });
-const questions = createQuestionService({
-	repo: createQuestionRepository(db),
-});
-const tutor = createTutorService({
-	repo: createTutorRepository(db),
+const services = createServices({
+	db,
+	pdf: createWorkerPdfReader(),
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
 	}),
-	logError: (error) => app.log.error(error),
+	budget: createTokenBudget({ dailyTokens: config.aiDailyTokens }),
+	logError: (error) => {
+		app.log.error(error);
+		errors.report(error);
+	},
 	logUsage: (line) => app.log.info(line, 'ai usage'),
 });
 
 const app: ReturnType<typeof buildApp> = buildApp({
 	auth,
-	services: { courses, notes, profiles, questions, tutor },
+	services,
+	reportError: errors.report,
 });
 app.addHook('onClose', () => db.$client.end());
 
@@ -61,17 +61,24 @@ app.addHook('onClose', () => db.$client.end());
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 	process.once(signal, () => {
 		app.log.info(`${signal} received, shutting down`);
-		app.close().then(
-			() => process.exit(0),
-			(error) => {
-				app.log.error(error);
-				process.exit(1);
-			}
-		);
+		app
+			.close()
+			.then(
+				() => 0,
+				(error) => {
+					app.log.error(error);
+					errors.report(error);
+					return 1;
+				}
+			)
+			// the last reports are sent before the process ends
+			.then((code) => errors.flush().then(() => process.exit(code)));
 	});
 }
 
-app.listen({ port: config.port, host: config.host }).catch((error) => {
+app.listen({ port: config.port, host: config.host }).catch(async (error) => {
 	app.log.error(error);
+	errors.report(error);
+	await errors.flush();
 	process.exit(1);
 });
