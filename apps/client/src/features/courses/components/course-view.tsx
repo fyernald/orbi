@@ -1,5 +1,6 @@
 'use client';
 
+import { LoadError } from '@/components/load-error';
 import type { ComposerPreset } from '@/features/tutor/components/note-composer';
 import { usePageTitle } from '@/hooks/use-page-title';
 import { apiErrorMessage, isClientError } from '@/lib/api';
@@ -7,7 +8,6 @@ import { useCourse } from '../hooks';
 import { BackToCourses } from './back-to-courses';
 import { CourseWorkspace } from './course-workspace';
 import { ListLoader } from './list-loader';
-import { LoadError } from '@/components/load-error';
 
 type CourseViewProps = {
 	courseId: string;
