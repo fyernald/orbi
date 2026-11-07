@@ -4,8 +4,8 @@ import {
 	type TutorAction,
 } from '@orbi/shared';
 import type { Metadata } from 'next';
-import { z } from 'zod';
 import { CourseView } from '@/features/courses/components/course-view';
+import { parseTopicParam } from '@/features/courses/topic-param';
 
 export const metadata: Metadata = { title: 'Course' };
 
@@ -41,7 +41,7 @@ export default async function CoursePage({
 					typeof ask === 'string'
 						? ask.slice(0, TUTOR_MESSAGE_MAX_LENGTH)
 						: undefined,
-				topicId: z.uuid().safeParse(topic).success ? topic : undefined,
+				topicId: parseTopicParam(topic),
 				modelId:
 					typeof model === 'string'
 						? model.slice(0, MODEL_ID_MAX_LENGTH)
