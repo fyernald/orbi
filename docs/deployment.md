@@ -185,9 +185,11 @@ A request the browser traced is traced on the API too, whatever the API's share 
 
 To see the traces, open the `orbi` project in Sentry:
 
-- **Insights > Backend** lists the API routes by how slow they are, and **Insights > Frontend** the pages,
-- **Insights > Web Vitals** gives each page a score from LCP, INP and CLS,
-- **Explore > Traces** shows single traces, from the page load to the database queries.
+- **Explore > Traces** lists every trace. Open one to see its timeline, from the page load to the API request, its database queries and the AI call.
+- **Dashboards > Sentry Built** has ready-made dashboards: the backend one lists the API routes by how slow they are, the frontend one the pages, and the Web Vitals one gives each page a score from LCP, INP and CLS.
+- **Monitors** is for alert rules, not traces.
+
+Look at p75 or p95 rather than the average: p75 is the time 3 in 4 visits beat. With 1 in 5 traced, a page needs a few days of visits before its numbers mean much.
 
 ## Backups
 
