@@ -15,6 +15,7 @@ import { useTopics } from '../hooks';
 import { useTopicSheet } from '../use-topic-sheet';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';
 import { StudyPane } from './study-pane';
+import { StudyPlanCard } from './study-plan-card';
 import { TopicsPane } from './topics-pane';
 import { TutorPane, type ScopedPreset } from './tutor-pane';
 
@@ -167,6 +168,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 				<StudyPane
 					onStartTool={startTool}
 					className={paneClass('study', studyOpen)}
+					studyPlan={<StudyPlanCard course={course} topics={topics.data} />}
 				/>
 			</div>
 			<TopicNotesSheet
