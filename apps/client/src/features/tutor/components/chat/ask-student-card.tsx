@@ -53,6 +53,7 @@ export function AskStudentCard({
 
 	return (
 		<form
+			method="post"
 			onSubmit={submit}
 			aria-labelledby={`${id}-question`}
 			className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4"

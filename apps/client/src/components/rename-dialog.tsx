@@ -76,6 +76,7 @@ function RenameForm({
 
 	return (
 		<form
+			method="post"
 			onSubmit={form.handleSubmit((values) =>
 				values.name === name ? onClose() : onSave(values.name)
 			)}

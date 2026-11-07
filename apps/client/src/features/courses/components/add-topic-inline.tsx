@@ -37,6 +37,7 @@ export function AddTopicInline({
 
 	return (
 		<form
+			method="post"
 			onSubmit={form.handleSubmit((values) =>
 				create.mutate(values, {
 					onSuccess: () => {
