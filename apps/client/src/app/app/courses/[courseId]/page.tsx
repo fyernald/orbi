@@ -5,9 +5,19 @@ import {
 } from '@orbi/shared';
 import type { Metadata } from 'next';
 import { CourseView } from '@/features/courses/components/course-view';
+import { courseTitle } from '@/features/courses/course-title';
+import { getServerCourse } from '@/features/courses/server';
 import { parseTopicParam } from '@/features/courses/topic-param';
 
-export const metadata: Metadata = { title: 'Course' };
+type CoursePageParams = { params: Promise<{ courseId: string }> };
+
+// the course name in the tab; a rename on the page updates it in CourseView
+export async function generateMetadata({
+	params,
+}: CoursePageParams): Promise<Metadata> {
+	const { courseId } = await params;
+	return { title: courseTitle(await getServerCourse(courseId)) };
+}
 
 const isTutorAction = (value: unknown): value is TutorAction =>
 	TUTOR_ACTIONS.includes(value as TutorAction);
@@ -19,8 +29,7 @@ const MODEL_ID_MAX_LENGTH = 100;
 export default async function CoursePage({
 	params,
 	searchParams,
-}: {
-	params: Promise<{ courseId: string }>;
+}: CoursePageParams & {
 	searchParams: Promise<{
 		tool?: string;
 		ask?: string;
