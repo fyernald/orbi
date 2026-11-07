@@ -65,13 +65,14 @@ The **Basis** column is the reason the law allows it:
 
 #### Study content
 
-| Data                                                 | Stored in              | Why Orbi needs it                                                 | Kept for                                      | Basis   |
-| ---------------------------------------------------- | ---------------------- | ----------------------------------------------------------------- | --------------------------------------------- | ------- |
-| Courses (name, description, colour, goal) and topics | `course`, `topic`      | How the student organises their studies                           | Until the student deletes them or the account | Service |
-| Notes                                                | `note`                 | The tutor and the questions are made from them                    | Until the student deletes them or the account | Service |
-| Tutor chats and messages, with the model and timings | `chat`, `chat_message` | The chat history, and the context the AI needs for the next reply | Until the student deletes them or the account | Service |
-| Practice questions, with the AI provider and model   | `question`             | Study sessions, and knowing which model wrote which question      | Until the student deletes them or the account | Service |
-| Answers (choice, right or wrong, time, where)        | `answer`               | Mastery score, spaced repetition, today's study list              | Until the question or the account is deleted  | Service |
+| Data                                                          | Stored in              | Why Orbi needs it                                                   | Kept for                                      | Basis   |
+| ------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- | --------------------------------------------- | ------- |
+| Courses (name, description, colour, goal) and topics          | `course`, `topic`      | How the student organises their studies                             | Until the student deletes them or the account | Service |
+| Notes                                                         | `note`                 | The tutor and the questions are made from them                      | Until the student deletes them or the account | Service |
+| Tutor chats and messages, with the model and timings          | `chat`, `chat_message` | The chat history, and the context the AI needs for the next reply   | Until the student deletes them or the account | Service |
+| Practice questions, with the AI provider and model            | `question`             | Study sessions, and knowing which model wrote which question        | Until the student deletes them or the account | Service |
+| Answers (choice, right or wrong, time, where)                 | `answer`               | Mastery score, spaced repetition, today's study list                | Until the question or the account is deleted  | Service |
+| Explanations of wrong answers, with the AI provider and model | `answer_explanation`   | Shows why a choice was wrong again without a second AI call (US-07) | Until the question or the account is deleted  | Service |
 
 #### Server and hosting
 

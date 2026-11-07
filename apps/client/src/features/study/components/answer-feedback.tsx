@@ -5,6 +5,7 @@ import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { choiceLetter } from '@/features/questions/choices';
 import { cn } from '@/lib/utils';
+import { WrongAnswerExplanation } from './wrong-answer-explanation';
 
 type AnswerFeedbackProps = {
 	answer: SessionAnswer;
@@ -13,7 +14,8 @@ type AnswerFeedbackProps = {
 	nextRef?: Ref<HTMLButtonElement>;
 };
 
-// right after each answer: was it right, the correct one if not, and why
+// right after each answer: was it right, the correct one if not, and why; after a
+// wrong one the student can also ask Orbi to explain their mistake
 export function AnswerFeedback({
 	answer,
 	isLast,
@@ -37,6 +39,14 @@ export function AnswerFeedback({
 				</span>
 				{answer.explanation}
 			</p>
+			{!answer.correct && (
+				// a new one for each question, so an explanation never shows on the next one
+				<WrongAnswerExplanation
+					key={answer.questionId}
+					questionId={answer.questionId}
+					choice={answer.choice}
+				/>
+			)}
 			<div className="flex items-center justify-end gap-3">
 				<span className="hidden items-center gap-1.5 text-xs text-muted-foreground pointer-fine:flex">
 					Press <KeyHint>Enter</KeyHint>
