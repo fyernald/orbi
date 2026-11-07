@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
 	TUTOR_ACTIONS,
 	type QuestionSet,
@@ -12,6 +13,7 @@ type StudyPaneProps = {
 	onStartTool: (action: TutorAction) => void;
 	onOpenSet: (set: QuestionSet) => void;
 	className?: string;
+	studyPlan?: ReactNode;
 };
 
 export function StudyPane({
@@ -19,11 +21,13 @@ export function StudyPane({
 	onStartTool,
 	onOpenSet,
 	className,
+	studyPlan,
 }: StudyPaneProps) {
 	return (
 		<section aria-labelledby="study-pane-title" className={className}>
 			<PaneHeader title={<h2 id="study-pane-title">Study</h2>} />
 			<div className="flex flex-1 flex-col gap-7 overflow-y-auto p-3">
+				{studyPlan}
 				<ul className="grid grid-cols-2 gap-2">
 					{TUTOR_ACTIONS.map((action) => (
 						<li key={action}>
