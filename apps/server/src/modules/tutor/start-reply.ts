@@ -217,7 +217,7 @@ export function createReplyStarter({
 			),
 			tools,
 			// practice questions belong to a topic, so the whole-course chat cannot make them
-			activeTools: topic ? undefined : ['askStudent'],
+			activeTools: topic ? undefined : ['askStudent', 'createDiagram'],
 			// a forced tool stays forced until it worked once, so a bad input gets a retry
 			prepareStep: forcedTool
 				? ({ steps }) => {

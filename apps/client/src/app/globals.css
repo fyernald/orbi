@@ -32,6 +32,7 @@
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar);
+	--color-chart-6: var(--chart-6);
 	--color-chart-5: var(--chart-5);
 	--color-chart-4: var(--chart-4);
 	--color-chart-3: var(--chart-3);
@@ -124,11 +125,15 @@
 	--input: #e8e1e4;
 	--ring: #c61d78;
 	--scrollbar: #ddd2d7;
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
+	/* charts and diagrams: berry, blue, aqua, yellow, violet, orange, in this order;
+	   checked for colour-blind students and against the card in each mode (US-42).
+	   Aqua and yellow are under 3:1 on the light card, so visuals always label them */
+	--chart-1: #c61d78;
+	--chart-2: #2a78d6;
+	--chart-3: #1baf7a;
+	--chart-4: #eda100;
+	--chart-5: #6250d6;
+	--chart-6: #eb6834;
 	--radius: 0.75rem;
 	--sidebar: #fcf9fa;
 	--sidebar-foreground: #1f1519;
@@ -175,11 +180,13 @@
 	--input: #342b2f;
 	--ring: #f167a4;
 	--scrollbar: #43383d;
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
+	/* the same chart hues, stepped for the dark card */
+	--chart-1: #e2559a;
+	--chart-2: #3987e5;
+	--chart-3: #199e70;
+	--chart-4: #c98500;
+	--chart-5: #9085e9;
+	--chart-6: #d95926;
 	--sidebar: #140d10;
 	--sidebar-foreground: #f7f2f4;
 	--sidebar-primary: #f167a4;

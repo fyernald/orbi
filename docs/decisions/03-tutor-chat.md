@@ -39,16 +39,18 @@ Two accepted rules do not fit a chat:
 
 A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 
-| Tool              | Runs where            | What it does                                       |
-| ----------------- | --------------------- | -------------------------------------------------- |
-| `createQuestions` | server                | saves multiple-choice questions as pending (US-04) |
-| `askStudent`      | browser (the student) | asks one clarifying question with 2 to 4 options   |
-| later             | server or browser     | flashcards, diagrams, charts, mock exam link       |
+| Tool              | Runs where                   | What it does                                          |
+| ----------------- | ---------------------------- | ----------------------------------------------------- |
+| `createQuestions` | server                       | saves multiple-choice questions as pending (US-04)    |
+| `askStudent`      | browser (the student)        | asks one clarifying question with 2 to 4 options      |
+| `createDiagram`   | server, drawn in the browser | a Mermaid diagram in Orbi's colours (US-42)           |
+| later             | server or browser            | flashcards, charts, interactive tools, mock exam link |
 
 - Every tool's input and output schema lives in `packages/shared/src/tutor-tools.ts`, so the server checks the AI's data and the client gets the types.
 - The server tool lives in `apps/server/src/modules/tutor/tools/`, one file per tool.
 - The client draws each tool with its own component, listed in `features/tutor/components/chat/tool-views.tsx`. The list is typed by the shared tools, so a tool without a view does not compile.
-- The AI never sends HTML or code to run. It sends data that a Zod schema checks first.
+- The AI never sends HTML or code to run. It sends data that a Zod schema checks first. A diagram is Mermaid text: the browser draws it with Mermaid's strict security, and the schema refuses Mermaid config, so the app keeps the theme.
+- A reply shows at most 2 visuals (diagrams, and later charts and tools). A further call returns an error to the model, which then explains in text.
 
 ### 4. The composer action decides the tool
 
