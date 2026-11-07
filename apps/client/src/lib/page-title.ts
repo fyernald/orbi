@@ -1,4 +1,4 @@
-export const APP_NAME = 'Orbi';
+import { APP_NAME } from '@orbi/shared';
 
 // every page's browser tab: "Courses · Orbi"; the root layout gives it to Next.js
 export const TITLE_TEMPLATE = `%s · ${APP_NAME}`;

@@ -1,8 +1,9 @@
+import { APP_NAME } from '@orbi/shared';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-import { APP_NAME, TITLE_TEMPLATE } from '@/lib/page-title';
+import { TITLE_TEMPLATE } from '@/lib/page-title';
 import { cn } from '@/lib/utils';
 import { Providers } from './providers';
 import './globals.css';
