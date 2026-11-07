@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+import { APP_NAME, TITLE_TEMPLATE } from '@/lib/page-title';
 import { cn } from '@/lib/utils';
 import { Providers } from './providers';
 import './globals.css';
@@ -9,7 +10,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-	title: { default: 'Orbi', template: '%s · Orbi' },
+	title: { default: APP_NAME, template: TITLE_TEMPLATE },
 	description: 'Personal AI Study Coach',
 };
 
