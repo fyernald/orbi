@@ -1,9 +1,9 @@
 'use client';
 
 import type { Note } from '@orbi/shared';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { isLongNote } from '../note-preview';
+import { isNotePreviewClipped } from '../note-preview';
 import { noteTime } from '../note-time';
 import { EditNoteForm } from './edit-note-form';
 import { NoteActions } from './note-actions';
@@ -17,10 +17,23 @@ type NoteCardProps = {
 // happens in place too
 export function NoteCard({ courseId, note }: NoteCardProps) {
 	const [expanded, setExpanded] = useState(false);
+	const [hasOverflow, setHasOverflow] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const actions = useRef<HTMLButtonElement>(null);
-	const long = isLongNote(note.content);
+	const preview = useRef<HTMLParagraphElement>(null);
 	const time = noteTime(note, new Date());
+
+	useEffect(() => {
+		const element = preview.current;
+		if (!element) return;
+
+		const measure = () => setHasOverflow(isNotePreviewClipped(element));
+		measure();
+
+		const observer = new ResizeObserver(measure);
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, [editing, note.content]);
 
 	if (editing) {
 		return (
@@ -54,15 +67,24 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 					/>
 				</div>
 			</header>
-			<p
-				className={cn(
-					'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground',
-					long && !expanded && 'line-clamp-5'
+			<div className="relative">
+				<p
+					ref={preview}
+					aria-hidden={expanded}
+					className={cn(
+						'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground line-clamp-5',
+						expanded && 'invisible absolute inset-x-0 top-0'
+					)}
+				>
+					{note.content}
+				</p>
+				{expanded && (
+					<p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground">
+						{note.content}
+					</p>
 				)}
-			>
-				{note.content}
-			</p>
-			{long && (
+			</div>
+			{(hasOverflow || expanded) && (
 				<button
 					type="button"
 					onClick={() => setExpanded((value) => !value)}
