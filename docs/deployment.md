@@ -137,6 +137,35 @@ Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), s
 
 **Stop deploys for a while:** set the `DEPLOY_ENABLED` variable to `false`.
 
+## Error monitoring
+
+Unexpected errors go to [Sentry](https://sentry.io), so we hear about them before a student reports them. It runs only in production, and only when a DSN is set.
+
+| Where              | What is reported                                                                                                                 | Code                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| The API            | Every 500 answer, with its route (`POST /api/chats/:chatId/messages`), and errors the services log, such as a failed tutor reply | `src/error-reporter.ts`, used by `error-handler.ts` and `index.ts` |
+| The Next.js server | Errors while it renders a page                                                                                                   | `src/instrumentation.ts`                                           |
+| The browser        | Errors in the page, with its path                                                                                                | `src/instrumentation-client.ts`                                    |
+
+Sentry never gets cookies, headers, request bodies, query strings, IP addresses, the user, or anything the student wrote. AI errors are sent with their name only, failed queries without their values, and console lines and clicks are left out ([decision 0004](decisions/04-user-data.md), `lib/monitoring.ts` and `src/error-reporter.ts`).
+
+### Set up (once)
+
+1. Make an organisation on sentry.io and pick the **EU (Frankfurt)** data region. It cannot be changed later.
+2. Make one project of the platform **Next.js** named `orbi`. The API and the client share it; the tags show which one an error came from.
+3. In the project's **Settings > Security & Privacy**, turn on **Prevent Storing of IP Addresses** and leave the data scrubber on.
+4. Copy the DSN from **Settings > Client Keys (DSN)** and put it in two places:
+   - `SENTRY_DSN=` in `.env` on the VPS, for the API, then deploy again,
+   - a repository variable `SENTRY_DSN` under **Settings > Secrets and variables > Actions > Variables**, for the client. It is put into the client image when it is built, so the next merge into `main` turns it on.
+
+The DSN is not a secret: the browser has to know it to send reports.
+
+### See the errors and the alerts
+
+Open the `orbi` project in Sentry and go to **Issues**. Each issue shows the error, its stack, the route or page, and the release (the commit that was deployed, from `SENTRY_RELEASE` in `compose.yml`). The client's stacks are not mapped to the source yet, because the build does not upload source maps.
+
+Sentry emails every member of the project for each new issue (its default alert rule). Add every team member to the project under **Settings > Teams** so the whole team gets them. The free plan keeps errors for 30 days.
+
 ## Backups
 
 Every night cron runs [deploy/backup/backup.sh](../deploy/backup/backup.sh) on the VPS. Here is what it does:
