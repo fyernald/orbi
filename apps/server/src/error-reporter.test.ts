@@ -1,7 +1,14 @@
 import type { ErrorEvent } from '@sentry/node';
+type Span = Parameters<typeof scrubSpan>[0];
 import { APICallError, NoObjectGeneratedError } from 'ai';
 import { describe, expect, it } from 'vitest';
-import { scrubBreadcrumb, scrubEvent } from './error-reporter';
+import {
+	scrubBreadcrumb,
+	scrubEvent,
+	scrubSpan,
+	sentryOptions,
+	tracesSampler,
+} from './error-reporter';
 
 const eventOf = (...values: { type: string; value: string }[]): ErrorEvent => ({
 	type: undefined,
@@ -113,5 +120,150 @@ describe('scrubBreadcrumb', () => {
 		expect(breadcrumb?.data?.url).toBe(
 			'https://orbi.study/api/reset-password/[token]'
 		);
+	});
+});
+
+const spanOf = (name: string, attributes: Record<string, unknown>): Span => ({
+	trace_id: 't',
+	span_id: 's',
+	name,
+	start_timestamp: 0,
+	status: 'ok',
+	is_segment: true,
+	attributes,
+});
+
+describe('scrubSpan', () => {
+	it('keeps the route and the path, without the query or the reset token', () => {
+		const span = scrubSpan(
+			spanOf('GET /api/reset-password/abc123?callbackURL=x', {
+				'http.route': '/api/reset-password/:token',
+				'url.path': {
+					value: '/api/reset-password/abc123?callbackURL=x',
+					type: 'string',
+				},
+				'url.full': 'https://orbi.study/api/notes/42?q=photosynthesis',
+				'http.response.status_code': 200,
+			})
+		);
+
+		expect(span.name).toBe('GET /api/reset-password/[token]');
+		expect(span.attributes).toEqual({
+			'http.route': '/api/reset-password/[token]',
+			'url.path': '/api/reset-password/[token]',
+			'url.full': 'https://orbi.study/api/notes/42',
+			'http.response.status_code': 200,
+		});
+	});
+
+	it('drops the user, the query, headers, bodies and cookies', () => {
+		const span = scrubSpan(
+			spanOf('GET /api/notes/:id', {
+				'user.id': 'user-1',
+				'user.email': 'ada@example.com',
+				'client.address': '10.0.0.5',
+				'url.query': 'q=photosynthesis',
+				'http.request.header.cookie': 'session=abc',
+				'http.request.body': 'my notes',
+				'sentry.op': 'http.server',
+			})
+		);
+
+		expect(span.attributes).toEqual({ 'sentry.op': 'http.server' });
+	});
+
+	it('keeps the model and the tokens of an AI call, never the prompt or reply', () => {
+		const span = scrubSpan(
+			spanOf('chat deepseek-chat', {
+				'gen_ai.request.model': 'deepseek-chat',
+				'gen_ai.usage.input_tokens': 1200,
+				'gen_ai.operation.name': 'chat',
+				'gen_ai.input.messages': '[{"role":"user","content":"my notes"}]',
+				'gen_ai.output.messages': 'Photosynthesis is ...',
+				'gen_ai.system_instructions': 'You are a tutor. Notes: ...',
+				'gen_ai.tool.call.arguments': '{"answer":"B"}',
+				'ai.prompt': 'my notes',
+				'vercel.ai.telemetry.metadata.topic': 'Biology',
+			})
+		);
+
+		expect(span.attributes).toEqual({
+			'gen_ai.request.model': 'deepseek-chat',
+			'gen_ai.usage.input_tokens': 1200,
+			'gen_ai.operation.name': 'chat',
+		});
+	});
+
+	it('leaves a database span as it is, with the query text but no values', () => {
+		const attributes = {
+			'db.query.text': 'select "id" from "notes" where "id" = $1',
+			'db.system.name': 'postgresql',
+		};
+
+		expect(scrubSpan(spanOf('SELECT notes', attributes)).attributes).toEqual(
+			attributes
+		);
+	});
+});
+
+describe('tracesSampler', () => {
+	const sample = tracesSampler(0.2);
+	const context = (attributes: Record<string, unknown>) => ({
+		name: 'GET',
+		attributes,
+		inheritOrSampleWith: (rate: number) => rate,
+	});
+
+	it('traces a share of requests, or what the browser decided', () => {
+		expect(sample(context({ 'url.path': '/api/notes/42' }))).toBe(0.2);
+		expect(
+			sample({
+				...context({ 'url.path': '/api/notes/42' }),
+				inheritOrSampleWith: () => 1,
+			})
+		).toBe(1);
+	});
+
+	it('never traces the health check', () => {
+		expect(sample(context({ 'url.path': '/api/health' }))).toBe(0);
+		expect(
+			sample({
+				...context({}),
+				normalizedRequest: { url: '/api/health?x=1' },
+			})
+		).toBe(0);
+	});
+});
+
+describe('sentryOptions', () => {
+	const options = sentryOptions({
+		dsn: 'https://key@o1.ingest.de.sentry.io/2',
+		tracesSampleRate: 0.2,
+	});
+
+	it('keeps every data setting off while tracing', () => {
+		expect(options.tracesSampler).toBeDefined();
+		expect(options.dataCollection).toMatchObject({
+			userInfo: false,
+			cookies: false,
+			httpHeaders: false,
+			httpBodies: [],
+			urlQueryParams: false,
+			genAI: { inputs: false, outputs: false },
+			databaseQueryData: false,
+		});
+		expect(options.beforeSendSpan).toBe(scrubSpan);
+	});
+
+	it('leaves 500 answers to error-handler.ts, so each is reported once', () => {
+		type FastifyIntegration = {
+			name: string;
+			setupOnce(): void;
+			getShouldHandleError(): (...args: unknown[]) => boolean;
+		};
+		const integrations = options.integrations as FastifyIntegration[];
+		const fastify = integrations.find(({ name }) => name === 'Fastify')!;
+		fastify.setupOnce();
+		expect(fastify.getShouldHandleError()(new Error('boom'))).toBe(false);
 	});
 });

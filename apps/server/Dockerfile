@@ -26,4 +26,5 @@ COPY --from=build /repo/apps/server/dist dist
 COPY --from=build /repo/apps/server/drizzle drizzle
 USER node
 EXPOSE 3001
-CMD ["node", "dist/index.js"]
+# instrument.js starts Sentry first, so it can trace the database (src/instrument.ts)
+CMD ["node", "--import", "./dist/instrument.js", "dist/index.js"]

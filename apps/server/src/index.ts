@@ -6,7 +6,7 @@ import { buildApp } from './app';
 import { createAuth } from './auth';
 import { loadConfig } from './config';
 import { createDb } from './db';
-import { createSentryReporter, noErrorReporter } from './error-reporter';
+import { noErrorReporter, sentryReporter } from './error-reporter';
 import { createConsoleMailer } from './mail/console';
 import { createSmtpMailer } from './mail/mailer';
 import { createBreachedPasswordCheck } from './modules/auth/breached-password';
@@ -15,9 +15,7 @@ import { createServices } from './services';
 
 // the only file that reads the environment and connects the parts
 const config = loadConfig();
-const errors = config.sentry
-	? createSentryReporter(config.sentry)
-	: noErrorReporter;
+const errors = config.sentry ? sentryReporter : noErrorReporter;
 const db = createDb(config.databaseUrl);
 const mailer = config.smtp
 	? createSmtpMailer(config.smtp)
