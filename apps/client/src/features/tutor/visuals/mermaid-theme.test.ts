@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-	mermaidThemeVariables,
-	withColourClasses,
-	type ThemeTokens,
-} from './mermaid-theme';
+import { mermaidThemeVariables, withColourClasses } from './mermaid-theme';
+import type { ThemeTokens } from './theme-tokens';
 
 const light: ThemeTokens = {
 	card: '#ffffff',

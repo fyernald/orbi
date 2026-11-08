@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 import type { TutorPart } from '../../chat';
 import { AskStudentCard } from './ask-student-card';
 import { QuestionSetCard } from './question-set-card';
+import { ChartView } from './visuals/chart-view';
 import { DiagramView } from './visuals/diagram-view';
 
 type ToolName = keyof TutorTools;
@@ -34,6 +35,7 @@ const toolViews: { [Name in ToolName]: ComponentType<ToolViewProps<Name>> } = {
 	createQuestions: QuestionSetCard,
 	askStudent: AskStudentCard,
 	createDiagram: DiagramView,
+	createChart: ChartView,
 };
 
 export function ToolView({
