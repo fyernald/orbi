@@ -1,67 +1,36 @@
 import type { Topic } from '@orbi/shared';
 import { toIsoDate } from '@/lib/dates';
+import { daysUntil } from './exam-date';
 
-const DAY_MS = 86_400_000;
-const dayNumber = (date: string) => Date.parse(`${date}T00:00:00Z`) / DAY_MS;
-const dateAt = (day: number) =>
-	new Date(day * DAY_MS).toISOString().slice(0, 10);
+export type StudyDay = { date: string; topics: Topic[] };
 
-export type StudyPlanState = {
-	examDate: string;
-	assignments: Record<string, string>;
-	completed: Record<string, boolean>;
-};
+const addDays = (now: Date, days: number) =>
+	toIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days));
 
-// Schedule new topics evenly over the remaining days, reserving exam day for review.
-export function reconcileStudyPlan(
-	previous: StudyPlanState | null,
+// a topic ticked off before today is done; one ticked today stays in today's list
+export const isDoneBefore = (topic: Topic, today: string) =>
+	topic.planDoneOn !== null && topic.planDoneOn < today;
+
+// Splits the topics still to study over the days before the exam, today first, and
+// leaves the exam day for revision. It is worked out again from what is left each
+// day, so a missed topic moves into the coming days with the rest.
+export function studyPlan(
 	topics: Topic[],
 	examDate: string,
-	today = toIsoDate(new Date())
-): StudyPlanState {
-	const valid = previous?.examDate === examDate ? previous : null;
-	const assignments: Record<string, string> = {};
-	const completed: Record<string, boolean> = {};
-	const ordered = [...topics].sort((a, b) => a.position - b.position);
-	const first = dayNumber(today);
-	const remainingDays = Math.max(1, dayNumber(examDate) - first);
-	const unscheduled = ordered.filter((topic) => !valid?.assignments[topic.id]);
-	for (const topic of ordered) {
-		if (valid?.assignments[topic.id]) {
-			const assignedDate = valid.assignments[topic.id];
-			if (assignedDate !== undefined) {
-				assignments[topic.id] = assignedDate;
-			}
-			if (valid.completed[topic.id]) completed[topic.id] = true;
-		}
-	}
-	unscheduled.forEach((topic, index) => {
-		assignments[topic.id] = dateAt(
-			first +
-				Math.floor((index * remainingDays) / Math.max(1, unscheduled.length))
-		);
-	});
-	// A topic missed yesterday is scheduled for tomorrow, not silently marked done.
-	for (const topic of ordered) {
-		const assignedDate = assignments[topic.id];
-		if (
-			!completed[topic.id] &&
-			assignedDate !== undefined &&
-			dayNumber(assignedDate) < first
-		) {
-			assignments[topic.id] = dateAt(first + 1);
-		}
-	}
-	return { examDate, assignments, completed };
-}
+	now: Date
+): StudyDay[] {
+	const today = toIsoDate(now);
+	const left = topics
+		.filter((topic) => !isDoneBefore(topic, today))
+		.sort((a, b) => a.position - b.position);
+	const days = Math.max(1, daysUntil(examDate, now));
 
-export function topicsForDay(
-	topics: Topic[],
-	state: StudyPlanState,
-	today: string
-) {
-	return topics.filter(
-		(topic) =>
-			!state.completed[topic.id] && state.assignments[topic.id] === today
-	);
+	const plan: StudyDay[] = [];
+	left.forEach((topic, index) => {
+		const date = addDays(now, Math.floor((index * days) / left.length));
+		const last = plan.at(-1);
+		if (last?.date === date) last.topics.push(topic);
+		else plan.push({ date, topics: [topic] });
+	});
+	return plan;
 }

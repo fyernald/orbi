@@ -134,6 +134,13 @@
       "when": 1794039329212,
       "tag": "0018_answer-explanation",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794147437309,
+      "tag": "0019_study-plan-done",
+      "breakpoints": true
     }
   ]
 }

@@ -21,12 +21,12 @@ export interface CourseService {
 		courseId: string,
 		input: CreateTopicInput
 	): Promise<Topic>;
-	renameCourse(
+	updateCourse(
 		userId: string,
 		courseId: string,
 		input: UpdateCourseInput
 	): Promise<Course>;
-	renameTopic(
+	updateTopic(
 		userId: string,
 		courseId: string,
 		topicId: string,
@@ -66,17 +66,17 @@ export function createCourseService({
 			return repo.insertTopic(userId, courseId, input);
 		},
 
-		async renameCourse(userId, courseId, { name }) {
-			if (!(await repo.renameCourse(userId, courseId, name))) {
+		async updateCourse(userId, courseId, input) {
+			if (!(await repo.updateCourse(userId, courseId, input))) {
 				throw new NotFoundError('Course not found.');
 			}
 			return getCourse(userId, courseId);
 		},
 
-		async renameTopic(userId, courseId, topicId, { name }) {
-			const renamed = await repo.renameTopic(userId, courseId, topicId, name);
+		async updateTopic(userId, courseId, topicId, input) {
+			const updated = await repo.updateTopic(userId, courseId, topicId, input);
 			const found =
-				renamed && (await repo.findTopic(userId, courseId, topicId));
+				updated && (await repo.findTopic(userId, courseId, topicId));
 			if (!found) throw new NotFoundError('Topic not found.');
 			return found;
 		},

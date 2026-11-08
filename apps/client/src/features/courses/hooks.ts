@@ -113,24 +113,25 @@ export function useCreateTopic(courseId: string) {
 	});
 }
 
-// the course list and the open course show the new name at once
-export function useRenameCourse(courseId: string) {
+// the course list and the open course show the new name or exam date at once
+export function useUpdateCourse(courseId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (input: UpdateCourseInput) =>
 			api.patch(`/courses/${courseId}`, course, input),
-		onSuccess: (renamed) => {
+		onSuccess: (updated) => {
 			queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
-				courses?.map((item) => (item.id === renamed.id ? renamed : item))
+				courses?.map((item) => (item.id === updated.id ? updated : item))
 			);
-			queryClient.setQueryData(courseKey(renamed.id), renamed);
+			queryClient.setQueryData(courseKey(updated.id), updated);
 			// the topic lists show the course name
 			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }
 
-export function useRenameTopic(courseId: string) {
+// a rename, or a tick in the study plan
+export function useUpdateTopic(courseId: string) {
 	const queryClient = useQueryClient();
 	const topicsChanged = useTopicsChanged(courseId);
 	return useMutation({
@@ -139,9 +140,9 @@ export function useRenameTopic(courseId: string) {
 			...input
 		}: UpdateTopicInput & { topicId: string }) =>
 			api.patch(`/courses/${courseId}/topics/${topicId}`, topic, input),
-		onSuccess: (renamed) => {
+		onSuccess: (updated) => {
 			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
-				topics?.map((item) => (item.id === renamed.id ? renamed : item))
+				topics?.map((item) => (item.id === updated.id ? updated : item))
 			);
 			topicsChanged(0);
 		},

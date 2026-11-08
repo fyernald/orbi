@@ -1,9 +1,9 @@
 'use client';
 
-import { updateCourseInput, type Course } from '@orbi/shared';
+import { renameCourseInput, type Course } from '@orbi/shared';
 import { RenameDialog } from '@/components/rename-dialog';
 import { apiErrorMessage } from '@/lib/api';
-import { useRenameCourse } from '../hooks';
+import { useUpdateCourse } from '../hooks';
 
 type RenameCourseDialogProps = {
 	course: Course;
@@ -16,7 +16,7 @@ export function RenameCourseDialog({
 	open,
 	onOpenChange,
 }: RenameCourseDialogProps) {
-	const rename = useRenameCourse(course.id);
+	const rename = useUpdateCourse(course.id);
 
 	return (
 		<RenameDialog
@@ -28,7 +28,7 @@ export function RenameCourseDialog({
 			title="Rename course"
 			label="Course name"
 			name={course.name}
-			schema={updateCourseInput}
+			schema={renameCourseInput}
 			pending={rename.isPending}
 			error={apiErrorMessage(rename.error)}
 			onSave={(name) =>

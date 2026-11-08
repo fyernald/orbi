@@ -123,6 +123,8 @@ export const topic = pgTable(
 		courseId: uuid('course_id').notNull(),
 		name: varchar('name', { length: 255 }).notNull(),
 		position: integer('position').notNull().default(0),
+		// the student's own day it was ticked off in the study plan
+		planDoneOn: date('plan_done_on'),
 		...timestamps,
 	},
 	(t) => [

@@ -4,6 +4,8 @@ import type {
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
+	UpdateCourseInput,
+	UpdateTopicInput,
 } from '@orbi/shared';
 import { and, asc, count, countDistinct, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
@@ -28,16 +30,16 @@ export interface CourseRepository {
 		topicId: string
 	): Promise<Topic | undefined>;
 	// each returns false when nothing of this user matched
-	renameCourse(
+	updateCourse(
 		userId: string,
 		courseId: string,
-		name: string
+		changes: UpdateCourseInput
 	): Promise<boolean>;
-	renameTopic(
+	updateTopic(
 		userId: string,
 		courseId: string,
 		topicId: string,
-		name: string
+		changes: UpdateTopicInput
 	): Promise<boolean>;
 	deleteCourse(userId: string, courseId: string): Promise<boolean>;
 	deleteTopic(
@@ -75,6 +77,7 @@ const topicColumns = {
 	courseId: topic.courseId,
 	name: topic.name,
 	position: topic.position,
+	planDoneOn: topic.planDoneOn,
 };
 
 const topicWithNoteCount = { ...topicColumns, noteCount: count(note.id) };
@@ -197,22 +200,22 @@ export function createCourseRepository(db: Db): CourseRepository {
 			return found;
 		},
 
-		async renameCourse(userId, courseId, name) {
-			const renamed = await db
+		async updateCourse(userId, courseId, changes) {
+			const updated = await db
 				.update(course)
-				.set({ name })
+				.set(changes)
 				.where(ownCourse(userId, courseId))
 				.returning({ id: course.id });
-			return renamed.length > 0;
+			return updated.length > 0;
 		},
 
-		async renameTopic(userId, courseId, topicId, name) {
-			const renamed = await db
+		async updateTopic(userId, courseId, topicId, changes) {
+			const updated = await db
 				.update(topic)
-				.set({ name })
+				.set(changes)
 				.where(ownTopic(userId, courseId, topicId))
 				.returning({ id: topic.id });
-			return renamed.length > 0;
+			return updated.length > 0;
 		},
 
 		// its topics, notes, questions, answers, and chats go with it (ON DELETE CASCADE)
