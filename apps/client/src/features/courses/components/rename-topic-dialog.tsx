@@ -1,9 +1,9 @@
 'use client';
 
-import { updateTopicInput, type Topic } from '@orbi/shared';
+import { createTopicInput, type Topic } from '@orbi/shared';
 import { RenameDialog } from '@/components/rename-dialog';
 import { apiErrorMessage } from '@/lib/api';
-import { useRenameTopic } from '../hooks';
+import { useUpdateTopic } from '../hooks';
 
 type RenameTopicDialogProps = {
 	topic: Topic;
@@ -16,7 +16,7 @@ export function RenameTopicDialog({
 	open,
 	onOpenChange,
 }: RenameTopicDialogProps) {
-	const rename = useRenameTopic(topic.courseId);
+	const rename = useUpdateTopic(topic.courseId);
 
 	return (
 		<RenameDialog
@@ -28,7 +28,7 @@ export function RenameTopicDialog({
 			title="Rename topic"
 			label="Topic name"
 			name={topic.name}
-			schema={updateTopicInput}
+			schema={createTopicInput}
 			pending={rename.isPending}
 			error={apiErrorMessage(rename.error)}
 			onSave={(name) =>

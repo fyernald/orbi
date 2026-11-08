@@ -91,7 +91,7 @@ export function createCourseRoutes({
 				},
 			},
 			async (request) =>
-				courses.renameCourse(
+				courses.updateCourse(
 					await requireUser(request),
 					request.params.courseId,
 					request.body
@@ -110,7 +110,7 @@ export function createCourseRoutes({
 			async (request) => {
 				const userId = await requireUser(request);
 				const { courseId, topicId } = request.params;
-				return courses.renameTopic(userId, courseId, topicId, request.body);
+				return courses.updateTopic(userId, courseId, topicId, request.body);
 			}
 		);
 

@@ -1,0 +1,1 @@
+ALTER TABLE "topic" ADD COLUMN "plan_done_on" date;

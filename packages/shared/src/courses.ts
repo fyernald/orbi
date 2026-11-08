@@ -17,6 +17,8 @@ const name = (thing: string) =>
 
 export const topicName = name('topic');
 
+const examDate = z.iso.date('Enter a valid date.').nullable();
+
 export const createCourseInput = z.object({
 	name: name('course'),
 	description: z
@@ -29,7 +31,7 @@ export const createCourseInput = z.object({
 		.optional(),
 	color: z.enum(COURSE_COLORS, 'Choose a colour.'),
 	goal: z.enum(COURSE_GOALS, 'Choose what this course is for.'),
-	examDate: z.iso.date('Enter a valid date.').nullable().optional(),
+	examDate: examDate.optional(),
 	topics: z
 		.array(topicName)
 		.max(
@@ -40,9 +42,26 @@ export const createCourseInput = z.object({
 
 export const createTopicInput = z.object({ name: topicName });
 
-// a rename; more course details can join it later
-export const updateCourseInput = z.object({ name: name('course') });
-export const updateTopicInput = createTopicInput;
+export const renameCourseInput = z.object({ name: name('course') });
+export const examDateInput = z.object({ examDate });
+
+// a rename, a new exam date, or both
+export const updateCourseInput = z
+	.object({ name: name('course'), examDate })
+	.partial()
+	.refine(
+		(input) => input.name !== undefined || input.examDate !== undefined,
+		'Nothing to change.'
+	);
+
+// a rename, or the day the topic was ticked off in the study plan (null to untick)
+export const updateTopicInput = z
+	.object({ name: topicName, planDoneOn: z.iso.date().nullable() })
+	.partial()
+	.refine(
+		(input) => input.name !== undefined || input.planDoneOn !== undefined,
+		'Nothing to change.'
+	);
 
 export const courseParams = z.object({ courseId: z.uuid('Course not found.') });
 
@@ -70,6 +89,8 @@ export const topic = z.object({
 	name: z.string(),
 	position: z.int(),
 	noteCount: z.int(),
+	// the student's day it was ticked off in the study plan
+	planDoneOn: z.iso.date().nullable(),
 });
 
 // a topic with the name of its course, for places that list the topics of every
@@ -85,6 +106,7 @@ export type CourseColor = (typeof COURSE_COLORS)[number];
 export type CourseGoal = (typeof COURSE_GOALS)[number];
 export type CreateCourseInput = z.infer<typeof createCourseInput>;
 export type CreateTopicInput = z.infer<typeof createTopicInput>;
+export type ExamDateInput = z.infer<typeof examDateInput>;
 export type UpdateCourseInput = z.infer<typeof updateCourseInput>;
 export type UpdateTopicInput = z.infer<typeof updateTopicInput>;
 export type Course = z.infer<typeof course>;
