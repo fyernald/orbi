@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getServerProfile } from '@/features/profile/server';
+import { DefaultModelSettingsCard } from '@/features/settings/components/default-model-settings';
 import { ReminderSettingsCard } from '@/features/settings/components/reminder-settings';
 import { toReminderValues } from '@/features/settings/reminder';
 
@@ -13,6 +14,7 @@ export default async function SettingsPage() {
 			<header className="flex flex-col gap-1">
 				<h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
 			</header>
+			<DefaultModelSettingsCard />
 			<ReminderSettingsCard
 				saved={toReminderValues(saved)}
 				timezone={saved.timezone}

@@ -81,4 +81,4 @@ A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 - The tutor works with any model in the catalog without new code.
 - A new kind of reply is three small pieces: a shared schema, a server tool (or none, for browser tools), and a view.
 - The API process now holds long requests open while the model writes. That is fine for the expected number of students. If it is not later, the worker can take over batch work first.
-- `T-05` is covered by this record and the `ai/` folder, except the per-user default model in the profile, which comes with the settings page.
+- `T-05` is covered by this record and the `ai/` folder. The per-user default model (`T-38`) is saved in the profile from the settings page, and `GET /api/models` starts on it when the server can still call it.

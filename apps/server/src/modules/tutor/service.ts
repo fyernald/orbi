@@ -17,10 +17,11 @@ import {
 	DAILY_TOKENS_DEFAULT,
 	type TokenBudget,
 } from '../../ai/budget';
-import type {
-	ModelOptions,
-	ModelRegistry,
-	ResolvedModel,
+import {
+	MODEL_NOT_IN_LIST,
+	type ModelOptions,
+	type ModelRegistry,
+	type ResolvedModel,
 } from '../../ai/models';
 import type { LogUsage } from '../../ai/usage';
 import {
@@ -64,7 +65,8 @@ import { createReplyStarter, type TutorStream } from './start-reply';
 import { createStepTracker } from './step-tracker';
 
 export interface TutorService {
-	listModels(): AiModels;
+	// the models this server can call, starting on the student's own default
+	listModels(userId: string): Promise<AiModels>;
 	listChats(userId: string, courseId: string): Promise<ChatSummary[]>;
 	// the chat with its newest messages
 	getChat(userId: string, chatId: string): Promise<ChatThread>;
@@ -149,7 +151,7 @@ export function createTutorService({
 				'The AI tutor is not set up on this server yet.'
 			);
 		}
-		throw new ValidationError('Choose a model from the list.');
+		throw new ValidationError(MODEL_NOT_IN_LIST);
 	}
 
 	// Every model call takes one of the student's places, so neither replies nor
@@ -197,7 +199,8 @@ export function createTutorService({
 	});
 
 	return {
-		listModels: () => models.list(),
+		listModels: async (userId) =>
+			models.list(await repo.findDefaultModelId(userId)),
 
 		explainAnswer,
 

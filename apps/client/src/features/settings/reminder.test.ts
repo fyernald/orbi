@@ -16,6 +16,7 @@ const saved = (changes: Partial<Profile>): Profile => ({
 	timezone: 'Europe/Istanbul',
 	reminderEnabled: false,
 	reminderTime: null,
+	defaultModelId: null,
 	onboardedAt: '2026-11-01T10:00:00.000Z',
 	...changes,
 });
