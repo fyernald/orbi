@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+import { browserBarColors } from '@/lib/browser-bar';
 import { TITLE_TEMPLATE } from '@/lib/page-title';
 import { cn } from '@/lib/utils';
 import { Providers } from './providers';
@@ -15,11 +16,13 @@ export const metadata: Metadata = {
 	description: 'Personal AI Study Coach',
 };
 
-// the browser bar on phones takes the page's background (--background in globals.css)
 export const viewport: Viewport = {
 	themeColor: [
-		{ media: '(prefers-color-scheme: light)', color: '#fcf9fa' },
-		{ media: '(prefers-color-scheme: dark)', color: '#140d10' },
+		{
+			media: '(prefers-color-scheme: light)',
+			color: browserBarColors.light,
+		},
+		{ media: '(prefers-color-scheme: dark)', color: browserBarColors.dark },
 	],
 };
 

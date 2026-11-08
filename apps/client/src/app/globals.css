@@ -44,6 +44,9 @@
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-warning: var(--warning);
+	--color-switch-sky: var(--switch-sky);
+	--color-switch-sun: var(--switch-sun);
+	--color-switch-moon: var(--switch-moon);
 	--color-tone-blue: var(--tone-blue);
 	--color-tone-blue-foreground: var(--tone-blue-foreground);
 	--color-tone-teal: var(--tone-teal);
@@ -120,6 +123,11 @@
 	--flame-yellow: #f5b83d;
 	--flame-orange: #f97316;
 	--flame-red: #e5484d;
+	/* the theme switch: a day sky with the sun, a night sky with the moon and stars */
+	--switch-sky: #e0f2fe;
+	--switch-sun: #f59e0b;
+	--switch-moon: #a5b4fc;
+	--switch-star: #ffffff;
 	--border: #e8e1e4;
 	--divider: #f2edef;
 	--input: #e8e1e4;
@@ -180,6 +188,7 @@
 	--input: #342b2f;
 	--ring: #f167a4;
 	--scrollbar: #43383d;
+	--switch-sky: #1e1b4b;
 	/* the same chart hues, stepped for the dark card */
 	--chart-1: #e2559a;
 	--chart-2: #3987e5;
@@ -753,5 +762,134 @@
 		opacity: 0;
 		transform: scale(0.94);
 		filter: blur(8px);
+	}
+}
+
+/* the theme switch in the top bar: the knob rolls across, spinning, and the sun and
+   moon swap halfway. A rolled knob rests where the dark class puts it */
+@layer components {
+	.theme-switch {
+		--knob-travel: 2rem;
+	}
+
+	.dark .theme-switch-knob {
+		translate: var(--knob-travel) 0;
+	}
+
+	.theme-switch-moon,
+	.dark .theme-switch-sun {
+		opacity: 0;
+		scale: 0.4;
+	}
+
+	.dark .theme-switch-moon {
+		opacity: 1;
+		scale: 1;
+	}
+
+	.theme-switch-stars > span {
+		position: absolute;
+		border-radius: 9999px;
+		background: var(--switch-star);
+		opacity: 0;
+	}
+
+	.dark .theme-switch-stars > span {
+		animation: twinkle 2.4s ease-in-out infinite;
+	}
+
+	.dark .theme-switch-stars > span:nth-child(2) {
+		animation-delay: -0.8s;
+	}
+
+	.dark .theme-switch-stars > span:nth-child(3) {
+		animation-delay: -1.6s;
+	}
+
+	/* longhands: a shorthand without a name is built into "animation: none" */
+	.theme-switch[data-roll]
+		:is(.theme-switch-knob, .theme-switch-sun, .theme-switch-moon) {
+		animation-duration: 600ms;
+		animation-timing-function: ease-in-out;
+		animation-fill-mode: both;
+	}
+
+	.theme-switch[data-roll] .theme-switch-knob {
+		animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-knob {
+		animation-name: knob-to-dark;
+	}
+
+	.theme-switch[data-roll='to-light'] .theme-switch-knob {
+		animation-name: knob-to-light;
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-sun,
+	.theme-switch[data-roll='to-light'] .theme-switch-moon {
+		animation-name: theme-icon-out;
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-moon,
+	.theme-switch[data-roll='to-light'] .theme-switch-sun {
+		animation-name: theme-icon-in;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.theme-switch[data-roll]
+			:is(.theme-switch-knob, .theme-switch-sun, .theme-switch-moon),
+		.dark .theme-switch-stars > span {
+			animation: none;
+		}
+		.dark .theme-switch-stars > span {
+			opacity: 0.8;
+		}
+	}
+}
+
+@keyframes knob-to-dark {
+	from {
+		translate: 0 0;
+		rotate: 0deg;
+	}
+	to {
+		translate: var(--knob-travel) 0;
+		rotate: 360deg;
+	}
+}
+
+@keyframes knob-to-light {
+	from {
+		translate: var(--knob-travel) 0;
+		rotate: 360deg;
+	}
+	to {
+		translate: 0 0;
+		rotate: 0deg;
+	}
+}
+
+@keyframes theme-icon-out {
+	from {
+		opacity: 1;
+		scale: 1;
+	}
+	50%,
+	to {
+		opacity: 0;
+		scale: 0.4;
+	}
+}
+
+@keyframes theme-icon-in {
+	from,
+	50% {
+		opacity: 0;
+		scale: 0.4;
+	}
+	to {
+		opacity: 1;
+		scale: 1;
 	}
 }
