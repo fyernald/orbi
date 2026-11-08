@@ -44,6 +44,9 @@
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-warning: var(--warning);
+	--color-switch-sky: var(--switch-sky);
+	--color-switch-sun: var(--switch-sun);
+	--color-switch-moon: var(--switch-moon);
 	--color-tone-blue: var(--tone-blue);
 	--color-tone-blue-foreground: var(--tone-blue-foreground);
 	--color-tone-teal: var(--tone-teal);
@@ -120,6 +123,11 @@
 	--flame-yellow: #f5b83d;
 	--flame-orange: #f97316;
 	--flame-red: #e5484d;
+	/* the theme switch: a day sky with the sun, a night sky with the moon and stars */
+	--switch-sky: #e0f2fe;
+	--switch-sun: #f59e0b;
+	--switch-moon: #a5b4fc;
+	--switch-star: #ffffff;
 	--border: #e8e1e4;
 	--divider: #f2edef;
 	--input: #e8e1e4;
@@ -180,6 +188,7 @@
 	--input: #342b2f;
 	--ring: #f167a4;
 	--scrollbar: #43383d;
+	--switch-sky: #1e1b4b;
 	/* the same chart hues, stepped for the dark card */
 	--chart-1: #e2559a;
 	--chart-2: #3987e5;
@@ -781,7 +790,7 @@
 	.theme-switch-stars > span {
 		position: absolute;
 		border-radius: 9999px;
-		background: white;
+		background: var(--switch-star);
 		opacity: 0;
 	}
 

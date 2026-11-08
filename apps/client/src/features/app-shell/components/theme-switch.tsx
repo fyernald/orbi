@@ -30,7 +30,7 @@ export function ThemeSwitch() {
 			aria-label="Dark mode"
 			onClick={toggle}
 			data-roll={roll ?? undefined}
-			className="theme-switch relative inline-flex h-8 w-16 shrink-0 items-center rounded-full bg-sky-100 p-1 shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-indigo-950"
+			className="theme-switch relative inline-flex h-8 w-16 shrink-0 items-center rounded-full bg-switch-sky p-1 shadow-[inset_0_0_0_1px_var(--border)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 		>
 			<span aria-hidden className="theme-switch-stars">
 				<span className="top-2 left-3 size-0.5" />
@@ -41,8 +41,8 @@ export function ThemeSwitch() {
 				aria-hidden
 				className="theme-switch-knob relative grid size-6 place-items-center rounded-full bg-background shadow-sm"
 			>
-				<Sun className="theme-switch-sun absolute size-4 text-amber-500" />
-				<Moon className="theme-switch-moon absolute size-3.5 text-indigo-300" />
+				<Sun className="theme-switch-sun absolute size-4 text-switch-sun" />
+				<Moon className="theme-switch-moon absolute size-3.5 text-switch-moon" />
 			</span>
 		</button>
 	);
