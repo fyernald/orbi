@@ -24,6 +24,7 @@ const profileColumns = {
 	timezone: profile.timezone,
 	reminderEnabled: profile.reminderEnabled,
 	reminderTime: profile.reminderTime,
+	defaultModelId: profile.defaultModelId,
 	onboardedAt: profile.onboardedAt,
 };
 

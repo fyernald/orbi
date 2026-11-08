@@ -90,6 +90,9 @@ export const profile = pgTable('profile', {
 	// the daily study reminder email, sent at reminder_time in the user's time zone
 	reminderEnabled: boolean('reminder_enabled').notNull().default(false),
 	reminderTime: time('reminder_time'),
+	// the catalog id new chats start on; null (or a model the server cannot call
+	// any more) means the server's default
+	defaultModelId: text('default_model_id'),
 	// set once every onboarding question is answered; the app stays closed until then
 	onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
 	...timestamps,

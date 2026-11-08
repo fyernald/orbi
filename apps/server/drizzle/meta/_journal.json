@@ -141,6 +141,13 @@
       "when": 1794147437309,
       "tag": "0019_study-plan-done",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794150421224,
+      "tag": "0020_default-model",
+      "breakpoints": true
     }
   ]
 }

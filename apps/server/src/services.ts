@@ -41,7 +41,10 @@ export function createServices({
 	return {
 		courses: createCourseService({ repo: createCourseRepository(db) }),
 		notes: createNoteService({ repo: createNoteRepository(db), pdf }),
-		profiles: createProfileService({ repo: createProfileRepository(db) }),
+		profiles: createProfileService({
+			repo: createProfileRepository(db),
+			models,
+		}),
 		questions: createQuestionService({ repo: createQuestionRepository(db) }),
 		tutor: createTutorService({
 			repo: createTutorRepository(db),

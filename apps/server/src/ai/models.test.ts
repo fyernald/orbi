@@ -71,6 +71,25 @@ describe('createModelRegistry', () => {
 		expect(options).toEqual([{ thinking: true }, { thinking: false }]);
 	});
 
+	it("starts on the student's own default when this server can call it", () => {
+		const registry = createModelRegistry({
+			providers: { google: mockFactory, anthropic: mockFactory },
+		});
+
+		expect(registry.list('claude-opus').defaultModelId).toBe('claude-opus');
+		expect(registry.list(null).defaultModelId).toBe('gemini-flash');
+	});
+
+	it('falls back to the server default for a model it cannot call', () => {
+		const registry = createModelRegistry({
+			providers: { google: mockFactory },
+		});
+
+		expect(registry.has('claude-opus')).toBe(false);
+		expect(registry.list('claude-opus').defaultModelId).toBe('gemini-flash');
+		expect(registry.list('made-up').defaultModelId).toBe('gemini-flash');
+	});
+
 	it('has no default when no provider is set up', () => {
 		const registry = createModelRegistry({ providers: {} });
 

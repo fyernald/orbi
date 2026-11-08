@@ -37,10 +37,7 @@ export function createTutorRoutes({
 		api.get(
 			'/models',
 			{ schema: { response: { 200: aiModels } } },
-			async (request) => {
-				await requireUser(request);
-				return tutor.listModels();
-			}
+			async (request) => tutor.listModels(await requireUser(request))
 		);
 
 		api.get(
