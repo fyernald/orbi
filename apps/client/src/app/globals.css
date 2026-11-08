@@ -90,13 +90,13 @@
 	--background: #fcf9fa;
 	--foreground: #1f1519;
 	--card: #ffffff;
-	--card-foreground: #1f1519;
-	--popover: #ffffff;
-	--popover-foreground: #1f1519;
+	--card-foreground: var(--foreground);
+	--popover: var(--card);
+	--popover-foreground: var(--foreground);
 	--primary: #c61d78;
 	--primary-foreground: #ffffff;
 	--secondary: #f4eef1;
-	--secondary-foreground: #1f1519;
+	--secondary-foreground: var(--foreground);
 	--muted: #f4eef1;
 	--muted-foreground: #6c5f65;
 	--subtle-foreground: #46393f;
@@ -130,8 +130,8 @@
 	--switch-star: #ffffff;
 	--border: #e8e1e4;
 	--divider: #f2edef;
-	--input: #e8e1e4;
-	--ring: #c61d78;
+	--input: var(--border);
+	--ring: var(--primary);
 	--scrollbar: #ddd2d7;
 	/* charts and diagrams: berry, blue, aqua, yellow, violet, orange, in this order;
 	   checked for colour-blind students and against the card in each mode (US-42).
@@ -143,27 +143,28 @@
 	--chart-5: #6250d6;
 	--chart-6: #eb6834;
 	--radius: 0.75rem;
-	--sidebar: #fcf9fa;
-	--sidebar-foreground: #1f1519;
-	--sidebar-primary: #c61d78;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #f4eef1;
-	--sidebar-accent-foreground: #1f1519;
-	--sidebar-border: #e8e1e4;
-	--sidebar-ring: #c61d78;
+	/* the colour theme picker shows each theme by its main colour */
+	--palette-berry: #c61d78;
+	--palette-ocean: #2563eb;
+	--palette-violet: #6d28d9;
+	--palette-forest: #047857;
+	--sidebar: var(--background);
+	--sidebar-foreground: var(--foreground);
+	--sidebar-primary: var(--primary);
+	--sidebar-primary-foreground: var(--primary-foreground);
+	--sidebar-accent: var(--secondary);
+	--sidebar-accent-foreground: var(--foreground);
+	--sidebar-border: var(--border);
+	--sidebar-ring: var(--primary);
 }
 
 .dark {
 	--background: #140d10;
 	--foreground: #f7f2f4;
 	--card: #1d1619;
-	--card-foreground: #f7f2f4;
-	--popover: #1d1619;
-	--popover-foreground: #f7f2f4;
 	--primary: #f167a4;
 	--primary-foreground: #270b17;
 	--secondary: #2a2125;
-	--secondary-foreground: #f7f2f4;
 	--muted: #2a2125;
 	--muted-foreground: #ada1a6;
 	--subtle-foreground: #d8ced2;
@@ -185,10 +186,12 @@
 	--tone-amber-foreground: #f7cf7f;
 	--border: #342b2f;
 	--divider: #261e21;
-	--input: #342b2f;
-	--ring: #f167a4;
 	--scrollbar: #43383d;
 	--switch-sky: #1e1b4b;
+	--palette-berry: #f167a4;
+	--palette-ocean: #60a5fa;
+	--palette-violet: #a78bfa;
+	--palette-forest: #34d399;
 	/* the same chart hues, stepped for the dark card */
 	--chart-1: #e2559a;
 	--chart-2: #3987e5;
@@ -196,14 +199,111 @@
 	--chart-4: #c98500;
 	--chart-5: #9085e9;
 	--chart-6: #d95926;
-	--sidebar: #140d10;
-	--sidebar-foreground: #f7f2f4;
-	--sidebar-primary: #f167a4;
-	--sidebar-primary-foreground: #270b17;
-	--sidebar-accent: #2a2125;
-	--sidebar-accent-foreground: #f7f2f4;
-	--sidebar-border: #342b2f;
-	--sidebar-ring: #f167a4;
+}
+/* Colour themes beside Berry (data-palette on <html>, from a cookie). Each sets the
+   brand colour and the greys, which carry a little of its hue, in both modes; course
+   colours, charts and warnings stay the same. A test checks both modes set the same tokens */
+
+/* Ocean: a clear tech blue */
+:root[data-palette='ocean'] {
+	--background: #f8fafc;
+	--foreground: #131921;
+	--card: #ffffff;
+	--primary: #2563eb;
+	--primary-foreground: #ffffff;
+	--secondary: #edf0f5;
+	--muted: #edf0f5;
+	--muted-foreground: #5d646e;
+	--subtle-foreground: #373e48;
+	--accent: #eaf1ff;
+	--accent-foreground: #1d4ed8;
+	--border: #e0e4e9;
+	--divider: #eceff3;
+	--scrollbar: #d0d6df;
+}
+:root.dark[data-palette='ocean'] {
+	--background: #0c1015;
+	--foreground: #f1f4f8;
+	--card: #15191e;
+	--primary: #60a5fa;
+	--primary-foreground: #0a1a33;
+	--secondary: #1f242c;
+	--muted: #1f242c;
+	--muted-foreground: #9fa5af;
+	--subtle-foreground: #ccd2d9;
+	--accent: #172a52;
+	--accent-foreground: #bfdbfe;
+	--border: #292e36;
+	--divider: #1d2127;
+	--scrollbar: #363c45;
+}
+
+/* Violet: a deep purple */
+:root[data-palette='violet'] {
+	--background: #fafafc;
+	--foreground: #181720;
+	--card: #ffffff;
+	--primary: #6d28d9;
+	--primary-foreground: #ffffff;
+	--secondary: #f0eff5;
+	--muted: #f0eff5;
+	--muted-foreground: #63616d;
+	--subtle-foreground: #3d3b47;
+	--accent: #f1ecff;
+	--accent-foreground: #5b21b6;
+	--border: #e3e2e9;
+	--divider: #efeef2;
+	--scrollbar: #d5d4de;
+}
+:root.dark[data-palette='violet'] {
+	--background: #0f0e15;
+	--foreground: #f4f3f7;
+	--card: #18171e;
+	--primary: #a78bfa;
+	--primary-foreground: #1a0b38;
+	--secondary: #24232b;
+	--muted: #24232b;
+	--muted-foreground: #a5a3ae;
+	--subtle-foreground: #d1d0d9;
+	--accent: #2c1a52;
+	--accent-foreground: #ddd6fe;
+	--border: #2e2d35;
+	--divider: #211f27;
+	--scrollbar: #3c3a44;
+}
+
+/* Forest: a deep green */
+:root[data-palette='forest'] {
+	--background: #f8fbf9;
+	--foreground: #111b15;
+	--card: #ffffff;
+	--primary: #047857;
+	--primary-foreground: #ffffff;
+	--secondary: #ecf2ee;
+	--muted: #ecf2ee;
+	--muted-foreground: #5a675f;
+	--subtle-foreground: #34413a;
+	--accent: #e3f6ee;
+	--accent-foreground: #065f46;
+	--border: #dfe5e1;
+	--divider: #ebf0ed;
+	--scrollbar: #ced8d2;
+}
+:root.dark[data-palette='forest'] {
+	--background: #0a110d;
+	--foreground: #f0f5f2;
+	--card: #131a16;
+	--primary: #34d399;
+	--primary-foreground: #022c1f;
+	--secondary: #1e2621;
+	--muted: #1e2621;
+	--muted-foreground: #9da8a1;
+	--subtle-foreground: #cbd4ce;
+	--accent: #0f3a2c;
+	--accent-foreground: #a7f3d0;
+	--border: #28302b;
+	--divider: #1b231e;
+	--scrollbar: #343f38;
 }
 
 @layer base {
@@ -891,5 +991,33 @@
 	to {
 		opacity: 1;
 		scale: 1;
+	}
+}
+
+/* the colour theme picker: a ring around the theme the page is in */
+@layer components {
+	.palette-swatch {
+		transition: scale 150ms ease-out;
+	}
+
+	:root[data-palette='berry'] [data-swatch='berry'],
+	:root[data-palette='ocean'] [data-swatch='ocean'],
+	:root[data-palette='violet'] [data-swatch='violet'],
+	:root[data-palette='forest'] [data-swatch='forest'] {
+		outline: 2px solid var(--swatch);
+		outline-offset: 2px;
+	}
+}
+
+/* picking a colour theme fades the page across (pickPalette) */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 350ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
 	}
 }

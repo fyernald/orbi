@@ -2,6 +2,7 @@
 
 import { useTheme } from 'next-themes';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { usePalette } from '@/hooks/use-palette';
 import { renderMermaid } from './render-mermaid';
 
 export type DiagramDrawing =
@@ -11,13 +12,14 @@ export type DiagramDrawing =
 
 type Drawn = { key: string; drawing: DiagramDrawing };
 
-// The diagram as SVG, drawn again when the theme changes, so its colours follow
-// light and dark mode. redraw tries once more after a failure.
+// The diagram as SVG, drawn again when the theme or colour theme changes, so its
+// colours follow them. redraw tries once more after a failure.
 export function useMermaidSvg(source: string) {
 	const { resolvedTheme } = useTheme();
+	const palette = usePalette();
 	const baseId = `diagram-${useId().replace(/[^\w-]/g, '')}`;
 	const [attempt, setAttempt] = useState(0);
-	const key = `${resolvedTheme}:${attempt}:${source}`;
+	const key = `${resolvedTheme}:${palette}:${attempt}:${source}`;
 	const [drawn, setDrawn] = useState<Drawn>();
 
 	useEffect(() => {
