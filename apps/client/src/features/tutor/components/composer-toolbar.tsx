@@ -1,7 +1,7 @@
 'use client';
 
 import type { AiModel, TutorRequestInput } from '@orbi/shared';
-import { useController, type Control } from 'react-hook-form';
+import { useController, useWatch, type Control } from 'react-hook-form';
 import { AttachButton } from './attach-button';
 import { ModelPicker } from './model-picker';
 import { SendButton } from './send-button';
@@ -14,7 +14,7 @@ type ComposerToolbarProps = {
 	// without it the Attach button is hidden
 	onFiles?: (files: File[]) => void;
 	sendLabel: string;
-	blockedReason: string | null;
+	blockedReason: (values: Partial<TutorRequestInput>) => string | null;
 	busy: boolean;
 	onStop?: () => void;
 };
@@ -50,9 +50,30 @@ export function ComposerToolbar({
 				{busy && onStop ? (
 					<StopButton onStop={onStop} />
 				) : (
-					<SendButton label={sendLabel} blockedReason={blockedReason} />
+					<ComposerSendButton
+						control={control}
+						label={sendLabel}
+						blockedReason={blockedReason}
+					/>
 				)}
 			</div>
 		</div>
 	);
+}
+
+type ComposerSendButtonProps = {
+	control: Control<TutorRequestInput>;
+	label: string;
+	blockedReason: ComposerToolbarProps['blockedReason'];
+};
+
+// watches the message on its own, so typing re-renders only this button
+// and not the model menu beside it
+function ComposerSendButton({
+	control,
+	label,
+	blockedReason,
+}: ComposerSendButtonProps) {
+	const values = useWatch({ control });
+	return <SendButton label={label} blockedReason={blockedReason(values)} />;
 }

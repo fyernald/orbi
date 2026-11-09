@@ -10,7 +10,7 @@ export type ComposerTopic = {
 };
 
 type ComposerState = {
-	values: TutorRequestInput;
+	values: Partial<TutorRequestInput>;
 	attachments: Attachment[];
 	// the whole-course chat can send without a topic
 	allowWholeCourse?: boolean;
