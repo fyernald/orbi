@@ -4,6 +4,7 @@ import {
 	type ChartSeriesInput,
 } from '@orbi/shared';
 import { seriesKey } from './chart-colors';
+import { niceScale, niceStep, type Range, type Scale } from './nice-scale';
 import { formatNumber } from './number-format';
 
 // one row of a chart's data: the label or x, then a value per series (s0, s1…)
@@ -23,14 +24,55 @@ export function categoryRows(
 	});
 }
 
-export type Bin = { from: number; to: number; count: number };
-
-// a round step near `raw`: 1, 2, 2.5 or 5 times a power of ten
-export function niceStep(raw: number): number {
-	const power = 10 ** Math.floor(Math.log10(raw));
-	const step = [1, 2, 2.5, 5, 10].find((factor) => factor * power >= raw);
-	return (step ?? 10) * power;
+// the lowest and highest value of any series, or nothing when there is none
+export function valueExtent(
+	rows: ChartRow[],
+	seriesCount: number
+): Range | undefined {
+	const values = rows.flatMap((row) =>
+		Array.from({ length: seriesCount }, (_, index) => row[seriesKey(index)])
+	);
+	const numbers = values.filter(
+		(value): value is number =>
+			typeof value === 'number' && Number.isFinite(value)
+	);
+	return numbers.length
+		? [Math.min(...numbers), Math.max(...numbers)]
+		: undefined;
 }
+
+// The value axis of a bar, line or area chart or a histogram: from 0 (bars start
+// there) to past the highest value, in round steps. Histogram counts step by whole
+// numbers.
+export function valueScale(
+	rows: ChartRow[],
+	seriesCount: number,
+	wholeNumbers = false
+): Scale {
+	const [low, high] = valueExtent(rows, seriesCount) ?? [0, 0];
+	return niceScale(Math.min(0, low), Math.max(0, high), { wholeNumbers });
+}
+
+// Both axes of a scatter plot, around its points in round steps, with about
+// `xSteps` along x. They need not start at 0: the pattern of the dots is what it
+// shows.
+export function pointScales(
+	series: ChartSeriesInput[],
+	xSteps?: number
+): { x: Scale; y: Scale } {
+	const points = series.flatMap(({ points = [] }) => points);
+	const around = (values: number[], steps?: number) =>
+		niceScale(Math.min(...values), Math.max(...values), { steps });
+	return {
+		x: around(
+			points.map(({ x }) => x),
+			xSteps
+		),
+		y: around(points.map(({ y }) => y)),
+	};
+}
+
+export type Bin = { from: number; to: number; count: number };
 
 // Sturges's rule: about log2(n) + 1 bars
 const defaultBinCount = (count: number) =>

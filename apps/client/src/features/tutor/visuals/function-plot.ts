@@ -1,13 +1,16 @@
 import { compileFormula, type ChartSeriesInput } from '@orbi/shared';
 import { seriesKey } from './chart-colors';
 import type { ChartRow } from './chart-rows';
+import { niceScale, ticksWithin, type Range } from './nice-scale';
 
 // enough points for a smooth curve across the chat's width
 export const FUNCTION_SAMPLES = 201;
 
-export type YRange = [number, number];
-
-export type FunctionPlot = { rows: ChartRow[]; yDomain: YRange };
+export type FunctionPlot = {
+	rows: ChartRow[];
+	yDomain: Range;
+	yTicks: number[];
+};
 
 const quantile = (sorted: number[], share: number) =>
 	sorted[Math.min(sorted.length - 1, Math.floor(share * sorted.length))]!;
@@ -15,7 +18,7 @@ const quantile = (sorted: number[], share: number) =>
 // The y range that shows the curve, not its spikes: tan(x) runs off to huge values
 // near its asymptotes, which would flatten everything else. Values far beyond the
 // middle 90% are left out of the range.
-export function curveRange(values: number[]): YRange {
+export function curveRange(values: number[]): Range {
 	const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
 	if (sorted.length === 0) return [-1, 1];
 	const low = quantile(sorted, 0.05);
@@ -27,6 +30,17 @@ export function curveRange(values: number[]): YRange {
 	const min = kept[0]!;
 	const max = kept.at(-1)!;
 	return min === max ? [min - 1, max + 1] : [min, max];
+}
+
+// The y axis: the curve's own range stretched to round numbers, or the range the
+// AI gave kept as it is, with round ticks inside it.
+function yAxis(auto: Range, yMin?: number, yMax?: number) {
+	if (yMin === undefined && yMax === undefined) {
+		const { domain, ticks } = niceScale(...auto);
+		return { yDomain: domain, yTicks: ticks };
+	}
+	const yDomain: Range = [yMin ?? auto[0], yMax ?? auto[1]];
+	return { yDomain, yTicks: ticksWithin(...yDomain) };
 }
 
 // A row per x across the range, with the y of every formula. A y that is not a
@@ -51,8 +65,7 @@ export function plotFunctions(
 	);
 	const ys = formulas.map((evaluate) => xs.map((x) => evaluate({ x })));
 
-	const auto = curveRange(ys.flat());
-	const yDomain: YRange = [yMin ?? auto[0], yMax ?? auto[1]];
+	const { yDomain, yTicks } = yAxis(curveRange(ys.flat()), yMin, yMax);
 	const spread = yDomain[1] - yDomain[0];
 	const onChart = (y: number) =>
 		Number.isFinite(y) && y >= yDomain[0] - spread && y <= yDomain[1] + spread;
@@ -65,5 +78,5 @@ export function plotFunctions(
 		});
 		return row;
 	});
-	return { rows, yDomain };
+	return { rows, yDomain, yTicks };
 }

@@ -22,7 +22,8 @@ describe('plotFunctions', () => {
 			{ x: 1, s0: 1, s1: 3 },
 			{ x: 2, s0: 4, s1: 5 },
 		]);
-		expect(plot.yDomain).toEqual([-3, 5]);
+		expect(plot.yDomain).toEqual([-4, 6]);
+		expect(plot.yTicks).toEqual([-4, -2, 0, 2, 4, 6]);
 	});
 
 	it('shows the normal curve at its height', () => {
@@ -32,8 +33,8 @@ describe('plotFunctions', () => {
 			3
 		);
 
-		expect(plot.yDomain[0]).toBeCloseTo(0.0044, 3);
-		expect(plot.yDomain[1]).toBeCloseTo(0.3989, 3);
+		expect(plot.yDomain).toEqual([0, 0.4]);
+		expect(plot.yTicks).toEqual([0, 0.1, 0.2, 0.3, 0.4]);
 	});
 
 	it('leaves gaps where a formula has no value or runs off the chart', () => {
@@ -67,6 +68,7 @@ describe('plotFunctions', () => {
 		);
 
 		expect(plot.yDomain).toEqual([-5, 5]);
+		expect(plot.yTicks).toEqual([-4, -2, 0, 2, 4]);
 	});
 });
 

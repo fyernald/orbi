@@ -1,8 +1,9 @@
 import { Area, Bar, ComposedChart, Line } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { seriesKey } from '../../../visuals/chart-colors';
-import type { ChartRow } from '../../../visuals/chart-rows';
-import { AXES_MARGIN, chartAxes } from './chart-axes';
+import { AXES_MARGIN } from '../../../visuals/chart-layout';
+import { valueScale, type ChartRow } from '../../../visuals/chart-rows';
+import { chartAxes } from './chart-axes';
 
 export type CategoryMark = 'bar' | 'line' | 'area' | 'histogram';
 
@@ -18,6 +19,23 @@ type CategoryPlotProps = {
 };
 
 const colorOf = (index: number) => `var(--color-${seriesKey(index)})`;
+
+type BarOptions = { histogram?: boolean; inRows?: boolean };
+
+// One series of bars: rounded at the end away from the axis, and no wider than
+// 24px unless they are histogram bars, which touch.
+export function barMark(index: number, { histogram, inRows }: BarOptions = {}) {
+	return (
+		<Bar
+			key={seriesKey(index)}
+			dataKey={seriesKey(index)}
+			fill={colorOf(index)}
+			radius={inRows ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+			maxBarSize={histogram ? undefined : 24}
+			isAnimationActive={false}
+		/>
+	);
+}
 
 // the marks of one series, in the specs every Orbi chart shares
 function seriesMark(mark: CategoryMark, index: number, dots: boolean) {
@@ -54,16 +72,7 @@ function seriesMark(mark: CategoryMark, index: number, dots: boolean) {
 			/>
 		);
 	}
-	return (
-		<Bar
-			key={key}
-			dataKey={key}
-			fill={color}
-			radius={[4, 4, 0, 0]}
-			maxBarSize={mark === 'histogram' ? undefined : 24}
-			isAnimationActive={false}
-		/>
-	);
+	return barMark(index, { histogram: mark === 'histogram' });
 }
 
 // Bar, line and area charts of values per label, and histograms (bars that touch,
@@ -76,6 +85,7 @@ export function CategoryPlot({
 	yLabel,
 }: CategoryPlotProps) {
 	const dots = rows.length <= DOTS_MAX;
+	const values = valueScale(rows, seriesCount, mark === 'histogram');
 	return (
 		<ComposedChart
 			data={rows}
@@ -83,7 +93,14 @@ export function CategoryPlot({
 			barGap={2}
 			barCategoryGap={mark === 'histogram' ? 2 : '20%'}
 		>
-			{chartAxes({ xLabel, yLabel, xType: 'category', xKey: 'label' })}
+			{chartAxes({
+				xLabel,
+				yLabel,
+				xType: 'category',
+				xKey: 'label',
+				yDomain: values.domain,
+				yTicks: values.ticks,
+			})}
 			<ChartTooltip content={<ChartTooltipContent />} />
 			{Array.from({ length: seriesCount }, (_, index) =>
 				seriesMark(mark, index, dots)

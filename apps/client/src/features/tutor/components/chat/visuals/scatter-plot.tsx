@@ -2,13 +2,17 @@ import type { ChartSeriesInput } from '@orbi/shared';
 import { Scatter, ScatterChart, ZAxis } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { seriesKey } from '../../../visuals/chart-colors';
-import { AXES_MARGIN, chartAxes } from './chart-axes';
+import { AXES_MARGIN, numberAxisSteps } from '../../../visuals/chart-layout';
+import { pointScales } from '../../../visuals/chart-rows';
+import { chartAxes } from './chart-axes';
 
 // the area of each dot: about 8px across
 const DOT_AREA = 64;
 
 type ScatterPlotProps = {
 	series: ChartSeriesInput[];
+	// the chart's width, to mark as many x steps as fit
+	width: number;
 	xLabel?: string;
 	yLabel?: string;
 };
@@ -20,10 +24,26 @@ const seriesOfPoint = (payload: readonly { payload?: unknown }[]) => {
 
 // Dots of two measures, a colour per series, each with a ring in the card's
 // colour so overlapping dots stay apart.
-export function ScatterPlot({ series, xLabel, yLabel }: ScatterPlotProps) {
+export function ScatterPlot({
+	series,
+	width,
+	xLabel,
+	yLabel,
+}: ScatterPlotProps) {
+	const scales = pointScales(series, numberAxisSteps(width));
 	return (
 		<ScatterChart margin={AXES_MARGIN}>
-			{chartAxes({ xLabel, yLabel, xType: 'number', xKey: 'x', yKey: 'y' })}
+			{chartAxes({
+				xLabel,
+				yLabel,
+				xType: 'number',
+				xKey: 'x',
+				yKey: 'y',
+				xDomain: scales.x.domain,
+				yDomain: scales.y.domain,
+				xTicks: scales.x.ticks,
+				yTicks: scales.y.ticks,
+			})}
 			<ZAxis range={[DOT_AREA, DOT_AREA]} />
 			<ChartTooltip
 				content={

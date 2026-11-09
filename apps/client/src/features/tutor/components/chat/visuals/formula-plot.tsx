@@ -1,15 +1,19 @@
 import { ComposedChart, Line, ReferenceLine } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { seriesKey } from '../../../visuals/chart-colors';
+import { AXES_MARGIN, numberAxisSteps } from '../../../visuals/chart-layout';
 import type { FunctionPlot } from '../../../visuals/function-plot';
+import { ticksWithin } from '../../../visuals/nice-scale';
 import { formatNumber } from '../../../visuals/number-format';
-import { AXES_MARGIN, chartAxes } from './chart-axes';
+import { chartAxes } from './chart-axes';
 
 type FormulaPlotProps = {
 	plot: FunctionPlot;
 	seriesCount: number;
 	xMin: number;
 	xMax: number;
+	// the chart's width, to mark as many x steps as fit
+	width: number;
 	xLabel?: string;
 	yLabel?: string;
 };
@@ -28,6 +32,7 @@ export function FormulaPlot({
 	seriesCount,
 	xMin,
 	xMax,
+	width,
 	xLabel,
 	yLabel,
 }: FormulaPlotProps) {
@@ -40,6 +45,8 @@ export function FormulaPlot({
 				xKey: 'x',
 				xDomain: [xMin, xMax],
 				yDomain: plot.yDomain,
+				xTicks: ticksWithin(xMin, xMax, numberAxisSteps(width)),
+				yTicks: plot.yTicks,
 				clipY: true,
 			})}
 			{inRange(0, plot.yDomain) && (

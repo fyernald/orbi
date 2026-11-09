@@ -4,6 +4,7 @@ import type { CreateChartInput } from '@orbi/shared';
 import { useMemo } from 'react';
 import { ChartContainer } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
+import { barRowsHeight, labelsFitAcross } from '../../../visuals/chart-layout';
 import { chartConfig, legendEntries } from '../../../visuals/chart-legend';
 import {
 	binValues,
@@ -11,18 +12,47 @@ import {
 	histogramRows,
 } from '../../../visuals/chart-rows';
 import { plotFunctions } from '../../../visuals/function-plot';
+import { useElementWidth } from '../../../visuals/use-element-width';
+import { BarRowsPlot } from './bar-rows-plot';
 import { CategoryPlot } from './category-plot';
 import { ChartKey } from './chart-key';
 import { FormulaPlot } from './formula-plot';
 import { PiePlot } from './pie-plot';
 import { ScatterPlot } from './scatter-plot';
 
+// Bars whose names would not all fit under them go in rows instead. Before the
+// chart has a width, they stay upright.
+const barsInRows = (input: CreateChartInput, width: number) =>
+	input.type === 'bar' &&
+	width > 0 &&
+	!labelsFitAcross(input.labels ?? [], width);
+
+type PlotProps = { input: CreateChartInput; width: number };
+
 // the Recharts chart for each chart type
-function Plot({ input }: { input: CreateChartInput }) {
+function Plot({ input, width }: PlotProps) {
 	const { type, series, xLabel, yLabel } = input;
 	const axes = { xLabel, yLabel };
 	switch (type) {
 		case 'bar':
+			if (barsInRows(input, width)) {
+				return (
+					<BarRowsPlot
+						rows={categoryRows(input.labels ?? [], series)}
+						seriesCount={series.length}
+						width={width}
+						{...axes}
+					/>
+				);
+			}
+			return (
+				<CategoryPlot
+					mark="bar"
+					rows={categoryRows(input.labels ?? [], series)}
+					seriesCount={series.length}
+					{...axes}
+				/>
+			);
 		case 'line':
 		case 'area':
 			return (
@@ -47,7 +77,7 @@ function Plot({ input }: { input: CreateChartInput }) {
 				<PiePlot labels={input.labels ?? []} values={series[0]?.values ?? []} />
 			);
 		case 'scatter':
-			return <ScatterPlot series={series} {...axes} />;
+			return <ScatterPlot series={series} width={width} {...axes} />;
 		case 'function': {
 			const xMin = input.xMin ?? -1;
 			const xMax = input.xMax ?? 1;
@@ -57,6 +87,7 @@ function Plot({ input }: { input: CreateChartInput }) {
 					seriesCount={series.length}
 					xMin={xMin}
 					xMax={xMax}
+					width={width}
 					{...axes}
 				/>
 			);
@@ -76,17 +107,29 @@ export default function ChartPlot({
 }) {
 	const config = useMemo(() => chartConfig(input), [input]);
 	const entries = legendEntries(input);
+	const { ref, width } = useElementWidth();
+	const inRows = barsInRows(input, width);
 	return (
-		<div className="flex flex-col gap-3">
+		<div ref={ref} className="flex flex-col gap-3">
 			{entries.length > 0 && <ChartKey entries={entries} />}
 			<ChartContainer
 				config={config}
 				className={cn(
 					'aspect-auto w-full [&_.recharts-label]:fill-muted-foreground',
-					large ? 'h-[60dvh]' : 'h-64'
+					!inRows && (large ? 'h-[60dvh]' : 'h-64')
 				)}
+				style={
+					inRows
+						? {
+								height: barRowsHeight(
+									input.labels?.length ?? 0,
+									input.series.length
+								),
+							}
+						: undefined
+				}
 			>
-				<Plot input={input} />
+				<Plot input={input} width={width} />
 			</ChartContainer>
 		</div>
 	);

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { binValues, categoryRows, histogramRows, niceStep } from './chart-rows';
+import {
+	binValues,
+	categoryRows,
+	histogramRows,
+	pointScales,
+	valueExtent,
+	valueScale,
+} from './chart-rows';
 
 describe('categoryRows', () => {
 	it('gives each label the value of every series', () => {
@@ -18,14 +25,53 @@ describe('categoryRows', () => {
 	});
 });
 
-describe('binValues', () => {
-	it('rounds the bar width', () => {
-		expect(niceStep(7.3)).toBe(10);
-		expect(niceStep(0.18)).toBe(0.2);
-		expect(niceStep(2.2)).toBe(2.5);
-		expect(niceStep(40)).toBe(50);
+describe('valueExtent', () => {
+	it('finds the lowest and highest value of every series', () => {
+		expect(
+			valueExtent(
+				[
+					{ label: 'A', s0: 4, s1: -2 },
+					{ label: 'B', s0: null, s1: 9 },
+				],
+				2
+			)
+		).toEqual([-2, 9]);
+		expect(valueExtent([{ label: 'A', s0: null }], 1)).toBeUndefined();
 	});
+});
 
+describe('valueScale', () => {
+	it('starts at 0 and steps up in round numbers', () => {
+		const rows = [
+			{ label: 'Prophase', s0: 36 },
+			{ label: 'Metaphase', s0: 20 },
+		];
+
+		expect(valueScale(rows, 1).ticks).toEqual([0, 10, 20, 30, 40]);
+		expect(valueScale([{ label: 'A', s0: 2 }], 1, true).ticks).toEqual([
+			0, 1, 2,
+		]);
+	});
+});
+
+describe('pointScales', () => {
+	it('fits both axes around the points', () => {
+		const scales = pointScales([
+			{
+				name: 'Class A',
+				points: [
+					{ x: 2, y: 55 },
+					{ x: 9, y: 91 },
+				],
+			},
+		]);
+
+		expect(scales.x.ticks).toEqual([2, 4, 6, 8, 10]);
+		expect(scales.y.ticks).toEqual([50, 60, 70, 80, 90, 100]);
+	});
+});
+
+describe('binValues', () => {
 	it('counts every value into bars of the same round width', () => {
 		const bins = binValues([52, 58, 61, 67, 70, 74, 79, 88, 90], 4);
 

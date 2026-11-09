@@ -1,3 +1,4 @@
+import { textWidth } from './chart-layout';
 import { readThemeTokens, type ThemeTokens } from './theme-tokens';
 
 // one entry of a chart's legend, with its colour as #rrggbb
@@ -7,8 +8,6 @@ const PADDING = 16;
 const TITLE_HEIGHT = 28;
 const KEY_ROW_HEIGHT = 20;
 const KEY_SWATCH = 10;
-// a rough width per character of the 12px legend text, to wrap the legend
-const KEY_CHARACTER_WIDTH = 7;
 const KEY_GAP = 16;
 
 // A saved SVG cannot load the page's web font, so the font list ends in a generic
@@ -32,8 +31,7 @@ function placeKeys(keys: ChartKeyItem[], width: number): Placed[] {
 	let x = 0;
 	let row = 0;
 	return keys.map((key) => {
-		const itemWidth =
-			KEY_SWATCH + 6 + key.name.length * KEY_CHARACTER_WIDTH + KEY_GAP;
+		const itemWidth = KEY_SWATCH + 6 + textWidth(key.name) + KEY_GAP;
 		if (x > 0 && x + itemWidth > width) {
 			x = 0;
 			row += 1;

@@ -1,5 +1,7 @@
 import type { ComponentProps } from 'react';
 import { CartesianGrid, XAxis, YAxis } from 'recharts';
+import { fitLabel, VALUE_AXIS_WIDTH } from '../../../visuals/chart-layout';
+import type { Scale } from '../../../visuals/nice-scale';
 import { formatNumber } from '../../../visuals/number-format';
 
 type AxisDomain = ComponentProps<typeof XAxis>['domain'];
@@ -14,12 +16,12 @@ type AxesProps = {
 	yKey?: string;
 	xDomain?: AxisDomain;
 	yDomain?: AxisDomain;
+	// round numbers to mark along each axis
+	xTicks?: number[];
+	yTicks?: number[];
 	// keep the given y range even when a curve runs past it
 	clipY?: boolean;
 };
-
-// room above the plot for the y axis name and under it for the x axis name
-export const AXES_MARGIN = { top: 28, right: 12, bottom: 20, left: 4 };
 
 // how far above the plot the y axis name sits
 const Y_NAME_RISE = 16;
@@ -47,6 +49,9 @@ const yAxisName =
 const formatTick = (value: unknown) =>
 	typeof value === 'number' ? formatNumber(value) : String(value);
 
+// the shared look of every axis: no axis line or tick marks
+const quietAxis = { tickLine: false, axisLine: false } as const;
+
 // The grid and both axes every x/y chart shares: hairline rows only, no axis
 // lines or tick marks, and each axis named. Returned as a list, since
 // Recharts reads its parts from the chart's children.
@@ -58,18 +63,22 @@ export function chartAxes({
 	yKey,
 	xDomain,
 	yDomain,
+	xTicks,
+	yTicks,
 	clipY,
 }: AxesProps) {
 	return [
 		<CartesianGrid key="grid" vertical={false} />,
 		<XAxis
 			key="x"
+			{...quietAxis}
 			dataKey={xKey}
 			type={xType}
 			domain={xDomain}
+			ticks={xTicks}
+			// round ticks are sized to the chart, so each keeps its number
+			interval={xTicks ? 0 : undefined}
 			name={xLabel}
-			tickLine={false}
-			axisLine={false}
 			tickMargin={8}
 			minTickGap={16}
 			tickFormatter={formatTick}
@@ -77,16 +86,61 @@ export function chartAxes({
 		/>,
 		<YAxis
 			key="y"
+			{...quietAxis}
 			type="number"
 			dataKey={yKey}
 			domain={yDomain}
+			ticks={yTicks}
 			allowDataOverflow={clipY}
 			name={yLabel}
-			width={44}
-			tickLine={false}
-			axisLine={false}
+			width={VALUE_AXIS_WIDTH}
 			tickFormatter={formatTick}
 			label={yLabel ? yAxisName(yLabel) : undefined}
+		/>,
+	];
+}
+
+type BarRowAxesProps = {
+	// the name of the labels, shown above them
+	labelName?: string;
+	// the name of the values, shown under them
+	valueName?: string;
+	values: Scale;
+	// the width of the column of labels
+	labelWidth: number;
+};
+
+// The axes of bars laid in rows: a name for every bar down the left, and the values
+// along the bottom with a hairline up from each round number.
+export function barRowAxes({
+	labelName,
+	valueName,
+	values,
+	labelWidth,
+}: BarRowAxesProps) {
+	return [
+		<CartesianGrid key="grid" horizontal={false} />,
+		<XAxis
+			key="x"
+			{...quietAxis}
+			type="number"
+			domain={values.domain}
+			ticks={values.ticks}
+			name={valueName}
+			tickMargin={8}
+			tickFormatter={formatTick}
+			label={{ value: valueName, position: 'bottom', offset: 4 }}
+		/>,
+		<YAxis
+			key="y"
+			{...quietAxis}
+			type="category"
+			dataKey="label"
+			name={labelName}
+			width={labelWidth}
+			interval={0}
+			tickFormatter={(label: string) => fitLabel(label, labelWidth - 8)}
+			label={labelName ? yAxisName(labelName) : undefined}
 		/>,
 	];
 }
