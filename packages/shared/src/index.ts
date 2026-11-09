@@ -5,7 +5,9 @@ export const APP_NAME = 'Orbi';
 
 export * from './ai-models';
 export * from './auth';
+export * from './charts';
 export * from './courses';
+export * from './formula';
 export * from './notes';
 export * from './profile';
 export * from './questions';

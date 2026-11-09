@@ -1,9 +1,6 @@
 import { DIAGRAM_SOURCE_MAX_LENGTH } from '@orbi/shared';
-import {
-	mermaidThemeVariables,
-	readThemeTokens,
-	withColourClasses,
-} from './mermaid-theme';
+import { mermaidThemeVariables, withColourClasses } from './mermaid-theme';
+import { readThemeTokens } from './theme-tokens';
 
 // Mermaid is large, so it loads with the first diagram in a chat, not with the page.
 // Strict security encodes HTML in labels and turns off click handlers; labels are

@@ -1,6 +1,7 @@
 import type { TutorToolName } from '@orbi/shared';
 import type { Tool } from 'ai';
 import { askStudentTool } from './ask-student';
+import { createChartTool } from './create-chart';
 import { createDiagramTool } from './create-diagram';
 import { createQuestionsTool, type SaveQuestions } from './create-questions';
 import { createVisualBudget } from './visual-budget';
@@ -16,6 +17,7 @@ export function createTutorTools({ saveQuestions }: TutorToolDeps) {
 		createQuestions: createQuestionsTool(saveQuestions),
 		askStudent: askStudentTool,
 		createDiagram: createDiagramTool(visuals),
+		createChart: createChartTool(visuals),
 	} satisfies Record<TutorToolName, Tool>;
 }
 

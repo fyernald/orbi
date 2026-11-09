@@ -1,5 +1,7 @@
 import {
+	CHART_LABELS_MAX,
 	DIAGRAM_COLOUR_CLASSES,
+	PIE_SLICES_MAX,
 	QUESTIONS_PER_SET_MAX,
 	QUESTIONS_PER_SET_MIN,
 	VISUALS_PER_REPLY_MAX,
@@ -150,9 +152,10 @@ export type InstructionsInput = {
 };
 
 // short, so they add few tokens to every reply (T-72)
-const diagramRules = [
+const visualRules = [
 	'- When the student asks to draw, show, map or visualize something, or when a structure, process or relation is much easier to see than to read, call createDiagram. Most replies need no diagram.',
 	`- Keep a diagram small (about 15 nodes at most) with short labels, and prefer top-down layouts, the chat is narrow. Write Mermaid only: no code fences, styles, colours or config. To set groups of flowchart or state nodes apart, give them the classes c1 to c${DIAGRAM_COLOUR_CLASSES} (A[Label]:::c2), the app colours them. Then explain in a few sentences what it shows, without repeating the Mermaid source. At most ${VISUALS_PER_REPLY_MAX} visuals in one reply.`,
+	`- When numbers, a trend, a comparison, a share or a formula are much easier to see than to read, call createChart: bar to compare, line or area for change, pie for parts of one whole (at most ${PIE_SLICES_MAX} slices), scatter for two measures, histogram for how values spread, function to plot formulas. Keep the data small (about ${CHART_LABELS_MAX} values), name both axes, and write formulas with * and ^ (2*x^2, exp(-x^2/2)). Then explain what it shows in a few sentences, without repeating the numbers.`,
 ];
 
 // the system instructions for one reply
@@ -193,7 +196,7 @@ export function buildInstructions({
 			'- Keep replies short and clear: short paragraphs, lists when they help, **bold** for key terms. Write maths in LaTeX between double dollar signs, also inside a sentence (for example $$2^n$$), never single ones.',
 			'- Help the student think. When they ask you to check their understanding, ask them to explain it first.',
 			...questions,
-			...diagramRules,
+			...visualRules,
 			'- If the request could mean very different things and the answer changes what you make, call askStudent once instead of guessing.',
 			'- If they ask for something unrelated to studying, answer briefly and steer back to the course.',
 		].join('\n'),

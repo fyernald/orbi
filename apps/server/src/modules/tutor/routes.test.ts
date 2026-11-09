@@ -730,6 +730,85 @@ describe('diagrams', () => {
 	});
 });
 
+describe('charts', () => {
+	const plot = (expression: string) => ({
+		tool: 'createChart',
+		input: {
+			title: 'The normal curve',
+			type: 'function',
+			xLabel: 'z',
+			yLabel: 'Density',
+			series: [{ name: 'Normal', expression }],
+			xMin: -3,
+			xMax: 3,
+			description: 'The bell-shaped normal curve from -3 to 3.',
+		},
+	});
+
+	it('draws a chart in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(plot('exp(-x^2/2)/sqrt(2*pi)'), {
+			text: 'Most values sit near 0.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const drawn = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createChart'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.series[0].expression).toBe('exp(-x^2/2)/sqrt(2*pi)');
+	});
+
+	it('gives the AI another try when a formula cannot be read', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(plot('exp(-x²/2)'), plot('exp(-x^2/2)'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('cannot be used');
+	});
+
+	it('counts charts and diagrams together toward the visual limit', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			plot('sin(x)'),
+			plot('cos(x)'),
+			{
+				tool: 'createDiagram',
+				input: {
+					title: 'Three',
+					kind: 'flowchart',
+					mermaid: 'flowchart TD\n  A --> B',
+					description: 'A third visual.',
+				},
+			},
+			{ text: 'Two is enough.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -748,6 +827,7 @@ describe('the whole-course chat', () => {
 		expect(ai.calls[0]!.tools?.map((tool) => tool.name)).toEqual([
 			'askStudent',
 			'createDiagram',
+			'createChart',
 		]);
 	});
 
