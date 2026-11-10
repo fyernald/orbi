@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { generatedQuestion } from './questions';
 import type { CreateChartInput, CreateChartOutput } from './charts';
+import type {
+	CreateInteractiveInput,
+	CreateInteractiveOutput,
+} from './interactive';
 import type { CreateDiagramInput, CreateDiagramOutput } from './visuals';
 
 // What the tutor's tools take and give back. The server checks the AI's input with
@@ -47,7 +51,11 @@ export const askStudentOutput = z.object({
 });
 
 // the tools that show a visual in the chat (US-42)
-export const VISUAL_TOOL_NAMES = ['createDiagram', 'createChart'] as const;
+export const VISUAL_TOOL_NAMES = [
+	'createDiagram',
+	'createChart',
+	'createInteractive',
+] as const;
 
 export const TUTOR_TOOL_NAMES = [
 	'createQuestions',
@@ -82,4 +90,8 @@ export type TutorTools = {
 	askStudent: { input: AskStudentInput; output: AskStudentOutput };
 	createDiagram: { input: CreateDiagramInput; output: CreateDiagramOutput };
 	createChart: { input: CreateChartInput; output: CreateChartOutput };
+	createInteractive: {
+		input: CreateInteractiveInput;
+		output: CreateInteractiveOutput;
+	};
 };

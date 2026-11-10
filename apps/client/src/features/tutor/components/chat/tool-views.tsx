@@ -7,6 +7,7 @@ import { AskStudentCard } from './ask-student-card';
 import { QuestionSetCard } from './question-set-card';
 import { ChartView } from './visuals/chart-view';
 import { DiagramView } from './visuals/diagram-view';
+import { InteractiveView } from './visuals/interactive-view';
 
 type ToolName = keyof TutorTools;
 
@@ -36,6 +37,7 @@ const toolViews: { [Name in ToolName]: ComponentType<ToolViewProps<Name>> } = {
 	askStudent: AskStudentCard,
 	createDiagram: DiagramView,
 	createChart: ChartView,
+	createInteractive: InteractiveView,
 };
 
 export function ToolView({
