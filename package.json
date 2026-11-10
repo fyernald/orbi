@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"prepare": "git config core.hooksPath .githooks || exit 0",
-		"dev": "pnpm --parallel --filter server --filter client dev",
+		"dev": "pnpm --parallel --filter server --filter client --filter sandbox dev",
 		"build": "pnpm -r build",
 		"typecheck": "pnpm -r typecheck",
 		"test": "vitest run",

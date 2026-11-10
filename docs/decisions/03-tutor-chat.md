@@ -39,20 +39,22 @@ Two accepted rules do not fit a chat:
 
 A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 
-| Tool                | Runs where                   | What it does                                                        |
-| ------------------- | ---------------------------- | ------------------------------------------------------------------- |
-| `createQuestions`   | server                       | saves multiple-choice questions as pending (US-04)                  |
-| `askStudent`        | browser (the student)        | asks one clarifying question with 2 to 4 options                    |
-| `createDiagram`     | server, drawn in the browser | a Mermaid diagram in Orbi's colours (US-42)                         |
-| `createChart`       | server, drawn in the browser | a bar, line, area, pie, scatter, histogram or formula chart (US-42) |
-| `createInteractive` | server, run in the browser   | controls linked by formulas to values and a chart of curves (US-42) |
-| later               | server or browser            | flashcards, sandboxed mini-apps, mock exam link                     |
+| Tool                | Runs where                   | What it does                                                         |
+| ------------------- | ---------------------------- | -------------------------------------------------------------------- |
+| `createQuestions`   | server                       | saves multiple-choice questions as pending (US-04)                   |
+| `askStudent`        | browser (the student)        | asks one clarifying question with 2 to 4 options                     |
+| `createDiagram`     | server, drawn in the browser | a Mermaid diagram in Orbi's colours (US-42)                          |
+| `createChart`       | server, drawn in the browser | a bar, line, area, pie, scatter, histogram or formula chart (US-42)  |
+| `createInteractive` | server, run in the browser   | controls linked by formulas to values and a chart of curves (US-42)  |
+| `createMiniApp`     | server, run in the sandbox   | HTML, CSS and JavaScript the AI writes, in a sandboxed frame (US-42) |
+| later               | server or browser            | flashcards, mock exam link                                           |
 
 - Every tool's input and output schema lives in `packages/shared/src/tutor-tools.ts`, so the server checks the AI's data and the client gets the types.
 - The server tool lives in `apps/server/src/modules/tutor/tools/`, one file per tool.
 - The client draws each tool with its own component, listed in `features/tutor/components/chat/tool-views.tsx`. The list is typed by the shared tools, so a tool without a view does not compile.
-- The AI never sends HTML or code to run. It sends data that a Zod schema checks first. A diagram is Mermaid text: the browser draws it with Mermaid's strict security, and the schema refuses Mermaid config, so the app keeps the theme. A chart is numbers or formulas: formulas are read by the small formula language in `packages/shared/src/formula.ts` (numbers, x, + - * / ^ and a list of maths functions), never `eval`, so the server checks them with the same code the browser draws them with. An interactive tool is controls (slider, number, stepper, toggle, select) and formulas of their names, with `normcdf`, `normpdf` and `erf` for statistics. The server works its values out at the starting values before the tool is saved, and the browser works them out again each time a control moves. The tool starts from its starting values each time the chat opens.
-- A reply shows at most 2 visuals (diagrams, charts and interactive tools). A further call returns an error to the model, which then explains in text.
+- Apart from mini-apps (below), the AI never sends HTML or code to run. It sends data that a Zod schema checks first. A diagram is Mermaid text: the browser draws it with Mermaid's strict security, and the schema refuses Mermaid config, so the app keeps the theme. A chart is numbers or formulas: formulas are read by the small formula language in `packages/shared/src/formula.ts` (numbers, x, + - * / ^ and a list of maths functions), never `eval`, so the server checks them with the same code the browser draws them with. An interactive tool is controls (slider, number, stepper, toggle, select) and formulas of their names, with `normcdf`, `normpdf` and `erf` for statistics. The server works its values out at the starting values before the tool is saved, and the browser works them out again each time a control moves. The tool starts from its starting values each time the chat opens.
+- A mini-app is for what an interactive tool cannot do: a simulation, a sort step by step, a small game. The AI writes HTML, CSS and JavaScript, and may ask for Chart.js, D3 or p5. The server checks the sizes and compiles the JavaScript without running it (`node:vm`), so a syntax error goes back to the model to fix. The browser runs it only on the sandbox page (`apps/sandbox`), on its own origin, in a frame sandboxed with scripts only, with no network, storage or cookies (see "Mini-app sandbox" in [deployment](../deployment.md)). The chat talks to it over a `MessageChannel` port: the code and Orbi's theme go in, and ready, errors, its height and answers to a ping every 2 seconds come out. One that does not start, stops answering or loads another page is closed, with Try again. The sandbox puts a guard in every loop, so an endless loop stops after 2 seconds in any browser; Chrome also runs the frame in a process of its own, so the chat stays responsive.
+- A reply shows at most 2 visuals (diagrams, charts, interactive tools and mini-apps). A further call returns an error to the model, which then explains in text.
 
 ### 4. The composer action decides the tool
 

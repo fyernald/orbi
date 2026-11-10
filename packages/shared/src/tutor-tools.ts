@@ -5,6 +5,7 @@ import type {
 	CreateInteractiveInput,
 	CreateInteractiveOutput,
 } from './interactive';
+import type { CreateMiniAppInput, CreateMiniAppOutput } from './mini-app';
 import type { CreateDiagramInput, CreateDiagramOutput } from './visuals';
 
 // What the tutor's tools take and give back. The server checks the AI's input with
@@ -55,6 +56,7 @@ export const VISUAL_TOOL_NAMES = [
 	'createDiagram',
 	'createChart',
 	'createInteractive',
+	'createMiniApp',
 ] as const;
 
 export const TUTOR_TOOL_NAMES = [
@@ -94,4 +96,5 @@ export type TutorTools = {
 		input: CreateInteractiveInput;
 		output: CreateInteractiveOutput;
 	};
+	createMiniApp: { input: CreateMiniAppInput; output: CreateMiniAppOutput };
 };

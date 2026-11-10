@@ -6,18 +6,19 @@ Every merge into `main` is deployed to the VPS automatically. Nobody has to log 
 
 1. A pull request is merged into `main`.
 2. GitHub Actions runs the CI checks (format, typecheck, tests, build).
-3. If they pass, it builds a Docker image for the client and one for the server and uploads them to GitHub Container Registry (`ghcr.io/fyernald/orbi-client` and `orbi-server`).
+3. If they pass, it builds a Docker image for the client, the server and the mini-app sandbox and uploads them to GitHub Container Registry (`ghcr.io/fyernald/orbi-client`, `orbi-server` and `orbi-sandbox`).
 4. It connects to the VPS with SSH, copies `deploy/compose.yml` and the backup scripts, downloads the new images, and restarts the containers.
 5. It waits until the new containers are healthy. If they are not, the run turns red in the **Actions** tab.
 
 The VPS also hosts other projects, so Orbi shares the existing nginx web server:
 
-| Part       | What it does                                                                                                |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| nginx      | Already on the VPS. Handles HTTPS for `orbi.study`, sends `/api/*` to the server and the rest to the client |
-| `client`   | The Next.js app, on `127.0.0.1:3100`                                                                        |
-| `server`   | The Fastify API, on `127.0.0.1:3101`                                                                        |
-| `postgres` | The database. It is not reachable from outside the containers                                               |
+| Part       | What it does                                                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| nginx      | Already on the VPS. Handles HTTPS for `orbi.study`, sends `/api/*` to the server and the rest to the client, and `sandbox.orbi.study` to the sandbox |
+| `client`   | The Next.js app, on `127.0.0.1:3100`                                                                                                                 |
+| `server`   | The Fastify API, on `127.0.0.1:3101`                                                                                                                 |
+| `sandbox`  | The page mini-apps run in, on `127.0.0.1:3102` (see [Mini-app sandbox](#mini-app-sandbox))                                                           |
+| `postgres` | The database. It is not reachable from outside the containers                                                                                        |
 
 Run exactly **one** `server` container. Six things assume there is only one API process:
 
@@ -38,7 +39,7 @@ You do this once. After that, deploys happen by themselves.
 
 ### 1. DNS
 
-In Namecheap, under **Domain List > orbi.study > Manage > Advanced DNS**, add two **A records** that point `@` and `www` to the VPS IP.
+In Namecheap, under **Domain List > orbi.study > Manage > Advanced DNS**, add three **A records** that point `@`, `www` and `sandbox` to the VPS IP.
 
 ### 2. A user for Orbi
 
@@ -70,7 +71,7 @@ Copy [deploy/nginx.conf](../deploy/nginx.conf) to `/etc/nginx/sites-available/or
 ```bash
 ln -s /etc/nginx/sites-available/orbi.study /etc/nginx/sites-enabled/orbi.study
 nginx -t && systemctl reload nginx
-certbot --nginx -d orbi.study -d www.orbi.study
+certbot --nginx -d orbi.study -d www.orbi.study -d sandbox.orbi.study
 ```
 
 `nginx -t` checks the config before the reload, so a typo cannot take the other sites down. certbot gets a free HTTPS certificate and renews it by itself.
@@ -114,7 +115,7 @@ After that, delete the private key file from your computer, or keep it in a pass
 
 ### 7. Turn on deploys
 
-Go to **Settings > Secrets and variables > Actions > Variables** and add a repository variable `DEPLOY_ENABLED` with the value `true`.
+Go to **Settings > Secrets and variables > Actions > Variables** and add two repository variables: `DEPLOY_ENABLED` with the value `true`, and `SANDBOX_URL` with the value `https://sandbox.orbi.study/` (the client is built with it; without it, mini-apps show "not set up").
 
 To test it, open **Actions > CI > Run workflow**, choose `main`, and run it. When the run is green, open https://orbi.study.
 
@@ -136,6 +137,21 @@ docker compose logs -f server
 Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), so older lines are deleted. Errors are logged without the student's notes or chat: AI errors keep the error name, status code, and the provider's message, and failed queries keep the query without its values (see `apps/server/src/log.ts`).
 
 **Stop deploys for a while:** set the `DEPLOY_ENABLED` variable to `false`.
+
+## Mini-app sandbox
+
+A mini-app (US-42) is HTML, CSS and JavaScript the AI writes. It runs only on the sandbox page (`apps/sandbox`), on its own address `sandbox.orbi.study`, in an iframe with `sandbox="allow-scripts"` and nothing more. So its code:
+
+- runs on an origin of its own (a sandboxed frame gets an opaque one), so it cannot read Orbi's pages, login cookie or storage,
+- cannot make network requests, submit forms, open other frames or windows, or move the chat page somewhere else (the sandbox's policy: `connect-src 'none'`, `form-action 'none'`, no `allow-top-navigation`),
+- can load only the pinned copies of Chart.js, D3 and p5 the sandbox serves from its own `node_modules`, never a CDN,
+- may be embedded only by `https://orbi.study` (`frame-ancestors`, from `APP_ORIGIN` in `compose.yml`).
+
+The chat closes a mini-app that does not start within 10 seconds, stops answering for 5, or loads another page. The sandbox also stops any loop that keeps the page busy for over 2 seconds, so an endless loop cannot hang it in any browser.
+
+To set it up once: the `sandbox` DNS record (step 1), the `sandbox.orbi.study` part of `nginx.conf` with its certificate (step 4), and the `SANDBOX_URL` variable (step 7). Check it with `curl -I https://sandbox.orbi.study/`: the answer has the `Content-Security-Policy` header with `sandbox allow-scripts`.
+
+`pnpm dev` runs the sandbox on `http://localhost:3200`, which the client uses in development without any setting.
 
 ## Error monitoring
 

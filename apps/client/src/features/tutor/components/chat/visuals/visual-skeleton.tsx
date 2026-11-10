@@ -1,12 +1,13 @@
 import type { JSX } from 'react';
 import { Thinking } from '../thinking';
 
-export type VisualKind = 'diagram' | 'chart' | 'interactive';
+export type VisualKind = 'diagram' | 'chart' | 'interactive' | 'miniApp';
 
 const makingLines: Record<VisualKind, string> = {
 	diagram: 'Orbi is creating your diagram…',
 	chart: 'Drawing your chart…',
 	interactive: 'Building your interactive tool…',
+	miniApp: 'Building your mini-app…',
 };
 
 // the boxes of a small tree: three rows, one, two and three wide
@@ -50,10 +51,24 @@ function InteractiveShape() {
 	);
 }
 
+// a small window: a bar of buttons over the app
+function MiniAppShape() {
+	return (
+		<div className="flex flex-col gap-3">
+			<div className="flex gap-2">
+				<div className="h-7 w-20 rounded-lg bg-muted" />
+				<div className="h-7 w-16 rounded-lg bg-muted" />
+			</div>
+			<div className="h-32 rounded-lg bg-muted" />
+		</div>
+	);
+}
+
 const shapes: Record<VisualKind, () => JSX.Element> = {
 	diagram: DiagramShape,
 	chart: ChartShape,
 	interactive: InteractiveShape,
+	miniApp: MiniAppShape,
 };
 
 // Holds the visual's place while Orbi makes it, shaped like what is coming. The
