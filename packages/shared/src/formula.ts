@@ -1,8 +1,10 @@
 // A small, safe formula language for function plots (US-42): numbers, the
 // variables a visual allows (x for a plot), pi and e, + - * / ^, brackets and a
-// short list of maths functions. It is read into a tree and worked out with plain
-// JavaScript maths, never eval, so the server can check a formula with the same
-// code the browser draws it with.
+// short list of maths and statistics functions. It is read into a tree and worked
+// out with plain JavaScript maths, never eval, so the server can check a formula
+// with the same code the browser draws it with.
+
+import { erf, normalCdf, normalPdf } from './statistics';
 
 export const FORMULA_MAX_LENGTH = 200;
 
@@ -35,6 +37,10 @@ const functions = new Map<string, [MathFunction, number, number]>(
 		sign: [Math.sign, 1, 1],
 		min: [Math.min, 2, 8],
 		max: [Math.max, 2, 8],
+		erf: [erf, 1, 1],
+		// (x), (x, mean) or (x, mean, sd)
+		normpdf: [normalPdf, 1, 3],
+		normcdf: [normalCdf, 1, 3],
 	})
 );
 

@@ -27,6 +27,7 @@ import {
 import { VisualCard } from './visual-card';
 import { VisualError } from './visual-error';
 import { VisualErrorBoundary } from './visual-error-boundary';
+import { PlotPlaceholder } from './plot-placeholder';
 import { VisualFullScreen } from './visual-full-screen';
 import { VisualSkeleton } from './visual-skeleton';
 
@@ -70,16 +71,6 @@ export function ChartView({ part, onRetry }: ToolViewProps<'createChart'>) {
 		>
 			<Chart input={part.input} />
 		</VisualErrorBoundary>
-	);
-}
-
-// holds the chart's place in the card while Recharts loads
-function PlotPlaceholder() {
-	return (
-		<div
-			aria-hidden
-			className="h-64 rounded-lg bg-muted motion-safe:animate-pulse"
-		/>
 	);
 }
 

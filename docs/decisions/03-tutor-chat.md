@@ -39,19 +39,20 @@ Two accepted rules do not fit a chat:
 
 A reply is a list of parts. Text is markdown. Everything else is a **tool**:
 
-| Tool              | Runs where                   | What it does                                                        |
-| ----------------- | ---------------------------- | ------------------------------------------------------------------- |
-| `createQuestions` | server                       | saves multiple-choice questions as pending (US-04)                  |
-| `askStudent`      | browser (the student)        | asks one clarifying question with 2 to 4 options                    |
-| `createDiagram`   | server, drawn in the browser | a Mermaid diagram in Orbi's colours (US-42)                         |
-| `createChart`     | server, drawn in the browser | a bar, line, area, pie, scatter, histogram or formula chart (US-42) |
-| later             | server or browser            | flashcards, interactive tools, mock exam link                       |
+| Tool                | Runs where                   | What it does                                                        |
+| ------------------- | ---------------------------- | ------------------------------------------------------------------- |
+| `createQuestions`   | server                       | saves multiple-choice questions as pending (US-04)                  |
+| `askStudent`        | browser (the student)        | asks one clarifying question with 2 to 4 options                    |
+| `createDiagram`     | server, drawn in the browser | a Mermaid diagram in Orbi's colours (US-42)                         |
+| `createChart`       | server, drawn in the browser | a bar, line, area, pie, scatter, histogram or formula chart (US-42) |
+| `createInteractive` | server, run in the browser   | controls linked by formulas to values and a chart of curves (US-42) |
+| later               | server or browser            | flashcards, sandboxed mini-apps, mock exam link                     |
 
 - Every tool's input and output schema lives in `packages/shared/src/tutor-tools.ts`, so the server checks the AI's data and the client gets the types.
 - The server tool lives in `apps/server/src/modules/tutor/tools/`, one file per tool.
 - The client draws each tool with its own component, listed in `features/tutor/components/chat/tool-views.tsx`. The list is typed by the shared tools, so a tool without a view does not compile.
-- The AI never sends HTML or code to run. It sends data that a Zod schema checks first. A diagram is Mermaid text: the browser draws it with Mermaid's strict security, and the schema refuses Mermaid config, so the app keeps the theme. A chart is numbers or formulas: formulas are read by the small formula language in `packages/shared/src/formula.ts` (numbers, x, + - * / ^ and a list of maths functions), never `eval`, so the server checks them with the same code the browser draws them with.
-- A reply shows at most 2 visuals (diagrams and charts, and later tools). A further call returns an error to the model, which then explains in text.
+- The AI never sends HTML or code to run. It sends data that a Zod schema checks first. A diagram is Mermaid text: the browser draws it with Mermaid's strict security, and the schema refuses Mermaid config, so the app keeps the theme. A chart is numbers or formulas: formulas are read by the small formula language in `packages/shared/src/formula.ts` (numbers, x, + - * / ^ and a list of maths functions), never `eval`, so the server checks them with the same code the browser draws them with. An interactive tool is controls (slider, number, stepper, toggle, select) and formulas of their names, with `normcdf`, `normpdf` and `erf` for statistics. The server works its values out at the starting values before the tool is saved, and the browser works them out again each time a control moves. The tool starts from its starting values each time the chat opens.
+- A reply shows at most 2 visuals (diagrams, charts and interactive tools). A further call returns an error to the model, which then explains in text.
 
 ### 4. The composer action decides the tool
 

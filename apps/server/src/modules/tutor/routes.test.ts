@@ -809,6 +809,67 @@ describe('charts', () => {
 	});
 });
 
+describe('interactive tools', () => {
+	const zScore = (shadeTo: string) => ({
+		tool: 'createInteractive',
+		input: {
+			title: 'Area under the normal curve',
+			controls: [
+				{
+					name: 'z',
+					label: 'z-score',
+					type: 'slider',
+					min: -3,
+					max: 3,
+					step: 0.1,
+					value: 1,
+				},
+			],
+			values: [{ name: 'p', label: 'P(Z ≤ z)', expression: 'normcdf(z)' }],
+			chart: {
+				xLabel: 'z',
+				yLabel: 'Density',
+				xMin: -4,
+				xMax: 4,
+				curves: [{ name: 'Normal', expression: 'normpdf(x)', shadeTo }],
+			},
+			description: 'The normal curve shaded up to z.',
+		},
+	});
+
+	it('builds a tool in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(zScore('z'), { text: 'Drag z and watch the area grow.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me what a z-score means'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createInteractive'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.values[0].expression).toBe('normcdf(z)');
+	});
+
+	it('gives the AI another try when a formula uses a name it does not have', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(zScore('x'), zScore('z'), { text: 'Here it is.' });
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me a z-score'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('Unknown name');
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -828,6 +889,7 @@ describe('the whole-course chat', () => {
 			'askStudent',
 			'createDiagram',
 			'createChart',
+			'createInteractive',
 		]);
 	});
 

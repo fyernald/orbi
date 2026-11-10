@@ -31,11 +31,13 @@ export const legendNames = (input: CreateChartInput) =>
 	);
 
 // each series' name and colour, which the chart parts read as --color-s0, s1…
-export function chartConfig(input: CreateChartInput): ChartConfig {
-	return Object.fromEntries(
-		input.series.map(({ name }, index) => [
+export const seriesConfig = (names: string[]): ChartConfig =>
+	Object.fromEntries(
+		names.map((name, index) => [
 			seriesKey(index),
 			{ label: name, color: chartColor(index) },
 		])
 	);
-}
+
+export const chartConfig = (input: CreateChartInput) =>
+	seriesConfig(input.series.map(({ name }) => name));

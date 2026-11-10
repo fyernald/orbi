@@ -3,6 +3,7 @@ import type { Tool } from 'ai';
 import { askStudentTool } from './ask-student';
 import { createChartTool } from './create-chart';
 import { createDiagramTool } from './create-diagram';
+import { createInteractiveTool } from './create-interactive';
 import { createQuestionsTool, type SaveQuestions } from './create-questions';
 import { createVisualBudget } from './visual-budget';
 
@@ -18,6 +19,7 @@ export function createTutorTools({ saveQuestions }: TutorToolDeps) {
 		askStudent: askStudentTool,
 		createDiagram: createDiagramTool(visuals),
 		createChart: createChartTool(visuals),
+		createInteractive: createInteractiveTool(visuals),
 	} satisfies Record<TutorToolName, Tool>;
 }
 

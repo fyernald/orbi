@@ -43,27 +43,43 @@ function yAxis(auto: Range, yMin?: number, yMax?: number) {
 	return { yDomain, yTicks: ticksWithin(...yDomain) };
 }
 
-// A row per x across the range, with the y of every formula. A y that is not a
-// number (sqrt of a negative) or far off the chart is left empty, so the line
-// breaks there instead of jumping across an asymptote.
-export function plotFunctions(
-	series: ChartSeriesInput[],
+// a curve's y for each x
+export type Curve = (x: number) => number;
+
+export type CurveOptions = {
+	yMin?: number;
+	yMax?: number;
+	samples?: number;
+	// further x the rows must have, like the edge of a shaded area
+	extraXs?: number[];
+};
+
+// evenly spaced x across the range, with the extra ones inside it put in order
+export function sampleXs(
 	xMin: number,
 	xMax: number,
-	yMin?: number,
-	yMax?: number,
-	samples = FUNCTION_SAMPLES
-): FunctionPlot {
-	const formulas = series.map(({ expression = '' }) => {
-		const formula = compileFormula(expression);
-		if (!formula.ok) throw new Error(formula.problem);
-		return formula.evaluate;
-	});
-	const xs = Array.from(
+	samples = FUNCTION_SAMPLES,
+	extraXs: number[] = []
+): number[] {
+	const even = Array.from(
 		{ length: samples },
 		(_, index) => xMin + ((xMax - xMin) * index) / (samples - 1)
 	);
-	const ys = formulas.map((evaluate) => xs.map((x) => evaluate({ x })));
+	const inside = extraXs.filter((x) => x > xMin && x < xMax);
+	return [...new Set([...even, ...inside])].sort((a, b) => a - b);
+}
+
+// A row per x across the range, with the y of every curve. A y that is not a
+// number (sqrt of a negative) or far off the chart is left empty, so the line
+// breaks there instead of jumping across an asymptote.
+export function plotCurves(
+	curves: Curve[],
+	xMin: number,
+	xMax: number,
+	{ yMin, yMax, samples, extraXs }: CurveOptions = {}
+): FunctionPlot {
+	const xs = sampleXs(xMin, xMax, samples, extraXs);
+	const ys = curves.map((curve) => xs.map(curve));
 
 	const { yDomain, yTicks } = yAxis(curveRange(ys.flat()), yMin, yMax);
 	const spread = yDomain[1] - yDomain[0];
@@ -79,4 +95,21 @@ export function plotFunctions(
 		return row;
 	});
 	return { rows, yDomain, yTicks };
+}
+
+// the formulas of a function chart, each a curve in x
+export function plotFunctions(
+	series: ChartSeriesInput[],
+	xMin: number,
+	xMax: number,
+	yMin?: number,
+	yMax?: number,
+	samples = FUNCTION_SAMPLES
+): FunctionPlot {
+	const curves = series.map(({ expression = '' }): Curve => {
+		const formula = compileFormula(expression);
+		if (!formula.ok) throw new Error(formula.problem);
+		return (x) => formula.evaluate({ x });
+	});
+	return plotCurves(curves, xMin, xMax, { yMin, yMax, samples });
 }

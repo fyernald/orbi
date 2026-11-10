@@ -1,8 +1,9 @@
-import { ComposedChart, Line, ReferenceLine } from 'recharts';
+import { Area, ComposedChart, Line, ReferenceLine } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { seriesKey } from '../../../visuals/chart-colors';
+import { seriesKey, shadeKey } from '../../../visuals/chart-colors';
 import { AXES_MARGIN, numberAxisSteps } from '../../../visuals/chart-layout';
 import type { FunctionPlot } from '../../../visuals/function-plot';
+import type { ChartMarker } from '../../../visuals/interactive-plot';
 import { ticksWithin } from '../../../visuals/nice-scale';
 import { formatNumber } from '../../../visuals/number-format';
 import { chartAxes } from './chart-axes';
@@ -16,6 +17,10 @@ type FormulaPlotProps = {
 	width: number;
 	xLabel?: string;
 	yLabel?: string;
+	// the series with an area shaded under them, by index
+	shaded?: number[];
+	// upright lines at given x, like the z of a z-score tool
+	markers?: ChartMarker[];
 };
 
 const inRange = (value: number, [low, high]: readonly [number, number]) =>
@@ -26,6 +31,10 @@ const xOfPoint = (payload: readonly { payload?: unknown }[]) => {
 	return typeof row?.x === 'number' ? `x = ${formatNumber(row.x)}` : '';
 };
 
+// the y a shaded area reaches down to: 0, or the edge of the chart nearest it
+const shadeBase = ([low, high]: readonly [number, number]) =>
+	Math.min(high, Math.max(low, 0));
+
 // Curves of formulas over x, with the x and y axes drawn where they cross 0.
 export function FormulaPlot({
 	plot,
@@ -35,6 +44,8 @@ export function FormulaPlot({
 	width,
 	xLabel,
 	yLabel,
+	shaded = [],
+	markers = [],
 }: FormulaPlotProps) {
 	return (
 		<ComposedChart data={plot.rows} margin={AXES_MARGIN}>
@@ -55,6 +66,34 @@ export function FormulaPlot({
 			{inRange(0, [xMin, xMax]) && (
 				<ReferenceLine x={0} stroke="var(--muted-foreground)" />
 			)}
+			{shaded.map((index) => (
+				<Area
+					key={shadeKey(index)}
+					dataKey={shadeKey(index)}
+					type="monotone"
+					baseValue={shadeBase(plot.yDomain)}
+					stroke="none"
+					fill={`var(--color-${seriesKey(index)})`}
+					fillOpacity={0.25}
+					activeDot={false}
+					tooltipType="none"
+					isAnimationActive={false}
+				/>
+			))}
+			{markers.map(({ label, x }) => (
+				<ReferenceLine
+					key={label}
+					x={x}
+					stroke="var(--foreground)"
+					strokeDasharray="4 3"
+					label={{
+						value: label,
+						position: 'top',
+						fontSize: 12,
+						fill: 'var(--muted-foreground)',
+					}}
+				/>
+			))}
 			<ChartTooltip
 				content={
 					<ChartTooltipContent
