@@ -85,7 +85,10 @@ export function CategoryPlot({
 	yLabel,
 }: CategoryPlotProps) {
 	const dots = rows.length <= DOTS_MAX;
-	const values = valueScale(rows, seriesCount, mark === 'histogram');
+	const values = valueScale(rows, seriesCount, {
+		wholeNumbers: mark === 'histogram',
+		fromZero: mark !== 'line',
+	});
 	return (
 		<ComposedChart
 			data={rows}
