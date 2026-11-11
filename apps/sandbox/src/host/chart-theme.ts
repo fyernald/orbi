@@ -1,37 +1,11 @@
 import type { SandboxTheme } from '@orbi/shared/mini-app-protocol';
+import { chartGlobal } from './chart-global';
 import { resolveDatasetColors, type ColorMemory } from './css-colors';
 
 // Chart.js in Orbi's theme. Chart.js keeps the colours it worked out when a chart
 // was made, so the scale and legend colours are set as functions of the current
 // theme: they are read again each time a chart updates, and a theme switch updates
 // every chart.
-
-type Colored = { color: unknown };
-
-type ChartGlobal = {
-	defaults: {
-		color: string;
-		borderColor: string;
-		backgroundColor: string;
-		font: { family: string };
-		scale: {
-			grid: Colored;
-			border: Colored;
-			ticks: Colored;
-			title: Colored;
-		};
-		plugins: { legend: { labels: Colored }; title: Colored };
-	};
-	register: (plugin: {
-		id: string;
-		beforeUpdate: (chart: {
-			data: { datasets: Record<string, unknown>[] };
-		}) => void;
-	}) => void;
-	instances: Record<string, { update: () => void }>;
-};
-
-const chartGlobal = () => (window as unknown as { Chart?: ChartGlobal }).Chart;
 
 let current: SandboxTheme | undefined;
 const memory: ColorMemory = new WeakMap();
