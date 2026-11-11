@@ -257,6 +257,7 @@ export function TutorChat({
 										? `Writing questions from ${notesOf}…`
 										: `Reading ${notesOf}…`
 								}
+								slowLabel="Still working. Long notes take a little longer."
 							/>
 						</div>
 					)}

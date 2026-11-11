@@ -59,7 +59,11 @@ export function MiniAppFrame({
 					role="status"
 					className="absolute inset-0 grid place-items-center rounded-lg bg-muted/40"
 				>
-					<Thinking label="Starting the mini-app…" className="text-xs" />
+					<Thinking
+						label="Starting the mini-app…"
+						slowLabel="Still starting. A big mini-app takes a little longer."
+						className="text-xs"
+					/>
 				</div>
 			)}
 			{running && state.lateError && (
