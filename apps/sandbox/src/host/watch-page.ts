@@ -10,14 +10,27 @@ export function watchErrors(report: (message: string) => void) {
 	});
 }
 
+// The body's height at the frame's full width. It is measured with the scrollbar
+// off: a scrollbar makes the page narrower, so a canvas that fits the width gets
+// shorter, and a frame sized from that would stay one scrollbar too short.
+function fullWidthHeight() {
+	const root = document.documentElement;
+	const overflow = root.style.overflowY;
+	root.style.overflowY = 'hidden';
+	const { body } = document;
+	const height = Math.max(
+		body.scrollHeight,
+		body.getBoundingClientRect().height
+	);
+	root.style.overflowY = overflow;
+	return Math.ceil(height);
+}
+
 // the height the mini-app needs, each time it changes, so the chat sizes the frame
 export function watchHeight(report: (height: number) => void) {
 	let last = 0;
 	const measure = () => {
-		const { body } = document;
-		const height = Math.ceil(
-			Math.max(body.scrollHeight, body.getBoundingClientRect().height)
-		);
+		const height = fullWidthHeight();
 		if (height !== last) {
 			last = height;
 			report(height);

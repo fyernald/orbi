@@ -2,6 +2,7 @@ import {
 	MINI_APP_LIBRARY_PATHS,
 	type MiniAppLibrary,
 } from '@orbi/shared/mini-app-protocol';
+import { setUpChartSize } from './chart-size';
 import { setUpChartTheme } from './chart-theme';
 
 const loadScript = (src: string) =>
@@ -20,7 +21,10 @@ export async function loadLibraries(libraries: MiniAppLibrary[]) {
 	for (const library of libraries) {
 		await loadScript(MINI_APP_LIBRARY_PATHS[library]);
 	}
-	if (libraries.includes('chart.js')) setUpChartTheme();
+	if (libraries.includes('chart.js')) {
+		setUpChartTheme();
+		setUpChartSize();
+	}
 }
 
 type P5Globals = {
