@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { contentSecurityPolicy, createNonce } from '@/lib/csp';
 import { sentryOrigin } from '@/lib/monitoring';
 import { routes } from '@/lib/routes';
+import { sandboxOrigin } from '@/lib/sandbox';
 
 // Report-Only for now: the browser reports what the policy would block to the API
 // log, and blocks nothing. Once the log stays clean it becomes the real header.
@@ -20,11 +21,12 @@ export function proxy(request: NextRequest) {
 	}
 
 	// Next.js reads the nonce from the request's policy and puts it on its scripts
-	const policy = contentSecurityPolicy(
-		createNonce(),
-		process.env.NODE_ENV === 'development',
-		sentryOrigin
-	);
+	const policy = contentSecurityPolicy({
+		nonce: createNonce(),
+		dev: process.env.NODE_ENV === 'development',
+		reportsTo: sentryOrigin,
+		framesFrom: sandboxOrigin,
+	});
 	const headers = new Headers(request.headers);
 	headers.set(CSP_HEADER, policy);
 	const response = NextResponse.next({ request: { headers } });

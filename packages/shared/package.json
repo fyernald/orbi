@@ -5,7 +5,8 @@
 	"license": "UNLICENSED",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./mini-app-protocol": "./src/mini-app-protocol.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

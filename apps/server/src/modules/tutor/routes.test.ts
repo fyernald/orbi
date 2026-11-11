@@ -870,6 +870,52 @@ describe('interactive tools', () => {
 	});
 });
 
+describe('mini-apps', () => {
+	const sortSteps = (js: string) => ({
+		tool: 'createMiniApp',
+		input: {
+			title: 'Bubble sort step by step',
+			html: '<button id="step">Next step</button><div id="bars"></div>',
+			js,
+			description: 'Bars that swap places one step at a time.',
+		},
+	});
+
+	it('builds a mini-app in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(sortSteps('let step = 0;'), { text: 'Press Next step.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createMiniApp'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.js).toBe('let step = 0;');
+	});
+
+	it('gives the AI another try when the code does not parse', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(sortSteps('let step = ;'), sortSteps('let step = 0;'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('syntax error');
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -890,6 +936,7 @@ describe('the whole-course chat', () => {
 			'createDiagram',
 			'createChart',
 			'createInteractive',
+			'createMiniApp',
 		]);
 	});
 

@@ -71,6 +71,21 @@ export default tseslint.config(
 		rules: restrict(noOtherApp, noFrontend),
 	},
 
+	// the sandbox origin: a small Node server, and the script of its page (host/)
+	{
+		files: ['apps/sandbox/**/*.ts'],
+		languageOptions: { globals: globals.node },
+		rules: restrict(noOtherApp, noFrontend, noServerPackages),
+	},
+	{
+		files: ['apps/sandbox/src/host/**/*.ts'],
+		languageOptions: { globals: globals.browser },
+		rules: restrict(noOtherApp, noFrontend, noServerPackages, {
+			group: ['node:*'],
+			message: 'The host script runs in the browser.',
+		}),
+	},
+
 	{
 		files: ['apps/client/**/*.{ts,tsx}'],
 		languageOptions: { globals: globals.browser },
