@@ -20,6 +20,7 @@ const topic = (id: string, name: string, position: number): Topic => ({
 	name,
 	position,
 	noteCount: 0,
+	planDoneOn: null,
 });
 
 const topics = [topic('t1', 'Mitosis', 0), topic('t2', 'Genetics', 1)];

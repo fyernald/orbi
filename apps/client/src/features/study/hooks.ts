@@ -1,6 +1,6 @@
 'use client';
 
-import { sessionAnswer, studySession } from '@orbi/shared';
+import { answerExplanation, sessionAnswer, studySession } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { todayKey } from '@/features/today/hooks';
 import { api } from '@/lib/api';
@@ -40,5 +40,14 @@ export function useAnswerInSession() {
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: todayKey });
 		},
+	});
+}
+
+// why a wrong answer is wrong, written by the AI; the server keeps it, so asking
+// again for the same choice gives back the same text
+export function useExplainAnswer() {
+	return useMutation({
+		mutationFn: ({ id, choice }: { id: string; choice: number }) =>
+			api.post(`/questions/${id}/explanation`, answerExplanation, { choice }),
 	});
 }

@@ -2,9 +2,28 @@ import { z } from 'zod';
 import { DAILY_TOKENS_DEFAULT } from './ai/budget';
 import type { SmtpOptions } from './mail/mailer';
 
+// the share of API requests traced when SENTRY_TRACES_SAMPLE_RATE is not set
+export const TRACES_SAMPLE_RATE_DEFAULT = 0.2;
+
+// instrument.ts reads these on their own, before the rest of the server loads
+const sentryVars = {
+	APP_ENV: z.enum(['local', 'production']).default('production'),
+	// error reports and traces go to Sentry only in production, and only when this is set
+	SENTRY_DSN: z.url().optional().or(z.literal('')),
+	// the image tag, so a report says which deploy it came from
+	SENTRY_RELEASE: z.string().optional(),
+	// from 0 (no request is traced) to 1 (every request); empty uses the default
+	SENTRY_TRACES_SAMPLE_RATE: z.preprocess(
+		(value) => (value === '' ? undefined : value),
+		z.coerce.number().min(0).max(1).optional()
+	),
+};
+
+const sentrySchema = z.object(sentryVars);
+
 const envSchema = z
 	.object({
-		APP_ENV: z.enum(['local', 'production']).default('production'),
+		...sentryVars,
 		SERVER_PORT: z.coerce.number().int().positive().default(3001),
 		HOST: z.string().min(1).default('127.0.0.1'),
 		DATABASE_URL: z.string().min(1, 'Copy .env.example to .env.'),
@@ -54,6 +73,12 @@ const envSchema = z
 
 export type AppEnv = 'local' | 'production';
 
+export type SentryConfig = {
+	dsn: string;
+	release?: string;
+	tracesSampleRate: number;
+};
+
 export type Config = {
 	env: AppEnv;
 	port: number;
@@ -63,18 +88,42 @@ export type Config = {
 	smtp: SmtpOptions | null;
 	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
 	aiDailyTokens: number;
+	sentry: SentryConfig | null;
 };
 
 // fails at startup with every missing or wrong variable listed
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-	const result = envSchema.safeParse(env);
+function parseEnv<T extends z.ZodType>(
+	schema: T,
+	env: NodeJS.ProcessEnv
+): z.output<T> {
+	const result = schema.safeParse(env);
 	if (!result.success) {
 		throw new Error(
 			`Invalid environment variables:\n${z.prettifyError(result.error)}`
 		);
 	}
+	return result.data;
+}
 
-	const vars = result.data;
+function sentryConfig(
+	vars: z.output<typeof sentrySchema>
+): SentryConfig | null {
+	if (vars.APP_ENV !== 'production' || !vars.SENTRY_DSN) return null;
+	return {
+		dsn: vars.SENTRY_DSN,
+		release: vars.SENTRY_RELEASE || undefined,
+		tracesSampleRate:
+			vars.SENTRY_TRACES_SAMPLE_RATE ?? TRACES_SAMPLE_RATE_DEFAULT,
+	};
+}
+
+// the same Sentry settings as loadConfig gives, without checking the other variables
+export const loadSentryConfig = (
+	env: NodeJS.ProcessEnv = process.env
+): SentryConfig | null => sentryConfig(parseEnv(sentrySchema, env));
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+	const vars = parseEnv(envSchema, env);
 	return {
 		env: vars.APP_ENV,
 		port: vars.SERVER_PORT,
@@ -97,5 +146,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
 		aiDailyTokens: vars.AI_DAILY_TOKENS_PER_STUDENT,
+		sentry: sentryConfig(vars),
 	};
 }

@@ -9,6 +9,7 @@ export type RateLimits = {
 	pdfUpload: number;
 	followUps: number;
 	sessionAnswer: number;
+	explainAnswer: number;
 };
 
 export const RATE_LIMITS: RateLimits = {
@@ -16,6 +17,8 @@ export const RATE_LIMITS: RateLimits = {
 	pdfUpload: 10,
 	followUps: 20,
 	sessionAnswer: 60,
+	// each new one is a model call
+	explainAnswer: 20,
 };
 
 // a route's own limit, instead of the default

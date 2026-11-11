@@ -21,6 +21,7 @@ const empty: Profile = {
 	timezone: null,
 	reminderEnabled: false,
 	reminderTime: null,
+	defaultModelId: null,
 	onboardedAt: null,
 };
 

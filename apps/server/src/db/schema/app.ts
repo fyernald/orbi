@@ -90,6 +90,9 @@ export const profile = pgTable('profile', {
 	// the daily study reminder email, sent at reminder_time in the user's time zone
 	reminderEnabled: boolean('reminder_enabled').notNull().default(false),
 	reminderTime: time('reminder_time'),
+	// the catalog id new chats start on; null (or a model the server cannot call
+	// any more) means the server's default
+	defaultModelId: text('default_model_id'),
 	// set once every onboarding question is answered; the app stays closed until then
 	onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
 	...timestamps,
@@ -123,6 +126,8 @@ export const topic = pgTable(
 		courseId: uuid('course_id').notNull(),
 		name: varchar('name', { length: 255 }).notNull(),
 		position: integer('position').notNull().default(0),
+		// the student's own day it was ticked off in the study plan
+		planDoneOn: date('plan_done_on'),
 		...timestamps,
 	},
 	(t) => [
@@ -355,6 +360,36 @@ export const questionReport = pgTable(
 		// a question is reported once
 		uniqueIndex('question_report_question_id_idx').on(t.questionId),
 		index('question_report_user_id_idx').on(t.userId),
+	]
+);
+
+// Why a wrong choice is wrong, written by the AI when the student asks after a wrong
+// answer (US-07). Saved once per question and choice, so asking again reads it back.
+export const answerExplanation = pgTable(
+	'answer_explanation',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		questionId: uuid('question_id').notNull(),
+		choice: integer('choice').notNull(),
+		text: text('text').notNull(),
+		aiProvider: aiProvider('ai_provider').notNull(),
+		aiModel: varchar('ai_model', { length: 100 }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		foreignKey({
+			name: 'answer_explanation_question_fk',
+			columns: [t.userId, t.questionId],
+			foreignColumns: [question.userId, question.id],
+		}).onDelete('cascade'),
+		// also backs the foreign key, so deleting a question finds its explanations
+		uniqueIndex('answer_explanation_choice_idx').on(
+			t.userId,
+			t.questionId,
+			t.choice
+		),
+		check('answer_explanation_text_not_empty', sql`${t.text} ~ '\\S'`),
 	]
 );
 

@@ -75,7 +75,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        app: [client, server]
+        app: [client, server, sandbox]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -91,6 +91,12 @@ jobs:
         with:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
+          # the browser's Sentry settings and the sandbox address are put into the client
+          # build; the other images ignore them
+          build-args: |
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=${{ vars.SENTRY_TRACES_SAMPLE_RATE }}
+            NEXT_PUBLIC_SANDBOX_URL=${{ vars.SANDBOX_URL }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/orbi-${{ matrix.app }}:${{ github.sha }}

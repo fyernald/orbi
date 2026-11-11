@@ -65,6 +65,7 @@ export function ReminderSettingsCard({
 				</CardDescription>
 			</CardHeader>
 			<form
+				method="post"
 				onSubmit={form.handleSubmit((values) =>
 					// the saved values become the new starting point, so Save turns off again
 					save.mutate(values, { onSuccess: () => form.reset(values) })

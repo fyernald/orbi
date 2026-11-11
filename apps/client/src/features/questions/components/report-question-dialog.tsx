@@ -76,7 +76,12 @@ export function ReportQuestionDialog({
 			}}
 		>
 			<DialogContent className="sm:max-w-md">
-				<form onSubmit={send} noValidate className="flex flex-col gap-5">
+				<form
+					method="post"
+					onSubmit={send}
+					noValidate
+					className="flex flex-col gap-5"
+				>
 					<DialogHeader>
 						<DialogTitle>Report this question</DialogTitle>
 						<DialogDescription>

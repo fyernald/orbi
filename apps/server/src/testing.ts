@@ -19,6 +19,7 @@ const NO_LIMITS: RateLimits = {
 	pdfUpload: 1_000_000,
 	followUps: 1_000_000,
 	sessionAnswer: 1_000_000,
+	explainAnswer: 1_000_000,
 };
 
 type TestAppOptions = {

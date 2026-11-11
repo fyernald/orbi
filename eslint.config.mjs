@@ -71,6 +71,21 @@ export default tseslint.config(
 		rules: restrict(noOtherApp, noFrontend),
 	},
 
+	// the sandbox origin: a small Node server, and the script of its page (host/)
+	{
+		files: ['apps/sandbox/**/*.ts'],
+		languageOptions: { globals: globals.node },
+		rules: restrict(noOtherApp, noFrontend, noServerPackages),
+	},
+	{
+		files: ['apps/sandbox/src/host/**/*.ts'],
+		languageOptions: { globals: globals.browser },
+		rules: restrict(noOtherApp, noFrontend, noServerPackages, {
+			group: ['node:*'],
+			message: 'The host script runs in the browser.',
+		}),
+	},
+
 	{
 		files: ['apps/client/**/*.{ts,tsx}'],
 		languageOptions: { globals: globals.browser },
@@ -94,6 +109,15 @@ export default tseslint.config(
 			// Safari drops the list role from lists without bullets unless it is set again
 			'jsx-a11y/no-redundant-roles': ['error', { ul: ['list'], ol: ['list'] }],
 			'no-console': ['error', { allow: ['warn', 'error'] }],
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector:
+						'JSXOpeningElement[name.name="form"]:not(:has(JSXAttribute[name.name="method"][value.value="post"]))',
+					message:
+						'Give every <form> method="post": sent before the page script runs, a form without it puts its fields in the address.',
+				},
+			],
 			...restrict(
 				noOtherApp,
 				noServerPackages,

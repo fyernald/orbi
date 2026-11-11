@@ -300,7 +300,7 @@ export function TutorChat({
 								type="button"
 								onClick={() => setNotice(null)}
 								aria-label="Dismiss"
-								className="rounded-md p-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+								className="rounded-md p-0.5 hover:bg-tone-amber-foreground/10"
 							>
 								<X className="size-4" />
 							</button>

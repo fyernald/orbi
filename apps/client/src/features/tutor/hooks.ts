@@ -18,7 +18,8 @@ import { fromChatMessage } from './chat';
 import type { OpenChat } from './open-chats';
 import { chatKey, courseChatsKey, followUpsKey, modelsKey } from './query-keys';
 
-// the models the server can use; they change only when the server is set up again
+// the models the server can use, which change only when the server is set up
+// again, and the student's default; saving a new default updates it here
 export function useModels() {
 	return useQuery({
 		queryKey: modelsKey,
