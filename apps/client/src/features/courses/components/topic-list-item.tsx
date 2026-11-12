@@ -1,5 +1,6 @@
-import type { CourseColor, Topic } from '@orbi/shared';
+import type { CourseColor, Topic, TopicMastery } from '@orbi/shared';
 import { cn } from '@/lib/utils';
+import { masteryLabel } from '../mastery';
 import { noteCountLabel } from '../note-count';
 import { MasteryRing } from './mastery-ring';
 import { ReplyingDot } from './replying-dot';
@@ -8,6 +9,8 @@ import { TopicActions } from './topic-actions';
 type TopicListItemProps = {
 	topic: Topic;
 	color: CourseColor;
+	// undefined while the scores load
+	score: TopicMastery['score'] | undefined;
 	selected: boolean;
 	onSelect: () => void;
 	onOpenNotes: () => void;
@@ -19,6 +22,7 @@ type TopicListItemProps = {
 export function TopicListItem({
 	topic,
 	color,
+	score,
 	selected,
 	onSelect,
 	onOpenNotes,
@@ -38,14 +42,19 @@ export function TopicListItem({
 				aria-pressed={selected}
 				className="flex min-w-0 flex-1 items-center gap-3 py-2 pl-2 text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 			>
-				{/* the topic's mastery score comes with the review scheduler in Sprint 3 */}
-				<MasteryRing value={null} color={color} className="size-7" />
+				<MasteryRing
+					value={score ?? null}
+					color={color}
+					showValue={false}
+					className="size-7"
+				/>
 				<span className="flex min-w-0 flex-1 flex-col">
 					<span className={cn('truncate', selected && 'font-semibold')}>
 						{topic.name}
 					</span>
-					<span className="text-xs text-muted-foreground">
+					<span className="truncate text-xs text-muted-foreground">
 						{noteCountLabel(topic.noteCount)}
+						{score !== undefined && ` · ${masteryLabel(score)}`}
 					</span>
 				</span>
 				{replying && <ReplyingDot />}
