@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { COURSE_SCOPE } from '@/features/tutor/chat';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { useTopicScores } from '../mastery-hooks';
 import { AddTopicInline } from './add-topic-inline';
 import { CourseActions } from './course-actions';
 import { CourseIntro } from './course-intro';
@@ -49,6 +50,7 @@ export function TopicsPane({
 	className,
 }: TopicsPaneProps) {
 	const router = useRouter();
+	const scoreOf = useTopicScores(course.id);
 	const [query, setQuery] = useState('');
 	const [adding, setAdding] = useState(false);
 	const [seenRequest, setSeenRequest] = useState(addTopicRequest);
@@ -148,6 +150,7 @@ export function TopicsPane({
 									key={topic.id}
 									topic={topic}
 									color={course.color}
+									score={scoreOf?.(topic.id)}
 									selected={topic.id === selectedTopicId}
 									onSelect={() => onSelect(topic.id)}
 									onOpenNotes={() => onOpenNotes(topic.id)}
