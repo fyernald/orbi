@@ -1,7 +1,7 @@
 'use client';
 
 import type { Note } from '@orbi/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { isNotePreviewClipped } from '../note-preview';
 import { noteTime } from '../note-time';
@@ -23,9 +23,10 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 	const preview = useRef<HTMLParagraphElement>(null);
 	const time = noteTime(note, new Date());
 
-	useEffect(() => {
+	// measured only while the note is cut, before paint, so the button never pops in
+	useLayoutEffect(() => {
 		const element = preview.current;
-		if (!element) return;
+		if (!element || expanded) return;
 
 		const measure = () => setHasOverflow(isNotePreviewClipped(element));
 		measure();
@@ -33,7 +34,7 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 		const observer = new ResizeObserver(measure);
 		observer.observe(element);
 		return () => observer.disconnect();
-	}, [editing, note.content]);
+	}, [editing, expanded, note.content]);
 
 	if (editing) {
 		return (
@@ -67,23 +68,15 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 					/>
 				</div>
 			</header>
-			<div className="relative">
-				<p
-					ref={preview}
-					aria-hidden={expanded}
-					className={cn(
-						'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground line-clamp-5',
-						expanded && 'invisible absolute inset-x-0 top-0'
-					)}
-				>
-					{note.content}
-				</p>
-				{expanded && (
-					<p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground">
-						{note.content}
-					</p>
+			<p
+				ref={preview}
+				className={cn(
+					'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground',
+					!expanded && 'line-clamp-5'
 				)}
-			</div>
+			>
+				{note.content}
+			</p>
 			{(hasOverflow || expanded) && (
 				<button
 					type="button"
