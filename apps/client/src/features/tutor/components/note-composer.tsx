@@ -9,6 +9,8 @@ import {
 } from '@orbi/shared';
 import { useEffect, useEffectEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { ComposerUsageNotice } from '@/features/usage/components/composer-usage-notice';
+import { useUsageBlock } from '@/features/usage/hooks';
 import { composerActions } from '../actions';
 import { messageAttachments } from '../attachments';
 import { sendBlockedReason, type ComposerTopic } from '../composer';
@@ -129,11 +131,14 @@ export function NoteComposer({
 	}, [presetVersion]);
 
 	const action = composerActions[actionId];
+	// an AI usage limit is used up; the server would refuse the same way
+	const usageBlock = useUsageBlock();
 	const noModels = models.isSuccess && models.data.models.length === 0;
 	const blockedReason = (values: Partial<TutorRequestInput>) =>
 		noModels
 			? 'The AI tutor is not set up on this server yet.'
-			: (limitReason ??
+			: (usageBlock ??
+				limitReason ??
 				sendBlockedReason({
 					values,
 					attachments,
@@ -161,6 +166,7 @@ export function NoteComposer({
 
 	return (
 		<div className="flex flex-col gap-3">
+			<ComposerUsageNotice />
 			<form
 				method="post"
 				onSubmit={form.handleSubmit(send, focusMessage)}
