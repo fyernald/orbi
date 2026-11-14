@@ -1,15 +1,7 @@
 import type { CourseColor } from '@orbi/shared';
 import { OrbitRing } from '@/components/orbit-ring';
+import { toneTextClasses } from '@/lib/tones';
 import { cn } from '@/lib/utils';
-
-// full class names, so Tailwind finds them
-const ringTones: Record<CourseColor, string> = {
-	blue: 'text-tone-blue-foreground',
-	teal: 'text-tone-teal-foreground',
-	green: 'text-tone-green-foreground',
-	amber: 'text-tone-amber-foreground',
-	red: 'text-tone-red-foreground',
-};
 
 type MasteryRingProps = {
 	// 0 to 100, or null while there is no score yet
@@ -33,7 +25,7 @@ export function MasteryRing({
 	const ring = (
 		<OrbitRing
 			value={value}
-			className={cn('size-11', ringTones[color], className)}
+			className={cn('size-11', toneTextClasses[color], className)}
 		>
 			{showValue && value !== null && (
 				<span className="text-[11px] font-semibold text-foreground tabular-nums">
