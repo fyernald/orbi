@@ -13,8 +13,15 @@ import {
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { questionSetsKey } from '@/features/questions/set-hooks';
 import { api } from '@/lib/api';
-import { allTopicsKey, courseKey, coursesKey, topicsKey } from './query-keys';
+import {
+	allTopicsKey,
+	courseKey,
+	courseMasteryKey,
+	coursesKey,
+	topicsKey,
+} from './query-keys';
 
 export function useCourses() {
 	return useQuery({
@@ -71,7 +78,8 @@ export function useTopics(courseId: string) {
 }
 
 // after a topic changes, the course list and the course load again, so their note
-// count and last activity come from the server; the topic count moves at once meanwhile
+// count and last activity come from the server; the topic count moves at once meanwhile.
+// The question sets show the topic's name and go with a deleted topic
 function useTopicsChanged(courseId: string) {
 	const queryClient = useQueryClient();
 	return (topicChange: number) => {
@@ -92,6 +100,11 @@ function useTopicsChanged(courseId: string) {
 			exact: true,
 		});
 		void queryClient.invalidateQueries({ queryKey: allTopicsKey });
+		void queryClient.invalidateQueries({ queryKey: questionSetsKey(courseId) });
+		// the course score counts every topic
+		void queryClient.invalidateQueries({
+			queryKey: courseMasteryKey(courseId),
+		});
 	};
 }
 
@@ -110,24 +123,25 @@ export function useCreateTopic(courseId: string) {
 	});
 }
 
-// the course list and the open course show the new name at once
-export function useRenameCourse(courseId: string) {
+// the course list and the open course show the new name or exam date at once
+export function useUpdateCourse(courseId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (input: UpdateCourseInput) =>
 			api.patch(`/courses/${courseId}`, course, input),
-		onSuccess: (renamed) => {
+		onSuccess: (updated) => {
 			queryClient.setQueryData<Course[]>(coursesKey, (courses) =>
-				courses?.map((item) => (item.id === renamed.id ? renamed : item))
+				courses?.map((item) => (item.id === updated.id ? updated : item))
 			);
-			queryClient.setQueryData(courseKey(renamed.id), renamed);
+			queryClient.setQueryData(courseKey(updated.id), updated);
 			// the topic lists show the course name
 			void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		},
 	});
 }
 
-export function useRenameTopic(courseId: string) {
+// a rename, or a tick in the study plan
+export function useUpdateTopic(courseId: string) {
 	const queryClient = useQueryClient();
 	const topicsChanged = useTopicsChanged(courseId);
 	return useMutation({
@@ -136,9 +150,9 @@ export function useRenameTopic(courseId: string) {
 			...input
 		}: UpdateTopicInput & { topicId: string }) =>
 			api.patch(`/courses/${courseId}/topics/${topicId}`, topic, input),
-		onSuccess: (renamed) => {
+		onSuccess: (updated) => {
 			queryClient.setQueryData<Topic[]>(topicsKey(courseId), (topics) =>
-				topics?.map((item) => (item.id === renamed.id ? renamed : item))
+				topics?.map((item) => (item.id === updated.id ? updated : item))
 			);
 			topicsChanged(0);
 		},

@@ -1,5 +1,6 @@
 import {
 	askStudentOutput,
+	isNonVisualToolPart,
 	type ChatMessage,
 	type TutorMessageMetadata,
 	type TutorTools,
@@ -20,6 +21,8 @@ export function toUIMessage(stored: StoredMessage): TutorUIMessage {
 			action: stored.action ?? undefined,
 			modelId: stored.modelId ?? undefined,
 			notesUsed: stored.notesUsed ?? undefined,
+			notesTotal: stored.notesTotal ?? undefined,
+			notesCut: stored.notesCut ?? undefined,
 			thinkingMs: stored.thinkingMs ?? undefined,
 			followUps: stored.followUps ?? undefined,
 			attachments: stored.attachments ?? undefined,
@@ -41,6 +44,8 @@ export function toStoredMessage(
 		action: metadata?.action ?? null,
 		modelId: metadata?.modelId ?? null,
 		notesUsed: metadata?.notesUsed ?? null,
+		notesTotal: metadata?.notesTotal ?? null,
+		notesCut: metadata?.notesCut ?? null,
 		thinkingMs: metadata?.thinkingMs ?? null,
 		followUps: metadata?.followUps ?? null,
 		attachments: metadata?.attachments ?? null,
@@ -195,11 +200,11 @@ export function withoutEarlierThinking(
 	});
 }
 
-// a reply that only explains, without question sets or questions for the student
+// a reply that explains (visuals included), without question sets or questions for the student
 export const isExplanation = (message: TutorUIMessage) =>
 	message.role === 'assistant' &&
 	messageText(message).length > 0 &&
-	!message.parts.some((part) => part.type.startsWith('tool-'));
+	!message.parts.some((part) => isNonVisualToolPart(part.type));
 
 // a reply worth keeping has text, a finished or failed tool, or a question for the student
 export function hasContent(message: TutorUIMessage): boolean {

@@ -1,6 +1,7 @@
 # Production services on the VPS. GitHub Actions copies this file to the server on every deploy.
 # Secrets come from the .env file next to it on the VPS (see deploy/.env.example).
-# nginx on the VPS sends orbi.study traffic to the client and server ports below (see deploy/nginx.conf).
+# nginx on the VPS sends orbi.study traffic to the client and server ports below, and
+# sandbox.orbi.study traffic to the sandbox port (see deploy/nginx.conf).
 
 name: orbi
 
@@ -12,12 +13,19 @@ x-logging: &logging
     max-size: 10m
     max-file: "3"
 
+# Upper limits, so a runaway PDF read or a memory leak cannot starve the other projects on
+# the VPS (12 CPUs, 47 GB). Idle, each service uses 40-80 MB (docker stats, 5 Nov 2026).
+# Check them again after a busy day (see docs/deployment.md).
+
 services:
   client:
     image: ghcr.io/fyernald/orbi-client:${IMAGE_TAG:-latest}
     restart: unless-stopped
     logging: *logging
     init: true
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768m }
     environment:
       # the Next.js server checks the session with the API before it renders a page
       API_URL: http://server:3001
@@ -32,6 +40,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # The page mini-apps run in (US-42), on its own address, so the code Orbi writes for
+  # them can never reach the app's pages, login cookie or API. It serves a few files
+  # and keeps no state (see "Mini-app sandbox" in docs/deployment.md).
+  sandbox:
+    image: ghcr.io/fyernald/orbi-sandbox:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    init: true
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128m }
+    environment:
+      # the only page that may embed the sandbox
+      APP_ORIGIN: https://orbi.study
+    ports:
+      - "127.0.0.1:3102:3200"
+    healthcheck:
+      test: wget -q --spider http://127.0.0.1:3200/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Exactly one: rate limits are kept in memory and it migrates the database on start
   # (see "How it works" in docs/deployment.md).
   server:
@@ -39,10 +69,16 @@ services:
     restart: unless-stopped
     logging: *logging
     init: true
+    # more memory and CPU than the client: it reads up to 2 PDFs at once in worker threads
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1g }
     env_file: .env
     environment:
       HOST: 0.0.0.0
       SERVER_PORT: 3001
+      # error reports say which deploy they came from
+      SENTRY_RELEASE: ${IMAGE_TAG:-latest}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     ports:
       - "127.0.0.1:3101:3001"
@@ -60,6 +96,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 768m }
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}

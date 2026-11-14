@@ -113,7 +113,7 @@ export function OnboardingFlow({ saved, name }: OnboardingFlowProps) {
 	};
 
 	return (
-		<form ref={formRef} onSubmit={onSubmit} noValidate>
+		<form method="post" ref={formRef} onSubmit={onSubmit} noValidate>
 			<OnboardingScreen
 				sky={
 					<OnboardingSky

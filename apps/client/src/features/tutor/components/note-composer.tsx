@@ -156,6 +156,7 @@ export function NoteComposer({
 	return (
 		<div className="flex flex-col gap-3">
 			<form
+				method="post"
 				onSubmit={form.handleSubmit(send, focusMessage)}
 				noValidate
 				{...(canAttach && dropZoneProps)}

@@ -64,6 +64,7 @@ describe('profile', () => {
 			timezone: null,
 			reminderEnabled: false,
 			reminderTime: null,
+			defaultModelId: null,
 			onboardedAt: null,
 		});
 	});

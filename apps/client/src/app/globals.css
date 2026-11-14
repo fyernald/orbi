@@ -32,6 +32,7 @@
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar);
+	--color-chart-6: var(--chart-6);
 	--color-chart-5: var(--chart-5);
 	--color-chart-4: var(--chart-4);
 	--color-chart-3: var(--chart-3);
@@ -43,6 +44,9 @@
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-warning: var(--warning);
+	--color-switch-sky: var(--switch-sky);
+	--color-switch-sun: var(--switch-sun);
+	--color-switch-moon: var(--switch-moon);
 	--color-tone-blue: var(--tone-blue);
 	--color-tone-blue-foreground: var(--tone-blue-foreground);
 	--color-tone-teal: var(--tone-teal);
@@ -86,13 +90,13 @@
 	--background: #fcf9fa;
 	--foreground: #1f1519;
 	--card: #ffffff;
-	--card-foreground: #1f1519;
-	--popover: #ffffff;
-	--popover-foreground: #1f1519;
+	--card-foreground: var(--foreground);
+	--popover: var(--card);
+	--popover-foreground: var(--foreground);
 	--primary: #c61d78;
 	--primary-foreground: #ffffff;
 	--secondary: #f4eef1;
-	--secondary-foreground: #1f1519;
+	--secondary-foreground: var(--foreground);
 	--muted: #f4eef1;
 	--muted-foreground: #6c5f65;
 	--subtle-foreground: #46393f;
@@ -119,38 +123,48 @@
 	--flame-yellow: #f5b83d;
 	--flame-orange: #f97316;
 	--flame-red: #e5484d;
+	/* the theme switch: a day sky with the sun, a night sky with the moon and stars */
+	--switch-sky: #e0f2fe;
+	--switch-sun: #f59e0b;
+	--switch-moon: #a5b4fc;
+	--switch-star: #ffffff;
 	--border: #e8e1e4;
 	--divider: #f2edef;
-	--input: #e8e1e4;
-	--ring: #c61d78;
+	--input: var(--border);
+	--ring: var(--primary);
 	--scrollbar: #ddd2d7;
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
+	/* charts and diagrams: berry, blue, aqua, yellow, violet, orange, in this order;
+	   checked for colour-blind students and against the card in each mode (US-42).
+	   Aqua and yellow are under 3:1 on the light card, so visuals always label them */
+	--chart-1: #c61d78;
+	--chart-2: #2a78d6;
+	--chart-3: #1baf7a;
+	--chart-4: #eda100;
+	--chart-5: #6250d6;
+	--chart-6: #eb6834;
 	--radius: 0.75rem;
-	--sidebar: #fcf9fa;
-	--sidebar-foreground: #1f1519;
-	--sidebar-primary: #c61d78;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #f4eef1;
-	--sidebar-accent-foreground: #1f1519;
-	--sidebar-border: #e8e1e4;
-	--sidebar-ring: #c61d78;
+	/* the colour theme picker shows each theme by its main colour */
+	--palette-berry: #c61d78;
+	--palette-ocean: #2563eb;
+	--palette-violet: #6d28d9;
+	--palette-forest: #047857;
+	--sidebar: var(--background);
+	--sidebar-foreground: var(--foreground);
+	--sidebar-primary: var(--primary);
+	--sidebar-primary-foreground: var(--primary-foreground);
+	--sidebar-accent: var(--secondary);
+	--sidebar-accent-foreground: var(--foreground);
+	--sidebar-border: var(--border);
+	--sidebar-ring: var(--primary);
 }
 
 .dark {
 	--background: #140d10;
 	--foreground: #f7f2f4;
 	--card: #1d1619;
-	--card-foreground: #f7f2f4;
-	--popover: #1d1619;
-	--popover-foreground: #f7f2f4;
 	--primary: #f167a4;
 	--primary-foreground: #270b17;
 	--secondary: #2a2125;
-	--secondary-foreground: #f7f2f4;
 	--muted: #2a2125;
 	--muted-foreground: #ada1a6;
 	--subtle-foreground: #d8ced2;
@@ -172,22 +186,124 @@
 	--tone-amber-foreground: #f7cf7f;
 	--border: #342b2f;
 	--divider: #261e21;
-	--input: #342b2f;
-	--ring: #f167a4;
 	--scrollbar: #43383d;
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
-	--sidebar: #140d10;
-	--sidebar-foreground: #f7f2f4;
-	--sidebar-primary: #f167a4;
-	--sidebar-primary-foreground: #270b17;
-	--sidebar-accent: #2a2125;
-	--sidebar-accent-foreground: #f7f2f4;
-	--sidebar-border: #342b2f;
-	--sidebar-ring: #f167a4;
+	--switch-sky: #1e1b4b;
+	--palette-berry: #f167a4;
+	--palette-ocean: #60a5fa;
+	--palette-violet: #a78bfa;
+	--palette-forest: #34d399;
+	/* the same chart hues, stepped for the dark card */
+	--chart-1: #e2559a;
+	--chart-2: #3987e5;
+	--chart-3: #199e70;
+	--chart-4: #c98500;
+	--chart-5: #9085e9;
+	--chart-6: #d95926;
+}
+/* Colour themes beside Berry (data-palette on <html>, from a cookie). Each sets the
+   brand colour and the greys, which carry a little of its hue, in both modes; course
+   colours, charts and warnings stay the same. A test checks both modes set the same tokens */
+
+/* Ocean: a clear tech blue */
+:root[data-palette='ocean'] {
+	--background: #f8fafc;
+	--foreground: #131921;
+	--card: #ffffff;
+	--primary: #2563eb;
+	--primary-foreground: #ffffff;
+	--secondary: #edf0f5;
+	--muted: #edf0f5;
+	--muted-foreground: #5d646e;
+	--subtle-foreground: #373e48;
+	--accent: #eaf1ff;
+	--accent-foreground: #1d4ed8;
+	--border: #e0e4e9;
+	--divider: #eceff3;
+	--scrollbar: #d0d6df;
+}
+:root.dark[data-palette='ocean'] {
+	--background: #0c1015;
+	--foreground: #f1f4f8;
+	--card: #15191e;
+	--primary: #60a5fa;
+	--primary-foreground: #0a1a33;
+	--secondary: #1f242c;
+	--muted: #1f242c;
+	--muted-foreground: #9fa5af;
+	--subtle-foreground: #ccd2d9;
+	--accent: #172a52;
+	--accent-foreground: #bfdbfe;
+	--border: #292e36;
+	--divider: #1d2127;
+	--scrollbar: #363c45;
+}
+
+/* Violet: a deep purple */
+:root[data-palette='violet'] {
+	--background: #fafafc;
+	--foreground: #181720;
+	--card: #ffffff;
+	--primary: #6d28d9;
+	--primary-foreground: #ffffff;
+	--secondary: #f0eff5;
+	--muted: #f0eff5;
+	--muted-foreground: #63616d;
+	--subtle-foreground: #3d3b47;
+	--accent: #f1ecff;
+	--accent-foreground: #5b21b6;
+	--border: #e3e2e9;
+	--divider: #efeef2;
+	--scrollbar: #d5d4de;
+}
+:root.dark[data-palette='violet'] {
+	--background: #0f0e15;
+	--foreground: #f4f3f7;
+	--card: #18171e;
+	--primary: #a78bfa;
+	--primary-foreground: #1a0b38;
+	--secondary: #24232b;
+	--muted: #24232b;
+	--muted-foreground: #a5a3ae;
+	--subtle-foreground: #d1d0d9;
+	--accent: #2c1a52;
+	--accent-foreground: #ddd6fe;
+	--border: #2e2d35;
+	--divider: #211f27;
+	--scrollbar: #3c3a44;
+}
+
+/* Forest: a deep green */
+:root[data-palette='forest'] {
+	--background: #f8fbf9;
+	--foreground: #111b15;
+	--card: #ffffff;
+	--primary: #047857;
+	--primary-foreground: #ffffff;
+	--secondary: #ecf2ee;
+	--muted: #ecf2ee;
+	--muted-foreground: #5a675f;
+	--subtle-foreground: #34413a;
+	--accent: #e3f6ee;
+	--accent-foreground: #065f46;
+	--border: #dfe5e1;
+	--divider: #ebf0ed;
+	--scrollbar: #ced8d2;
+}
+:root.dark[data-palette='forest'] {
+	--background: #0a110d;
+	--foreground: #f0f5f2;
+	--card: #131a16;
+	--primary: #34d399;
+	--primary-foreground: #022c1f;
+	--secondary: #1e2621;
+	--muted: #1e2621;
+	--muted-foreground: #9da8a1;
+	--subtle-foreground: #cbd4ce;
+	--accent: #0f3a2c;
+	--accent-foreground: #a7f3d0;
+	--border: #28302b;
+	--divider: #1b231e;
+	--scrollbar: #343f38;
 }
 
 @layer base {
@@ -746,5 +862,162 @@
 		opacity: 0;
 		transform: scale(0.94);
 		filter: blur(8px);
+	}
+}
+
+/* the theme switch in the top bar: the knob rolls across, spinning, and the sun and
+   moon swap halfway. A rolled knob rests where the dark class puts it */
+@layer components {
+	.theme-switch {
+		--knob-travel: 2rem;
+	}
+
+	.dark .theme-switch-knob {
+		translate: var(--knob-travel) 0;
+	}
+
+	.theme-switch-moon,
+	.dark .theme-switch-sun {
+		opacity: 0;
+		scale: 0.4;
+	}
+
+	.dark .theme-switch-moon {
+		opacity: 1;
+		scale: 1;
+	}
+
+	.theme-switch-stars > span {
+		position: absolute;
+		border-radius: 9999px;
+		background: var(--switch-star);
+		opacity: 0;
+	}
+
+	.dark .theme-switch-stars > span {
+		animation: twinkle 2.4s ease-in-out infinite;
+	}
+
+	.dark .theme-switch-stars > span:nth-child(2) {
+		animation-delay: -0.8s;
+	}
+
+	.dark .theme-switch-stars > span:nth-child(3) {
+		animation-delay: -1.6s;
+	}
+
+	/* longhands: a shorthand without a name is built into "animation: none" */
+	.theme-switch[data-roll]
+		:is(.theme-switch-knob, .theme-switch-sun, .theme-switch-moon) {
+		animation-duration: 600ms;
+		animation-timing-function: ease-in-out;
+		animation-fill-mode: both;
+	}
+
+	.theme-switch[data-roll] .theme-switch-knob {
+		animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-knob {
+		animation-name: knob-to-dark;
+	}
+
+	.theme-switch[data-roll='to-light'] .theme-switch-knob {
+		animation-name: knob-to-light;
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-sun,
+	.theme-switch[data-roll='to-light'] .theme-switch-moon {
+		animation-name: theme-icon-out;
+	}
+
+	.theme-switch[data-roll='to-dark'] .theme-switch-moon,
+	.theme-switch[data-roll='to-light'] .theme-switch-sun {
+		animation-name: theme-icon-in;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.theme-switch[data-roll]
+			:is(.theme-switch-knob, .theme-switch-sun, .theme-switch-moon),
+		.dark .theme-switch-stars > span {
+			animation: none;
+		}
+		.dark .theme-switch-stars > span {
+			opacity: 0.8;
+		}
+	}
+}
+
+@keyframes knob-to-dark {
+	from {
+		translate: 0 0;
+		rotate: 0deg;
+	}
+	to {
+		translate: var(--knob-travel) 0;
+		rotate: 360deg;
+	}
+}
+
+@keyframes knob-to-light {
+	from {
+		translate: var(--knob-travel) 0;
+		rotate: 360deg;
+	}
+	to {
+		translate: 0 0;
+		rotate: 0deg;
+	}
+}
+
+@keyframes theme-icon-out {
+	from {
+		opacity: 1;
+		scale: 1;
+	}
+	50%,
+	to {
+		opacity: 0;
+		scale: 0.4;
+	}
+}
+
+@keyframes theme-icon-in {
+	from,
+	50% {
+		opacity: 0;
+		scale: 0.4;
+	}
+	to {
+		opacity: 1;
+		scale: 1;
+	}
+}
+
+/* the colour theme picker: a ring around the theme the page is in */
+@layer components {
+	.palette-swatch {
+		transition: scale 150ms ease-out;
+	}
+
+	:root[data-palette='berry'] [data-swatch='berry'],
+	:root[data-palette='ocean'] [data-swatch='ocean'],
+	:root[data-palette='violet'] [data-swatch='violet'],
+	:root[data-palette='forest'] [data-swatch='forest'] {
+		outline: 2px solid var(--swatch);
+		outline-offset: 2px;
+	}
+}
+
+/* picking a colour theme fades the page across (pickPalette) */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 350ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
 	}
 }

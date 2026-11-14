@@ -47,6 +47,10 @@ export const tutorMessageMetadata = z.object({
 	modelId: z.string().optional(),
 	// how many of the topic's notes the tutor read for this reply
 	notesUsed: z.int().optional(),
+	// how many notes the topic had; older replies do not have it
+	notesTotal: z.int().optional(),
+	// the last note read did not fit and was read only in part
+	notesCut: z.boolean().optional(),
 	// how long each of the reply's thinking parts took, in the order they appear
 	thinkingMs: z.array(z.int().nonnegative()).optional(),
 	// the follow-up questions last shown under this reply
@@ -107,6 +111,20 @@ export const chatSummary = z.object({
 	title: z.string(),
 	updatedAt: z.iso.datetime(),
 });
+
+// a chat's name is the only thing the student can change about it
+export const renameChatInput = z.object({
+	title: z
+		.string()
+		.trim()
+		.min(1, 'Enter a chat name.')
+		.max(
+			CHAT_TITLE_MAX_LENGTH,
+			`Use at most ${CHAT_TITLE_MAX_LENGTH} characters.`
+		),
+});
+
+export type RenameChatInput = z.infer<typeof renameChatInput>;
 
 // a chat opens on its newest messages; older ones load as the student scrolls up
 export const CHAT_PAGE_SIZE = 30;

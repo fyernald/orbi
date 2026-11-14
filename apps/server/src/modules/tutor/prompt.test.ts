@@ -24,6 +24,7 @@ describe('selectNotes', () => {
 
 		expect(selection.notes.map(({ id }) => id)).toEqual(['a', 'b']);
 		expect(selection.total).toBe(2);
+		expect(selection.cut).toBe(false);
 	});
 
 	it('drops the oldest notes and cuts the last one that only fits in part', () => {
@@ -39,6 +40,7 @@ describe('selectNotes', () => {
 		expect(selection.notes.map(({ id }) => id)).toEqual(['new', 'mid']);
 		expect(selection.notes[1]!.content).toBe('yy');
 		expect(selection.total).toBe(3);
+		expect(selection.cut).toBe(true);
 	});
 
 	it('reads the notes of attached PDFs first, in the order given', () => {

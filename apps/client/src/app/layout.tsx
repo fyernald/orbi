@@ -1,7 +1,11 @@
+import { APP_NAME } from '@orbi/shared';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type { ReactNode } from 'react';
+import { browserBarColors } from '@/lib/browser-bar';
+import { TITLE_TEMPLATE } from '@/lib/page-title';
+import { PALETTE_COOKIE, readPalette } from '@/lib/palette';
 import { cn } from '@/lib/utils';
 import { Providers } from './providers';
 import './globals.css';
@@ -9,17 +13,24 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-	title: { default: 'Orbi', template: '%s · Orbi' },
+	title: { default: APP_NAME, template: TITLE_TEMPLATE },
 	description: 'Personal AI Study Coach',
 };
 
-// the browser bar on phones takes the page's background (--background in globals.css)
-export const viewport: Viewport = {
-	themeColor: [
-		{ media: '(prefers-color-scheme: light)', color: '#fcf9fa' },
-		{ media: '(prefers-color-scheme: dark)', color: '#140d10' },
-	],
-};
+// the colour theme the student picked, from its cookie
+async function palette() {
+	return readPalette((await cookies()).get(PALETTE_COOKIE)?.value);
+}
+
+export async function generateViewport(): Promise<Viewport> {
+	const colors = browserBarColors[await palette()];
+	return {
+		themeColor: [
+			{ media: '(prefers-color-scheme: light)', color: colors.light },
+			{ media: '(prefers-color-scheme: dark)', color: colors.dark },
+		],
+	};
+}
 
 // the nonce of this request's Content-Security-Policy, set by proxy.ts
 async function cspNonce() {
@@ -39,6 +50,7 @@ export default async function RootLayout({
 		<html
 			lang="en"
 			className={cn('font-sans', inter.variable)}
+			data-palette={await palette()}
 			suppressHydrationWarning
 		>
 			<body>

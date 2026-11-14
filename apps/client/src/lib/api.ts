@@ -118,3 +118,10 @@ export function apiErrorMessage(error: unknown): string | undefined {
 	if (!error) return undefined;
 	return error instanceof ApiError ? error.message : fallbackMessage;
 }
+
+// a 4xx answer (not found, not allowed) will not change by asking again
+export const isClientErrorStatus = (status: number) =>
+	status >= 400 && status < 500;
+
+export const isClientError = (error: unknown) =>
+	error instanceof ApiError && isClientErrorStatus(error.status);

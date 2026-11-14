@@ -2,11 +2,13 @@ import {
 	CHAT_PAGE_SIZE,
 	MAX_PARALLEL_REPLIES,
 	type AiModels,
+	type AnswerExplanation,
 	type ChatMessagesPage,
 	type ChatSummary,
 	type ChatThread,
 	type FollowUps,
 	type FollowUpsInput,
+	type RenameChatInput,
 	type SendChatMessageInput,
 } from '@orbi/shared';
 import { generateText } from 'ai';
@@ -15,10 +17,11 @@ import {
 	DAILY_TOKENS_DEFAULT,
 	type TokenBudget,
 } from '../../ai/budget';
-import type {
-	ModelOptions,
-	ModelRegistry,
-	ResolvedModel,
+import {
+	MODEL_NOT_IN_LIST,
+	type ModelOptions,
+	type ModelRegistry,
+	type ResolvedModel,
 } from '../../ai/models';
 import type { LogUsage } from '../../ai/usage';
 import {
@@ -28,6 +31,8 @@ import {
 	ValidationError,
 } from '../../errors';
 import { actionRules } from './actions';
+import { createAnswerExplainer } from './answer-explainer';
+import type { ExplanationRepository } from './explanation-repository';
 import {
 	cleanFollowUps,
 	FOLLOW_UP_NOTES_MAX_LENGTH,
@@ -60,10 +65,17 @@ import { createReplyStarter, type TutorStream } from './start-reply';
 import { createStepTracker } from './step-tracker';
 
 export interface TutorService {
-	listModels(): AiModels;
+	// the models this server can call, starting on the student's own default
+	listModels(userId: string): Promise<AiModels>;
 	listChats(userId: string, courseId: string): Promise<ChatSummary[]>;
 	// the chat with its newest messages
 	getChat(userId: string, chatId: string): Promise<ChatThread>;
+	renameChat(
+		userId: string,
+		chatId: string,
+		input: RenameChatInput
+	): Promise<ChatSummary>;
+	deleteChat(userId: string, chatId: string): Promise<void>;
 	getEarlierMessages(
 		userId: string,
 		chatId: string,
@@ -83,6 +95,12 @@ export interface TutorService {
 		messageId: string,
 		input: FollowUpsInput
 	): Promise<FollowUps>;
+	// why a wrong choice in a study session is wrong, from the topic's notes (US-07)
+	explainAnswer(
+		userId: string,
+		questionId: string,
+		choice: number
+	): Promise<AnswerExplanation>;
 }
 
 const FOLLOW_UPS_TIMEOUT_MS = 30_000;
@@ -108,6 +126,7 @@ const toSummary = (chat: ChatRecord): ChatSummary => ({
 
 export function createTutorService({
 	repo,
+	explanations,
 	models,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
 	budget = createTokenBudget({ dailyTokens: DAILY_TOKENS_DEFAULT }),
@@ -116,6 +135,7 @@ export function createTutorService({
 	now = () => new Date(),
 }: {
 	repo: TutorRepository;
+	explanations: ExplanationRepository;
 	models: ModelRegistry;
 	limiter?: ReplyLimiter;
 	budget?: TokenBudget;
@@ -131,7 +151,7 @@ export function createTutorService({
 				'The AI tutor is not set up on this server yet.'
 			);
 		}
-		throw new ValidationError('Choose a model from the list.');
+		throw new ValidationError(MODEL_NOT_IN_LIST);
 	}
 
 	// Every model call takes one of the student's places, so neither replies nor
@@ -166,9 +186,23 @@ export function createTutorService({
 
 	const trackStep = createStepTracker({ logUsage, budget });
 	const startReply = createReplyStarter({ repo, now, logError, trackStep });
+	const explainAnswer = createAnswerExplainer({
+		explanations,
+		repo,
+		// a study session has no model picker, and a few sentences need no thinking
+		resolveDefaultModel: () =>
+			resolveModel(models.list().defaultModelId ?? '', { thinking: false }),
+		requireBudget,
+		takePlace,
+		trackStep,
+		logError,
+	});
 
 	return {
-		listModels: () => models.list(),
+		listModels: async (userId) =>
+			models.list(await repo.findDefaultModelId(userId)),
+
+		explainAnswer,
 
 		async listChats(userId, courseId) {
 			if (!(await repo.courseExists(userId, courseId))) {
@@ -183,6 +217,18 @@ export function createTutorService({
 				limit: CHAT_PAGE_SIZE,
 			});
 			return { ...toSummary(chat), ...toPage(page) };
+		},
+
+		async renameChat(userId, chatId, { title }) {
+			const renamed = await repo.renameChat(userId, chatId, title);
+			if (!renamed) throw new NotFoundError('Chat not found.');
+			return toSummary(renamed);
+		},
+
+		async deleteChat(userId, chatId) {
+			if (!(await repo.deleteChat(userId, chatId))) {
+				throw new NotFoundError('Chat not found.');
+			}
 		},
 
 		async getEarlierMessages(userId, chatId, beforeId) {

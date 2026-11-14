@@ -1,6 +1,7 @@
 import { AISDKError, APICallError, RetryError } from 'ai';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import type { FastifyRequest } from 'fastify';
+import { isPostgresError } from './db/errors';
 
 // links from auth emails carry a one-time token in the path or the query,
 // so request logs keep only the path, with the token masked
@@ -33,17 +34,6 @@ const stackFrames = (error: Error) =>
 		error.name,
 		...(error.stack?.split('\n').filter((line) => /^\s+at /.test(line)) ?? []),
 	].join('\n');
-
-// pg and PGlite errors have the same fields; detail can hold the whole row
-const isPostgresError = (
-	error: Error
-): error is Error & {
-	code: string;
-	severity: string;
-	constraint?: string;
-	table?: string;
-	column?: string;
-} => typeof Reflect.get(error, 'code') === 'string' && 'severity' in error;
 
 const serializeCause = (cause: unknown, depth: number) =>
 	cause instanceof Error ? serializeError(cause, depth + 1) : cause;

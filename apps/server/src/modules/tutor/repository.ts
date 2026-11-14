@@ -73,6 +73,8 @@ export type StoredMessage = {
 	action: TutorAction | null;
 	modelId: string | null;
 	notesUsed: number | null;
+	notesTotal: number | null;
+	notesCut: boolean | null;
 	thinkingMs: number[] | null;
 	followUps: string[] | null;
 	attachments: MessageAttachment[] | null;
@@ -99,6 +101,8 @@ export interface TutorRepository {
 	findStudent(userId: string): Promise<StudentContext | undefined>;
 	// the student's IANA time zone from the profile, null before onboarding
 	findTimeZone(userId: string): Promise<string | null>;
+	// the model the student saved as their default, if any
+	findDefaultModelId(userId: string): Promise<string | null>;
 	// The notes a reply can read, in a topic or (for the whole-course chat) a course:
 	// the attached ones, then the newest others, until about maxLength characters.
 	// total counts every note there, read or not.
@@ -115,6 +119,14 @@ export interface TutorRepository {
 	): Promise<string[]>;
 	findChat(userId: string, chatId: string): Promise<ChatRecord | undefined>;
 	listChats(userId: string, courseId: string): Promise<ChatRecord[]>;
+	// undefined when the user has no such chat
+	renameChat(
+		userId: string,
+		chatId: string,
+		title: string
+	): Promise<ChatRecord | undefined>;
+	// false when the user has no such chat
+	deleteChat(userId: string, chatId: string): Promise<boolean>;
 	// undefined when the id is already taken, by any user
 	createChat(
 		userId: string,
@@ -174,6 +186,8 @@ const messageColumns = {
 	action: chatMessage.action,
 	modelId: chatMessage.modelId,
 	notesUsed: chatMessage.notesUsed,
+	notesTotal: chatMessage.notesTotal,
+	notesCut: chatMessage.notesCut,
 	thinkingMs: chatMessage.thinkingMs,
 	followUps: chatMessage.followUps,
 	attachments: chatMessage.attachments,
@@ -231,6 +245,14 @@ export function createTutorRepository(db: Db): TutorRepository {
 				.from(profile)
 				.where(eq(profile.userId, userId));
 			return found?.timezone ?? null;
+		},
+
+		async findDefaultModelId(userId) {
+			const [found] = await db
+				.select({ defaultModelId: profile.defaultModelId })
+				.from(profile)
+				.where(eq(profile.userId, userId));
+			return found?.defaultModelId ?? null;
 		},
 
 		async findStudent(userId) {
@@ -346,6 +368,26 @@ export function createTutorRepository(db: Db): TutorRepository {
 				.where(and(eq(chat.userId, userId), eq(chat.courseId, courseId)))
 				.orderBy(desc(chat.updatedAt), desc(chat.id))
 				.limit(CHATS_LISTED);
+		},
+
+		// the list is sorted by the last message, so a new name does not move the chat
+		async renameChat(userId, chatId, title) {
+			const [renamed] = await db
+				.update(chat)
+				.set({ title, updatedAt: sql`${chat.updatedAt}` })
+				.where(and(eq(chat.userId, userId), eq(chat.id, chatId)))
+				.returning(chatColumns);
+			return renamed;
+		},
+
+		// its messages go with it (ON DELETE CASCADE); the questions it made stay with
+		// their topic
+		async deleteChat(userId, chatId) {
+			const deleted = await db
+				.delete(chat)
+				.where(and(eq(chat.userId, userId), eq(chat.id, chatId)))
+				.returning({ id: chat.id });
+			return deleted.length > 0;
 		},
 
 		async createChat(userId, input) {

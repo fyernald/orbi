@@ -1,7 +1,8 @@
 'use client';
 
-import { sessionAnswer, studySession } from '@orbi/shared';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { answerExplanation, sessionAnswer, studySession } from '@orbi/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { masteryKey } from '@/features/courses/query-keys';
 import { api } from '@/lib/api';
 
 const studyKey = (courseId: string, topicId: string) =>
@@ -23,8 +24,21 @@ export function useStudySession(courseId: string, topicId: string) {
 
 // the server checks the answer and saves it for the mastery score
 export function useAnswerInSession() {
+	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ id, choice }: { id: string; choice: number }) =>
 			api.post(`/questions/${id}/session-answer`, sessionAnswer, { choice }),
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: masteryKey });
+		},
+	});
+}
+
+// why a wrong answer is wrong, written by the AI; the server keeps it, so asking
+// again for the same choice gives back the same text
+export function useExplainAnswer() {
+	return useMutation({
+		mutationFn: ({ id, choice }: { id: string; choice: number }) =>
+			api.post(`/questions/${id}/explanation`, answerExplanation, { choice }),
 	});
 }

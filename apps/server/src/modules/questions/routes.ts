@@ -3,13 +3,16 @@ import {
 	approveTopicQuestionsOutput,
 	chatAnswer,
 	chatAnswersQuery,
+	courseParams,
 	question,
 	questionInput,
 	questionParams,
+	questionSet,
 	reportQuestionInput,
 	reviewTopic,
 	sessionAnswer,
 	studySession,
+	topicMastery,
 	topicParams,
 	topicQuestionParams,
 	updateQuestionInput,
@@ -141,6 +144,36 @@ export function createQuestionRoutes({
 					request.body.choice
 				);
 				return reply.status(201).send(saved);
+			}
+		);
+
+		// what the tutor made in the course, for its Study pane
+		api.get(
+			'/courses/:courseId/question-sets',
+			{
+				schema: {
+					params: courseParams,
+					response: { 200: z.array(questionSet) },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				return questions.listSets(userId, request.params.courseId);
+			}
+		);
+
+		// how well the student knows each topic of the course
+		api.get(
+			'/courses/:courseId/mastery',
+			{
+				schema: {
+					params: courseParams,
+					response: { 200: z.array(topicMastery) },
+				},
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				return questions.listMastery(userId, request.params.courseId);
 			}
 		);
 

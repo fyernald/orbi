@@ -12,6 +12,7 @@ import { createProfileService } from './modules/profile/service';
 import { createQuestionRepository } from './modules/questions/repository';
 import { createQuestionService } from './modules/questions/service';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
+import { createExplanationRepository } from './modules/tutor/explanation-repository';
 import { createTutorRepository } from './modules/tutor/repository';
 import { createTutorService } from './modules/tutor/service';
 import type { PdfReader } from './pdf/reader';
@@ -40,10 +41,14 @@ export function createServices({
 	return {
 		courses: createCourseService({ repo: createCourseRepository(db) }),
 		notes: createNoteService({ repo: createNoteRepository(db), pdf }),
-		profiles: createProfileService({ repo: createProfileRepository(db) }),
+		profiles: createProfileService({
+			repo: createProfileRepository(db),
+			models,
+		}),
 		questions: createQuestionService({ repo: createQuestionRepository(db) }),
 		tutor: createTutorService({
 			repo: createTutorRepository(db),
+			explanations: createExplanationRepository(db),
 			models,
 			budget,
 			limiter,

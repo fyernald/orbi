@@ -2,18 +2,28 @@ import type {
 	ChatAnswer,
 	Question,
 	QuestionInput,
+	QuestionSet,
 	QuestionStatus,
 	ReportQuestionInput,
 	ReviewTopic,
 	SessionAnswer,
 	StudySession,
+	TopicMastery,
 } from '@orbi/shared';
+import {
+	createSm2Scheduler,
+	defaultRating,
+	masteryScore,
+	type ReviewScheduler,
+	type ScoredAnswer,
+} from '@orbi/core';
 import { ConflictError, NotFoundError, ValidationError } from '../../errors';
 import type {
 	AnswerKey,
 	PendingQuestion,
 	QuestionContent,
 	QuestionRepository,
+	Reschedule,
 } from './repository';
 
 export interface QuestionService {
@@ -51,6 +61,9 @@ export interface QuestionService {
 		courseId: string,
 		topicId: string
 	): Promise<Question[]>;
+	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
+	// every topic of the course, in course order
+	listMastery(userId: string, courseId: string): Promise<TopicMastery[]>;
 	// a question the student writes is approved at once, so it is studied right away
 	addQuestion(
 		userId: string,
@@ -130,9 +143,19 @@ export function groupByTopic(pending: PendingQuestion[]): ReviewTopic[] {
 
 export function createQuestionService({
 	repo,
+	scheduler = createSm2Scheduler(),
+	now = () => new Date(),
 }: {
 	repo: QuestionRepository;
+	scheduler?: ReviewScheduler;
+	now?: () => Date;
 }): QuestionService {
+	// every answer moves the question's next review, in the chat and in sessions
+	const rescheduleAfter =
+		(correct: boolean): Reschedule =>
+		(previous) =>
+			scheduler.next(previous, defaultRating(correct), now());
+
 	const requireTopic = async (
 		userId: string,
 		courseId: string,
@@ -165,11 +188,12 @@ export function createQuestionService({
 				await repo.findAnswerKey(userId, questionId),
 				choice
 			);
-			const saved = await repo.insertChatAnswer(userId, {
-				questionId,
-				choice,
-				correct: choice === key.correctChoice,
-			});
+			const correct = choice === key.correctChoice;
+			const saved = await repo.insertChatAnswer(
+				userId,
+				{ questionId, choice, correct },
+				rescheduleAfter(correct)
+			);
 			if (!saved) {
 				throw new ConflictError('You already answered this question.');
 			}
@@ -206,7 +230,11 @@ export function createQuestionService({
 				choice,
 				correct: choice === key.correctChoice,
 			};
-			await repo.insertSessionAnswer(userId, saved);
+			await repo.insertSessionAnswer(
+				userId,
+				saved,
+				rescheduleAfter(saved.correct)
+			);
 			return {
 				...saved,
 				correctChoice: key.correctChoice,
@@ -214,9 +242,36 @@ export function createQuestionService({
 			};
 		},
 
+		async listMastery(userId, courseId) {
+			if (!(await repo.courseExists(userId, courseId))) {
+				throw new NotFoundError('Course not found.');
+			}
+			const byTopic = new Map<string, ScoredAnswer[]>();
+			for (const { topicId, answer } of await repo.listTopicAnswers(
+				userId,
+				courseId
+			)) {
+				const answers = byTopic.get(topicId) ?? [];
+				if (answer) answers.push(answer);
+				byTopic.set(topicId, answers);
+			}
+			const at = now();
+			return [...byTopic].map(([topicId, answers]) => ({
+				topicId,
+				score: masteryScore(answers, at),
+			}));
+		},
+
 		async listForTopic(userId, courseId, topicId) {
 			await requireTopic(userId, courseId, topicId);
 			return repo.listForTopic(userId, topicId);
+		},
+
+		async listSets(userId, courseId) {
+			if (!(await repo.courseExists(userId, courseId))) {
+				throw new NotFoundError('Course not found.');
+			}
+			return repo.listSets(userId, courseId);
 		},
 
 		async addQuestion(userId, courseId, topicId, input) {

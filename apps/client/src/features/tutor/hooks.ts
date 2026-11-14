@@ -7,6 +7,8 @@ import {
 	chatThread,
 	FOLLOW_UPS_MAX,
 	followUps,
+	type ChatSummary,
+	type ChatThread,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
@@ -16,7 +18,8 @@ import { fromChatMessage } from './chat';
 import type { OpenChat } from './open-chats';
 import { chatKey, courseChatsKey, followUpsKey, modelsKey } from './query-keys';
 
-// the models the server can use; they change only when the server is set up again
+// the models the server can use, which change only when the server is set up
+// again, and the student's default; saving a new default updates it here
 export function useModels() {
 	return useQuery({
 		queryKey: modelsKey,
@@ -30,6 +33,46 @@ export function useCourseChats(courseId: string) {
 	return useQuery({
 		queryKey: courseChatsKey(courseId),
 		queryFn: () => api.get(`/courses/${courseId}/chats`, z.array(chatSummary)),
+	});
+}
+
+// the new name shows in the list of chats at once
+export function useRenameChat(courseId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ chatId, title }: { chatId: string; title: string }) =>
+			api.patch(`/chats/${chatId}`, chatSummary, { title }),
+		onSuccess: (renamed) => {
+			queryClient.setQueryData<ChatSummary[]>(
+				courseChatsKey(courseId),
+				(chats) =>
+					chats?.map((chat) => (chat.id === renamed.id ? renamed : chat))
+			);
+			queryClient.setQueryData<ChatThread>(
+				chatKey(renamed.id),
+				(thread) => thread && { ...thread, title: renamed.title }
+			);
+		},
+	});
+}
+
+// onDeleted moves the student off the chat before its data goes, so the open chat
+// does not try to load it again
+export function useDeleteChat(
+	courseId: string,
+	onDeleted: (chatId: string) => void
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (chatId: string) => api.delete(`/chats/${chatId}`),
+		onSuccess: (_, chatId) => {
+			onDeleted(chatId);
+			queryClient.setQueryData<ChatSummary[]>(
+				courseChatsKey(courseId),
+				(chats) => chats?.filter((chat) => chat.id !== chatId)
+			);
+			queryClient.removeQueries({ queryKey: chatKey(chatId) });
+		},
 	});
 }
 

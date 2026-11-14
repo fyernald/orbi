@@ -6,6 +6,7 @@ import {
 import { APP_NAME } from '@orbi/shared';
 import type { Auth } from './auth';
 import { registerErrorHandler } from './error-handler';
+import type { ReportError } from './error-reporter';
 import { loggerOptions } from './log';
 import { createAuthRoutes } from './modules/auth/routes';
 import { createRequireUser } from './modules/auth/session';
@@ -32,6 +33,8 @@ export type AppDeps = {
 		tutor: TutorService;
 	};
 	limits?: RateLimits;
+	// unexpected errors also go here (Sentry in production)
+	reportError?: ReportError;
 };
 
 // The API is only reached through a proxy on a private network: nginx through the
@@ -41,7 +44,12 @@ export type AppDeps = {
 // from anywhere else cannot set them. The names are proxy-addr's ranges.
 const TRUSTED_PROXIES = ['loopback', 'uniquelocal'];
 
-export function buildApp({ auth, services, limits = RATE_LIMITS }: AppDeps) {
+export function buildApp({
+	auth,
+	services,
+	limits = RATE_LIMITS,
+	reportError,
+}: AppDeps) {
 	const app = Fastify({
 		logger: process.env.NODE_ENV !== 'test' && loggerOptions,
 		trustProxy: TRUSTED_PROXIES,
@@ -50,7 +58,7 @@ export function buildApp({ auth, services, limits = RATE_LIMITS }: AppDeps) {
 	// route schemas are the shared Zod schemas (app-patterns rule 4)
 	app.setValidatorCompiler(validatorCompiler);
 	app.setSerializerCompiler(serializerCompiler);
-	registerErrorHandler(app);
+	registerErrorHandler(app, reportError);
 	registerRateLimit(app, limits.default);
 
 	const requireUser = createRequireUser(auth);

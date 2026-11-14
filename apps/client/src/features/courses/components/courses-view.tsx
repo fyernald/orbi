@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LoadError } from '@/components/load-error';
 import { apiErrorMessage } from '@/lib/api';
 import { filterCourses, type CourseFilters } from '../course-filters';
 import { orderCourses } from '../course-groups';
@@ -11,7 +12,6 @@ import { CoursesEmpty } from './courses-empty';
 import { CoursesOrbit } from './courses-orbit';
 import { CoursesToolbar } from './courses-toolbar';
 import { ListLoader } from './list-loader';
-import { LoadError } from '@/components/load-error';
 import { NoMatchingCourses } from './no-matching-courses';
 import { UpNextRow } from './up-next-row';
 

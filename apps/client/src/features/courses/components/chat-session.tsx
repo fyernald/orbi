@@ -3,6 +3,7 @@
 import type { Course } from '@orbi/shared';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { LoadError } from '@/components/load-error';
+import { ChatVisibleContext } from '@/features/tutor/chat-visibility';
 import { TutorChat } from '@/features/tutor/components/chat/tutor-chat';
 import type {
 	ComposerDraft,
@@ -93,22 +94,24 @@ export function ChatSession({
 			) : thread.isPending ? (
 				<ChatLoading />
 			) : (
-				<TutorChat
-					chatId={chat.id}
-					courseId={course.id}
-					courseName={course.name}
-					chatTopicId={topicId}
-					initialMessages={thread.messages}
-					initialHasEarlier={thread.hasEarlier}
-					topics={topics}
-					preset={preset}
-					emptyState={emptyState}
-					limitReason={limitReason}
-					onHasMessages={hasMessages}
-					onBusyChange={busy}
-					onSwitchTopic={onSwitchTopic}
-					onAddTopic={onAddTopic}
-				/>
+				<ChatVisibleContext value={visible}>
+					<TutorChat
+						chatId={chat.id}
+						courseId={course.id}
+						courseName={course.name}
+						chatTopicId={topicId}
+						initialMessages={thread.messages}
+						initialHasEarlier={thread.hasEarlier}
+						topics={topics}
+						preset={preset}
+						emptyState={emptyState}
+						limitReason={limitReason}
+						onHasMessages={hasMessages}
+						onBusyChange={busy}
+						onSwitchTopic={onSwitchTopic}
+						onAddTopic={onAddTopic}
+					/>
+				</ChatVisibleContext>
 			)}
 		</div>
 	);

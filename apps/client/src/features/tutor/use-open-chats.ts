@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import { scopeTopicId } from './chat';
 import { useCourseChats } from './hooks';
 import {
+	closeChat,
 	openChat,
 	scopeChatList,
 	startNewChat,
@@ -56,5 +57,15 @@ export function useOpenChats(courseId: string, scopes: string[]) {
 			update(scope, (state) => openChat(state, chatId)),
 		startNew: (scope: string) =>
 			update(scope, (state) => startNewChat(state, crypto.randomUUID())),
+		// after the chat was deleted
+		close: (scope: string, chatId: string) =>
+			update(scope, (state) =>
+				closeChat(
+					state,
+					chatId,
+					scopeChatList(list.data ?? [], scopeTopicId(scope)),
+					crypto.randomUUID()
+				)
+			),
 	};
 }

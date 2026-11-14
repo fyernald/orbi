@@ -1,5 +1,6 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
+import type { ReportError } from './error-reporter';
 import { AppError } from './errors';
 
 export type ErrorBody = { error: { code: string; message: string } };
@@ -19,7 +20,10 @@ const codeByStatus: Record<number, string> = {
 };
 
 // every route answers errors in the same shape; unknown errors never show their details
-export function registerErrorHandler(app: FastifyInstance) {
+export function registerErrorHandler(
+	app: FastifyInstance,
+	reportError: ReportError = () => {}
+) {
 	app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
 		if (error instanceof AppError) {
 			return reply
@@ -47,6 +51,11 @@ export function registerErrorHandler(app: FastifyInstance) {
 		}
 
 		request.log.error(error);
+		// the route pattern, so a report holds no ids
+		reportError(
+			error,
+			`${request.method} ${request.routeOptions.url ?? 'unknown route'}`
+		);
 		return reply
 			.status(500)
 			.send(

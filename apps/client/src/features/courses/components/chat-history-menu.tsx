@@ -1,14 +1,16 @@
 'use client';
 
 import type { ChatSummary } from '@orbi/shared';
-import { History } from 'lucide-react';
+import { History, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -25,14 +27,25 @@ type ChatHistoryMenuProps = {
 	// the topic's name, or "Whole course"
 	scopeName: string;
 	onOpen: (chatId: string) => void;
+	// the open chat can be renamed or deleted once it is saved
+	canEditCurrent: boolean;
+	// a chat with a reply still running cannot be deleted
+	canDeleteCurrent: boolean;
+	onRename: () => void;
+	onDelete: () => void;
 };
 
-// the earlier chats of the open topic; picking one opens it, and the open one is ticked
+// the earlier chats of the open topic; picking one opens it, and the open one is ticked.
+// Below them, the open chat can be renamed or deleted
 export function ChatHistoryMenu({
 	chats,
 	currentId,
 	scopeName,
 	onOpen,
+	canEditCurrent,
+	canDeleteCurrent,
+	onRename,
+	onDelete,
 }: ChatHistoryMenuProps) {
 	const now = new Date();
 
@@ -75,6 +88,26 @@ export function ChatHistoryMenu({
 						))}
 					</DropdownMenuRadioGroup>
 				</MenuScrollArea>
+				{canEditCurrent && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onSelect={onRename} className="rounded-lg px-2">
+							<Pencil />
+							Rename this chat
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							variant="destructive"
+							disabled={!canDeleteCurrent}
+							onSelect={onDelete}
+							className="rounded-lg px-2"
+						>
+							<Trash2 />
+							{canDeleteCurrent
+								? 'Delete this chat'
+								: 'Delete this chat (Orbi is replying)'}
+						</DropdownMenuItem>
+					</>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

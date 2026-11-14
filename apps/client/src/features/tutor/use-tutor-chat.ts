@@ -13,6 +13,7 @@ import {
 	type ChatContext,
 	type TutorUIMessage,
 } from './chat';
+import { questionSetsKey } from '@/features/questions/set-hooks';
 import { chatKey, courseChatsKey } from './query-keys';
 
 // The chat with the tutor. Only the newest message goes to the server, which keeps
@@ -75,6 +76,10 @@ export function useTutorChat({
 				queryKey: courseChatsKey(courseId),
 			});
 			void queryClient.invalidateQueries({ queryKey: chatKey(chatId) });
+			// a reply can make a question set for the Study pane
+			void queryClient.invalidateQueries({
+				queryKey: questionSetsKey(courseId),
+			});
 		},
 		onError: (error) => {
 			if (!isRejectedRequest(error)) return;

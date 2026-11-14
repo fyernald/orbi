@@ -231,6 +231,7 @@ describe('topics', () => {
 			name: 'Limits',
 			position: 0,
 			noteCount: 0,
+			planDoneOn: null,
 		});
 
 		const list = await send(ada, 'GET', url);
@@ -345,6 +346,7 @@ describe('renaming', () => {
 			name: 'DNA and RNA',
 			position: 0,
 			noteCount: 1,
+			planDoneOn: null,
 		});
 	});
 
@@ -380,6 +382,59 @@ describe('renaming', () => {
 
 		expect(response.statusCode).toBe(404);
 		expect(response.json().error.message).toBe('Topic not found.');
+	});
+});
+
+describe('study plan', () => {
+	it('sets and clears the exam date of a course', async () => {
+		const { courseId } = await createFilledCourse(ada);
+
+		const set = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			examDate: '2027-01-15',
+		});
+		const cleared = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			examDate: null,
+		});
+
+		expect(set.statusCode).toBe(200);
+		expect(set.json()).toMatchObject({
+			examDate: '2027-01-15',
+			name: 'Genetics',
+		});
+		expect(cleared.json().examDate).toBeNull();
+	});
+
+	it('ticks a topic off and back on', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+		const url = `/api/courses/${courseId}/topics/${topicId}`;
+
+		const done = await send(ada, 'PATCH', url, { planDoneOn: '2026-11-08' });
+		const topics = (
+			await send(ada, 'GET', `/api/courses/${courseId}/topics`)
+		).json();
+		const undone = await send(ada, 'PATCH', url, { planDoneOn: null });
+
+		expect(done.json()).toMatchObject({
+			name: 'DNA',
+			planDoneOn: '2026-11-08',
+		});
+		expect(topics[0].planDoneOn).toBe('2026-11-08');
+		expect(undone.json().planDoneOn).toBeNull();
+	});
+
+	it('rejects a change with nothing in it', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+
+		const course = await send(ada, 'PATCH', `/api/courses/${courseId}`, {});
+		const topic = await send(
+			ada,
+			'PATCH',
+			`/api/courses/${courseId}/topics/${topicId}`,
+			{}
+		);
+
+		expect(course.statusCode).toBe(400);
+		expect(topic.statusCode).toBe(400);
 	});
 });
 

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { APICallError } from 'ai';
+import { NOTE_CONTENT_MAX_LENGTH } from '@orbi/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
@@ -36,7 +37,7 @@ beforeEach(() => {
 
 const send = (
 	cookie: string,
-	method: 'GET' | 'POST',
+	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	url: string,
 	payload?: object
 ) => app.inject({ method, url, headers: { cookie }, payload });
@@ -158,6 +159,42 @@ describe('tutor chat', () => {
 			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
 		).json();
 		expect(chats.map((chat: { id: string }) => chat.id)).toEqual([chatId]);
+	});
+
+	it('saves how many of the notes the reply read when some did not fit', async () => {
+		const context = await createTopic(ada, 'An old short note.');
+		const notesUrl = `/api/courses/${context.courseId}/topics/${context.topicId}/notes`;
+		for (const title of ['Long 1', 'Long 2']) {
+			await send(ada, 'POST', notesUrl, {
+				title,
+				content: 'x'.repeat(NOTE_CONTENT_MAX_LENGTH),
+			});
+		}
+		const chatId = randomUUID();
+		ai.script({ text: 'Here is what the notes say.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Sum it up.') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 2,
+			notesTotal: 3,
+		});
+	});
+
+	it('saves that every note was read when they all fit', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Anaphase?') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 1,
+			notesTotal: 1,
+			notesCut: false,
+		});
 	});
 
 	it("streams the model's thinking with Think on and saves how long it took", async () => {
@@ -604,6 +641,281 @@ describe('long chats', () => {
 	});
 });
 
+describe('diagrams', () => {
+	const diagram = (
+		title: string,
+		mermaid = 'flowchart TD\n  A[Prophase] --> B[Metaphase]'
+	) => ({
+		tool: 'createDiagram',
+		input: {
+			title,
+			kind: 'flowchart',
+			mermaid,
+			description: 'The phases of mitosis in order.',
+		},
+	});
+
+	it('draws a diagram in the reply and keeps follow-up questions for it', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(diagram('Phases of mitosis'), {
+			text: 'Prophase comes before metaphase.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Draw the phases of mitosis'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const reply = thread.messages[1];
+		const drawn = reply.parts.find(
+			(part: { type: string }) => part.type === 'tool-createDiagram'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.title).toBe('Phases of mitosis');
+
+		// a visual is part of an explanation, so the reply still gets follow-ups
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: { questions: ['What happens in anaphase?'] },
+		});
+		const followUps = await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+		expect(followUps.json().questions).toEqual(['What happens in anaphase?']);
+	});
+
+	it('gives the AI another try when its Mermaid breaks the rules', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			diagram('Phases', '```mermaid\nflowchart TD\n  A --> B\n```'),
+			diagram('Phases'),
+			{ text: 'Here they are.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw the phases'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		// the model reads what to fix; the student only sees that it is being redone
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain(
+			'without code fences'
+		);
+	});
+
+	it('stops a reply at two visuals', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(diagram('One'), diagram('Two'), diagram('Three'), {
+			text: 'That is enough diagrams.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+		expect(JSON.stringify(ai.calls[3]!.prompt)).toContain(
+			'already shows 2 visuals'
+		);
+	});
+});
+
+describe('charts', () => {
+	const plot = (expression: string) => ({
+		tool: 'createChart',
+		input: {
+			title: 'The normal curve',
+			type: 'function',
+			xLabel: 'z',
+			yLabel: 'Density',
+			series: [{ name: 'Normal', expression }],
+			xMin: -3,
+			xMax: 3,
+			description: 'The bell-shaped normal curve from -3 to 3.',
+		},
+	});
+
+	it('draws a chart in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(plot('exp(-x^2/2)/sqrt(2*pi)'), {
+			text: 'Most values sit near 0.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const drawn = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createChart'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.series[0].expression).toBe('exp(-x^2/2)/sqrt(2*pi)');
+	});
+
+	it('gives the AI another try when a formula cannot be read', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(plot('exp(-x²/2)'), plot('exp(-x^2/2)'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('cannot be used');
+	});
+
+	it('counts charts and diagrams together toward the visual limit', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			plot('sin(x)'),
+			plot('cos(x)'),
+			{
+				tool: 'createDiagram',
+				input: {
+					title: 'Three',
+					kind: 'flowchart',
+					mermaid: 'flowchart TD\n  A --> B',
+					description: 'A third visual.',
+				},
+			},
+			{ text: 'Two is enough.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+	});
+});
+
+describe('interactive tools', () => {
+	const zScore = (shadeTo: string) => ({
+		tool: 'createInteractive',
+		input: {
+			title: 'Area under the normal curve',
+			controls: [
+				{
+					name: 'z',
+					label: 'z-score',
+					type: 'slider',
+					min: -3,
+					max: 3,
+					step: 0.1,
+					value: 1,
+				},
+			],
+			values: [{ name: 'p', label: 'P(Z ≤ z)', expression: 'normcdf(z)' }],
+			chart: {
+				xLabel: 'z',
+				yLabel: 'Density',
+				xMin: -4,
+				xMax: 4,
+				curves: [{ name: 'Normal', expression: 'normpdf(x)', shadeTo }],
+			},
+			description: 'The normal curve shaded up to z.',
+		},
+	});
+
+	it('builds a tool in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(zScore('z'), { text: 'Drag z and watch the area grow.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me what a z-score means'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createInteractive'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.values[0].expression).toBe('normcdf(z)');
+	});
+
+	it('gives the AI another try when a formula uses a name it does not have', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(zScore('x'), zScore('z'), { text: 'Here it is.' });
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me a z-score'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('Unknown name');
+	});
+});
+
+describe('mini-apps', () => {
+	const sortSteps = (js: string) => ({
+		tool: 'createMiniApp',
+		input: {
+			title: 'Bubble sort step by step',
+			html: '<button id="step">Next step</button><div id="bars"></div>',
+			js,
+			description: 'Bars that swap places one step at a time.',
+		},
+	});
+
+	it('builds a mini-app in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(sortSteps('let step = 0;'), { text: 'Press Next step.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createMiniApp'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.js).toBe('let step = 0;');
+	});
+
+	it('gives the AI another try when the code does not parse', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(sortSteps('let step = ;'), sortSteps('let step = 0;'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('syntax error');
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -621,6 +933,10 @@ describe('the whole-course chat', () => {
 		// practice questions need a topic, so the model is not offered the tool
 		expect(ai.calls[0]!.tools?.map((tool) => tool.name)).toEqual([
 			'askStudent',
+			'createDiagram',
+			'createChart',
+			'createInteractive',
+			'createMiniApp',
 		]);
 	});
 
@@ -1423,5 +1739,101 @@ describe('attached PDFs', () => {
 		const prompt = JSON.stringify(ai.calls[0]!.prompt);
 		expect(prompt).toContain('attached \\"Lecture 3.pdf\\"');
 		expect(prompt).toContain('Solve 2x + 4 = 10');
+	});
+});
+
+describe('renaming and deleting a chat', () => {
+	// a topic with one saved chat
+	async function savedChat(cookie: string) {
+		const context = await createTopic(cookie, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+		await ask(cookie, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+		return { ...context, chatId };
+	}
+
+	it('renames a chat without moving it in the list', async () => {
+		const { courseId, chatId } = await savedChat(ada);
+		const before = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '  Anaphase basics  ',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			id: chatId,
+			title: 'Anaphase basics',
+			updatedAt: before.updatedAt,
+		});
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${courseId}/chats`)
+		).json();
+		expect(chats[0].title).toBe('Anaphase basics');
+	});
+
+	it('refuses an empty name', async () => {
+		const { chatId } = await savedChat(ada);
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '   ',
+		});
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('deletes a chat with its messages, and keeps the questions it made', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(
+			{ tool: 'createQuestions', input: { questions: fiveQuestions } },
+			{ text: 'Here are 5 questions.' }
+		);
+		await ask(ada, chatId, context, {
+			action: 'questions',
+			message: userMessage('Make questions from my notes'),
+		});
+
+		const response = await send(ada, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(response.statusCode).toBe(204);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
+		);
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
+		).json();
+		expect(chats).toEqual([]);
+		const questions = (
+			await send(
+				ada,
+				'GET',
+				`/api/courses/${context.courseId}/topics/${context.topicId}/questions`
+			)
+		).json();
+		expect(questions).toHaveLength(5);
+	});
+
+	it("answers 404 for another user's chat, and for one already deleted", async () => {
+		const { chatId } = await savedChat(ada);
+
+		const rename = await send(grace, 'PATCH', `/api/chats/${chatId}`, {
+			title: 'Mine now',
+		});
+		const remove = await send(grace, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(rename.statusCode).toBe(404);
+		expect(rename.json().error.message).toBe('Chat not found.');
+		expect(remove.statusCode).toBe(404);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			200
+		);
+
+		await send(ada, 'DELETE', `/api/chats/${chatId}`);
+		expect((await send(ada, 'DELETE', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
+		);
 	});
 });
