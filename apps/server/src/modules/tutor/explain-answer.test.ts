@@ -1,6 +1,5 @@
 import { APICallError } from 'ai';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
 import type { UsageLine } from '../../ai/usage';
 import { createMemoryMailer } from '../../mail/testing';
@@ -214,17 +213,23 @@ describe('when the AI fails', () => {
 	});
 });
 
-describe('explanations and the daily AI budget', () => {
+describe('explanations and the AI usage limits', () => {
 	const models = createScriptedModels();
 	let budgeted: TestApp;
 	let cookie: string;
 
-	// one mock model call uses 15 tokens, so the first one uses up a budget of 10
+	// one mock model call uses 15 tokens of Gemini Flash (60 credits), so the first
+	// one goes past the hourly limit of 50 and its extra allowance
 	beforeAll(async () => {
 		budgeted = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 			models: models.registry,
-			budget: createTokenBudget({ dailyTokens: 10 }),
+			usageLimits: {
+				hourCredits: 50,
+				weekCredits: 10_000,
+				gracePercent: 10,
+				totalCredits: 1_000_000,
+			},
 		});
 		cookie = await signUpTestUser(budgeted, 'barbara@test.dev');
 	});
@@ -233,7 +238,7 @@ describe('explanations and the daily AI budget', () => {
 		await budgeted.close();
 	});
 
-	it('asks no model once the budget is used up, but saved ones still come back', async () => {
+	it('asks no model once the limit is used up, but saved ones still come back', async () => {
 		const questionId = await createQuestion(cookie, budgeted);
 		models.script({ text: 'B is too late.' });
 		expect((await explain(cookie, questionId, 1, budgeted)).statusCode).toBe(
@@ -242,6 +247,7 @@ describe('explanations and the daily AI budget', () => {
 
 		const over = await explain(cookie, questionId, 2, budgeted);
 		expect(over.statusCode).toBe(429);
+		expect(over.json().error.code).toBe('usage_limit');
 
 		const saved = await explain(cookie, questionId, 1, budgeted);
 		expect(saved.json().text).toBe('B is too late.');

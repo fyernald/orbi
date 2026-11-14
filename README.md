@@ -208,7 +208,10 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `GEMINI_API_KEY`: Google Gemini API key (server only)
 - `ANTHROPIC_API_KEY`: Anthropic API key (server only, optional). Claude models show in the model menu only when it is set
 - `DEEPSEEK_API_KEY`: DeepSeek API key (server only, optional). DeepSeek models show in the model menu only when it is set
-- `AI_DAILY_TOKENS_PER_STUDENT`: how many AI tokens each student may use per day (default `1000000`). When they are used up, the tutor says so until the student's midnight
+- `AI_ENABLED_MODELS`: the only models students can pick, for example `deepseek-flash,deepseek-pro,claude-haiku`. Empty offers every model whose provider has a key
+- `AI_HOURLY_CREDITS`, `AI_WEEKLY_CREDITS`: how much AI each student may use per hour and per week, in credits (a token times the model's weight; defaults `300000` and `1500000`). Each window starts with the student's first AI message
+- `AI_GRACE_PERCENT`: the extra allowance over each limit, so a student can finish a thought (default `10`)
+- `AI_TOTAL_CREDITS`: the AI budget of every student together (default `80000000`, about $20). When it is used up, the AI stops for everyone
 
 ## Deployment
 

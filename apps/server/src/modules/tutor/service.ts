@@ -13,11 +13,6 @@ import {
 } from '@orbi/shared';
 import { generateText } from 'ai';
 import {
-	createTokenBudget,
-	DAILY_TOKENS_DEFAULT,
-	type TokenBudget,
-} from '../../ai/budget';
-import {
 	MODEL_NOT_IN_LIST,
 	type ModelOptions,
 	type ModelRegistry,
@@ -30,6 +25,7 @@ import {
 	TooManyRequestsError,
 	ValidationError,
 } from '../../errors';
+import type { UsageService } from '../usage/service';
 import { actionRules } from './actions';
 import { createAnswerExplainer } from './answer-explainer';
 import type { ExplanationRepository } from './explanation-repository';
@@ -128,8 +124,8 @@ export function createTutorService({
 	repo,
 	explanations,
 	models,
+	usage,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
-	budget = createTokenBudget({ dailyTokens: DAILY_TOKENS_DEFAULT }),
 	logError = (error) => console.error(error),
 	logUsage = () => {},
 	now = () => new Date(),
@@ -137,8 +133,9 @@ export function createTutorService({
 	repo: TutorRepository;
 	explanations: ExplanationRepository;
 	models: ModelRegistry;
+	// checks and counts the AI usage limits around every model call
+	usage: Pick<UsageService, 'requireRoom' | 'spend'>;
 	limiter?: ReplyLimiter;
-	budget?: TokenBudget;
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
 	now?: () => Date;
@@ -172,19 +169,7 @@ export function createTutorService({
 		return chat;
 	}
 
-	// A student whose daily AI budget is used up gets no new model call. Gives the
-	// student's time zone, since their day decides when the budget starts again.
-	async function requireBudget(userId: string) {
-		const timeZone = await repo.findTimeZone(userId);
-		if (!budget.hasLeft(userId, timeZone)) {
-			throw new TooManyRequestsError(
-				"You have used today's AI budget. It resets at midnight."
-			);
-		}
-		return timeZone;
-	}
-
-	const trackStep = createStepTracker({ logUsage, budget });
+	const trackStep = createStepTracker({ logUsage, usage, logError });
 	const startReply = createReplyStarter({ repo, now, logError, trackStep });
 	const explainAnswer = createAnswerExplainer({
 		explanations,
@@ -192,7 +177,7 @@ export function createTutorService({
 		// a study session has no model picker, and a few sentences need no thinking
 		resolveDefaultModel: () =>
 			resolveModel(models.list().defaultModelId ?? '', { thinking: false }),
-		requireBudget,
+		requireRoom: usage.requireRoom,
 		takePlace,
 		trackStep,
 		logError,
@@ -246,7 +231,8 @@ export function createTutorService({
 			const resolved = resolveModel(input.modelId, {
 				thinking: input.thinking,
 			});
-			const timeZone = await requireBudget(userId);
+			// a student over a limit gets no new model call
+			await usage.requireRoom(userId);
 
 			const course = await repo.findCourse(userId, input.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -291,7 +277,6 @@ export function createTutorService({
 					topic,
 					resolved,
 					rule,
-					timeZone,
 					abortSignal,
 					release,
 				});
@@ -320,7 +305,7 @@ export function createTutorService({
 			const resolved = resolveModel(reply.metadata?.modelId ?? '', {
 				thinking: false,
 			});
-			const timeZone = await requireBudget(userId);
+			await usage.requireRoom(userId);
 
 			const course = await repo.findCourse(userId, chat.courseId);
 			if (!course) throw new NotFoundError('Course not found.');
@@ -363,7 +348,6 @@ export function createTutorService({
 					maxRetries: 1,
 					onStepEnd: trackStep({
 						userId,
-						timeZone,
 						modelId: resolved.entry.id,
 						action: 'followUps',
 					}),

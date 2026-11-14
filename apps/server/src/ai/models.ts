@@ -45,14 +45,24 @@ export function createModelRegistry({
 	providers,
 	catalog = MODEL_CATALOG,
 	defaultModelIds = DEFAULT_MODEL_IDS,
+	enabledModelIds,
 }: {
 	providers: Partial<Record<AiProvider, ModelFactory>>;
 	catalog?: CatalogModel[];
 	defaultModelIds?: string[];
+	// AI_ENABLED_MODELS: only these are offered, even when other keys are set
+	enabledModelIds?: string[];
 }): ModelRegistry {
-	const available = catalog.filter((entry) => providers[entry.provider]);
-	const toPublic = ({ providerModelId: _, ...entry }: CatalogModel): AiModel =>
-		entry;
+	const available = catalog.filter(
+		(entry) =>
+			providers[entry.provider] &&
+			(!enabledModelIds || enabledModelIds.includes(entry.id))
+	);
+	const toPublic = ({
+		providerModelId: _,
+		creditWeight: __,
+		...entry
+	}: CatalogModel): AiModel => entry;
 	const fallbackId =
 		defaultModelIds.find((id) => available.some((entry) => entry.id === id)) ??
 		available[0]?.id ??

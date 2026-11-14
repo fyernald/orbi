@@ -88,7 +88,6 @@ export function createReplyStarter({
 		topic,
 		resolved,
 		rule,
-		timeZone,
 		abortSignal,
 		release,
 	}: {
@@ -103,7 +102,6 @@ export function createReplyStarter({
 			(typeof actionRules)[keyof typeof actionRules],
 			{ available: true }
 		>;
-		timeZone: string | null;
 		abortSignal: AbortSignal;
 		release: () => void;
 	}): Promise<TutorStream> {
@@ -244,7 +242,6 @@ export function createReplyStarter({
 			maxRetries: 1,
 			onStepEnd: trackStep({
 				userId,
-				timeZone,
 				modelId: resolved.entry.id,
 				action: input.action,
 			}),

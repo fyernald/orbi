@@ -21,6 +21,8 @@ import { createQuestionRoutes } from './modules/questions/routes';
 import type { QuestionService } from './modules/questions/service';
 import { createTutorRoutes } from './modules/tutor/routes';
 import type { TutorService } from './modules/tutor/service';
+import { createUsageRoutes } from './modules/usage/routes';
+import type { UsageService } from './modules/usage/service';
 import { RATE_LIMITS, registerRateLimit, type RateLimits } from './rate-limit';
 
 export type AppDeps = {
@@ -31,6 +33,7 @@ export type AppDeps = {
 		profiles: ProfileService;
 		questions: QuestionService;
 		tutor: TutorService;
+		usage: UsageService;
 	};
 	limits?: RateLimits;
 	// unexpected errors also go here (Sentry in production)
@@ -92,6 +95,7 @@ export function buildApp({
 			api.register(
 				createTutorRoutes({ tutor: services.tutor, requireUser, limits })
 			);
+			api.register(createUsageRoutes({ usage: services.usage, requireUser }));
 		},
 		{ prefix: '/api' }
 	);
