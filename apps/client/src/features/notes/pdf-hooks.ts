@@ -6,10 +6,12 @@ import {
 	savedPdf,
 	type KeyPointsInput,
 	type Note,
+	type SavedPdf,
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { pdfsKey } from '@/features/courses/query-keys';
+import { usageKey } from '@/features/usage/hooks';
 import { api, ApiError, type UploadProgress } from '@/lib/api';
 import { notesAdded, notesPath } from './hooks';
 
@@ -78,25 +80,34 @@ export function useWriteKeyPoints(courseId: string, topicId: string) {
 	): Promise<Note[]> => {
 		let notes: Note[] | undefined;
 		let failure: string | undefined;
-		await api.stream(
-			`${notesPath(courseId, topicId)}/key-points`,
-			keyPointsEvent,
-			{
-				body: input,
-				signal,
-				onEvent: (event) => {
-					if (event.type === 'progress') onProgress(event.done, event.total);
-					else if (event.type === 'done') notes = event.notes;
-					else failure = event.message;
-				},
-			}
-		);
-		void queryClient.invalidateQueries({
-			queryKey: pdfsKey(courseId, topicId),
-		});
+		try {
+			await api.stream(
+				`${notesPath(courseId, topicId)}/key-points`,
+				keyPointsEvent,
+				{
+					body: input,
+					signal,
+					onEvent: (event) => {
+						if (event.type === 'progress') onProgress(event.done, event.total);
+						else if (event.type === 'done') notes = event.notes;
+						else failure = event.message;
+					},
+				}
+			);
+		} finally {
+			// also after a cancel: the parts written so far count against the limits
+			void queryClient.invalidateQueries({ queryKey: usageKey });
+			void queryClient.invalidateQueries({
+				queryKey: pdfsKey(courseId, topicId),
+			});
+		}
 		if (failure) throw new ApiError(503, 'key_points_failed', failure);
 		// the stream ended without its last event: the connection was cut
 		if (!notes) throw new ApiError(503, 'key_points_cut', CUT_OFF);
+		// the PDF has notes now, so it leaves the list at once
+		queryClient.setQueryData<SavedPdf[]>(pdfsKey(courseId, topicId), (pdfs) =>
+			pdfs?.filter(({ fileHash }) => fileHash !== input.fileHash)
+		);
 		await notesAdded(queryClient, courseId, topicId, notes);
 		return notes;
 	};
