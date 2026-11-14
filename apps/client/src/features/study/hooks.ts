@@ -2,6 +2,7 @@
 
 import { answerExplanation, sessionAnswer, studySession } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { masteryKey } from '@/features/courses/query-keys';
 import { todayKey } from '@/features/today/hooks';
 import { api } from '@/lib/api';
 
@@ -38,6 +39,7 @@ export function useAnswerInSession() {
 		mutationFn: ({ id, choice }: { id: string; choice: number }) =>
 			api.post(`/questions/${id}/session-answer`, sessionAnswer, { choice }),
 		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: masteryKey });
 			void queryClient.invalidateQueries({ queryKey: todayKey });
 		},
 	});

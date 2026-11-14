@@ -41,16 +41,25 @@ export function valueExtent(
 		: undefined;
 }
 
-// The value axis of a bar, line or area chart or a histogram: from 0 (bars start
-// there) to past the highest value, in round steps. Histogram counts step by whole
-// numbers.
+type ValueScaleOptions = {
+	// histogram counts step by whole numbers
+	wholeNumbers?: boolean;
+	// bars and areas show size by their length, so they start at 0
+	fromZero?: boolean;
+};
+
+// The value axis of a bar, line or area chart or a histogram, in round steps: from
+// 0 to past the highest value, or for lines around the values, so lines close
+// together (heights of 155 to 170 cm) do not lie flat on top of each other.
 export function valueScale(
 	rows: ChartRow[],
 	seriesCount: number,
-	wholeNumbers = false
+	{ wholeNumbers = false, fromZero = true }: ValueScaleOptions = {}
 ): Scale {
 	const [low, high] = valueExtent(rows, seriesCount) ?? [0, 0];
-	return niceScale(Math.min(0, low), Math.max(0, high), { wholeNumbers });
+	return fromZero
+		? niceScale(Math.min(0, low), Math.max(0, high), { wholeNumbers })
+		: niceScale(low, high, { wholeNumbers });
 }
 
 // Both axes of a scatter plot, around its points in round steps, with about

@@ -4,6 +4,7 @@ import { miniAppCode, type CreateMiniAppInput } from '@orbi/shared';
 import { AppWindow, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { sandboxOrigin, sandboxUrl } from '@/lib/sandbox';
+import { useChatVisible } from '../../../chat-visibility';
 import { miniAppSource } from '../../../visuals/mini-app-source';
 import { streamedTitle } from '../../../visuals/streamed-title';
 import type { ToolViewProps } from '../tool-views';
@@ -72,8 +73,10 @@ type MiniAppProps = {
 };
 
 // The app in its card. One copy runs at a time: opening full screen starts it
-// there, and closing full screen starts it again in the chat.
+// there, and closing full screen starts it again in the chat. It stops while its
+// chat is hidden and starts again when the chat is shown.
 function MiniApp({ tool, sandbox, onRetry }: MiniAppProps) {
+	const visible = useChatVisible();
 	const app = useMemo(() => miniAppCode(tool), [tool]);
 	const [run, setRun] = useState(0);
 	const [fullScreen, setFullScreen] = useState(false);
@@ -116,7 +119,7 @@ function MiniApp({ tool, sandbox, onRetry }: MiniAppProps) {
 						Running in full screen.
 					</p>
 				) : (
-					frame(`chat-${run}`)
+					visible && frame(`chat-${run}`)
 				)}
 				<p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
 					<ShieldCheck aria-hidden className="size-3.5 shrink-0" />

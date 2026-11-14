@@ -12,9 +12,10 @@ import {
 } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { masteryKey } from '@/features/courses/query-keys';
+import { todayKey } from '@/features/today/hooks';
 import { api, ApiError } from '@/lib/api';
 import { approveTopic, pendingCount, replaceQuestion } from './review-cache';
-import { todayKey } from '@/features/today/hooks';
 import { allQuestionSetsKey } from './set-hooks';
 
 export const reviewKey = ['questions', 'review'] as const;
@@ -47,6 +48,8 @@ export function useSetQuestionStatus() {
 				(groups) => groups && replaceQuestion(groups, updated)
 			);
 			void queryClient.invalidateQueries({ queryKey: allQuestionSetsKey });
+			// answers to a rejected question stop counting toward the score
+			void queryClient.invalidateQueries({ queryKey: masteryKey });
 		},
 	});
 }
@@ -81,6 +84,7 @@ export function useReportQuestion() {
 				(groups) => groups && replaceQuestion(groups, rejected)
 			);
 			void queryClient.invalidateQueries({ queryKey: allQuestionSetsKey });
+			void queryClient.invalidateQueries({ queryKey: masteryKey });
 		},
 	});
 }
@@ -117,6 +121,7 @@ export function useAnswerInChat(questionIds: string[]) {
 				),
 				saved,
 			]);
+			void queryClient.invalidateQueries({ queryKey: masteryKey });
 			// an answered question is scheduled, so it leaves today's study list
 			void queryClient.invalidateQueries({ queryKey: todayKey });
 		},

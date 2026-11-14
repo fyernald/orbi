@@ -48,9 +48,19 @@ describe('valueScale', () => {
 		];
 
 		expect(valueScale(rows, 1).ticks).toEqual([0, 10, 20, 30, 40]);
-		expect(valueScale([{ label: 'A', s0: 2 }], 1, true).ticks).toEqual([
-			0, 1, 2,
-		]);
+		expect(
+			valueScale([{ label: 'A', s0: 2 }], 1, { wholeNumbers: true }).ticks
+		).toEqual([0, 1, 2]);
+	});
+
+	it('fits lines around their values', () => {
+		const rows = [
+			{ label: '2023', s0: 158, s1: 162 },
+			{ label: '2026', s0: 166, s1: 171 },
+		];
+
+		expect(valueScale(rows, 2, { fromZero: false }).domain).toEqual([155, 175]);
+		expect(valueScale(rows, 2).domain[0]).toBe(0);
 	});
 });
 

@@ -93,7 +93,11 @@ export function VisualSkeleton({
 				) : (
 					<div className="my-1 h-3 w-40 rounded-full bg-muted" />
 				)}
-				<Thinking label={makingLines[kind]} className="text-xs" />
+				<Thinking
+					label={makingLines[kind]}
+					slowLabel="Still working. A big visual takes a little longer."
+					className="text-xs"
+				/>
 			</div>
 			<div aria-hidden className="p-6 motion-safe:animate-pulse">
 				<Shape />
