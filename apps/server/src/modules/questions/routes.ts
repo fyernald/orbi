@@ -12,6 +12,8 @@ import {
 	reviewTopic,
 	sessionAnswer,
 	studySession,
+	studySessionQuery,
+	todayPlan,
 	topicMastery,
 	topicParams,
 	topicQuestionParams,
@@ -118,12 +120,27 @@ export function createQuestionRoutes({
 		// the approved questions of a topic, to answer one by one
 		api.get(
 			'/courses/:courseId/topics/:topicId/study',
-			{ schema: { params: topicParams, response: { 200: studySession } } },
+			{
+				schema: {
+					params: topicParams,
+					querystring: studySessionQuery,
+					response: { 200: studySession },
+				},
+			},
 			async (request) => {
 				const userId = await requireUser(request);
 				const { courseId, topicId } = request.params;
-				return questions.startSession(userId, courseId, topicId);
+				return questions.startSession(userId, courseId, topicId, {
+					today: request.query.today,
+				});
 			}
+		);
+
+		// what to study today from every course, for Home
+		api.get(
+			'/today',
+			{ schema: { response: { 200: todayPlan } } },
+			async (request) => questions.today(await requireUser(request))
 		);
 
 		api.post(

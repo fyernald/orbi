@@ -17,6 +17,7 @@ export * from './notes';
 export * from './profile';
 export * from './questions';
 export * from './statistics';
+export * from './today';
 export * from './tutor';
 export * from './tutor-tools';
 export * from './visuals';

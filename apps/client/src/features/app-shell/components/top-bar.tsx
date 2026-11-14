@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { routes } from '@/lib/routes';
 import { PageTitle } from './page-title';
 import { PalettePicker } from './palette-picker';
+import { ReviewButton } from './review-button';
 import { ThemeSwitch } from './theme-switch';
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
@@ -26,8 +27,8 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			<div className="ml-auto flex items-center gap-2">
 				<PalettePicker />
 				<ThemeSwitch />
-				{/* StreakLink (US-14) and ReviewButton (US-10) go here once the API
-				sends the student's real streak and due count */}
+				{/* StreakLink (US-14) goes here once the API sends the real streak */}
+				<ReviewButton />
 			</div>
 		</header>
 	);

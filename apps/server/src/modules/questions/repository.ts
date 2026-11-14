@@ -12,17 +12,23 @@ import {
 	and,
 	asc,
 	count,
+	countDistinct,
 	desc,
 	eq,
+	gte,
 	inArray,
 	isNotNull,
+	isNull,
+	lt,
 	min,
 	ne,
+	sql,
 } from 'drizzle-orm';
 import type { Db } from '../../db';
 import {
 	answer,
 	course,
+	profile,
 	question,
 	questionReport,
 	reviewItem,
@@ -48,9 +54,24 @@ export interface QuestionRepository {
 	// the sets the tutor made in the course, newest first
 	listSets(userId: string, courseId: string): Promise<QuestionSet[]>;
 	listPending(userId: string): Promise<PendingQuestion[]>;
-	// every topic of the course in course order, with the answers its questions got;
-	// a topic with no answers comes once, with answer null
-	listTopicAnswers(userId: string, courseId: string): Promise<TopicAnswer[]>;
+	// every topic of the course (or of every course) in course order, with the
+	// answers its questions got; a topic with no answers comes once, with answer null
+	listTopicAnswers(userId: string, courseId?: string): Promise<TopicAnswer[]>;
+	// every topic of the student with its course, and how many questions it has
+	listTopicsOfCourses(userId: string): Promise<TopicOfCourse[]>;
+	findTimeZone(userId: string): Promise<string | null>;
+	// approved questions due before the given time, the longest overdue first
+	listDue(userId: string, before: Date): Promise<QueuedQuestion[]>;
+	// approved questions never answered, oldest first
+	listUnscheduled(userId: string, limit: number): Promise<QueuedQuestion[]>;
+	// questions answered for the first time since then
+	countScheduledSince(userId: string, since: Date): Promise<number>;
+	// when approved questions come back, from one time until another
+	listDueDates(userId: string, from: Date, until: Date): Promise<Date[]>;
+	countAnswersSince(
+		userId: string,
+		since: Date
+	): Promise<{ answered: number; correct: number; questions: number }>;
 	// undefined when the user has no such question
 	setStatus(
 		userId: string,
@@ -123,6 +144,18 @@ export type QuestionContent = {
 };
 
 export type TopicAnswer = { topicId: string; answer: ScoredAnswer | null };
+
+export type TopicOfCourse = {
+	courseId: string;
+	courseName: string;
+	courseColor: CourseColor;
+	topicId: string;
+	topicName: string;
+	// not counting rejected questions
+	questionCount: number;
+};
+
+export type QueuedQuestion = { questionId: string; topicId: string };
 
 // where the question stands after the answer, from where it stood before;
 // previous is undefined for a question that was never answered
@@ -283,7 +316,12 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 						eq(answer.questionId, question.id)
 					)
 				)
-				.where(and(eq(topic.userId, userId), eq(topic.courseId, courseId)))
+				.where(
+					and(
+						eq(topic.userId, userId),
+						courseId ? eq(topic.courseId, courseId) : undefined
+					)
+				)
 				.orderBy(asc(topic.position), asc(topic.createdAt));
 			return rows.map(({ topicId, correct, answeredAt }) => ({
 				topicId,
@@ -292,6 +330,132 @@ export function createQuestionRepository(db: Db): QuestionRepository {
 						? null
 						: { correct, answeredAt },
 			}));
+		},
+
+		async listTopicsOfCourses(userId) {
+			return db
+				.select({
+					courseId: course.id,
+					courseName: course.name,
+					courseColor: course.color,
+					topicId: topic.id,
+					topicName: topic.name,
+					questionCount: count(question.id),
+				})
+				.from(topic)
+				.innerJoin(
+					course,
+					and(eq(course.userId, topic.userId), eq(course.id, topic.courseId))
+				)
+				.leftJoin(
+					question,
+					and(
+						eq(question.userId, topic.userId),
+						eq(question.topicId, topic.id),
+						ne(question.status, 'rejected')
+					)
+				)
+				.where(eq(topic.userId, userId))
+				.groupBy(course.id, topic.id)
+				.orderBy(asc(course.createdAt), asc(topic.position));
+		},
+
+		async findTimeZone(userId) {
+			const [found] = await db
+				.select({ timezone: profile.timezone })
+				.from(profile)
+				.where(eq(profile.userId, userId));
+			return found?.timezone ?? null;
+		},
+
+		async listDue(userId, before) {
+			return db
+				.select({ questionId: question.id, topicId: question.topicId })
+				.from(reviewItem)
+				.innerJoin(
+					question,
+					and(
+						eq(question.userId, reviewItem.userId),
+						eq(question.id, reviewItem.questionId)
+					)
+				)
+				.where(
+					and(
+						eq(reviewItem.userId, userId),
+						lt(reviewItem.dueAt, before),
+						eq(question.status, 'approved')
+					)
+				)
+				.orderBy(asc(reviewItem.dueAt));
+		},
+
+		async listUnscheduled(userId, limit) {
+			return db
+				.select({ questionId: question.id, topicId: question.topicId })
+				.from(question)
+				.leftJoin(
+					reviewItem,
+					and(
+						eq(reviewItem.userId, question.userId),
+						eq(reviewItem.questionId, question.id)
+					)
+				)
+				.where(
+					and(
+						eq(question.userId, userId),
+						eq(question.status, 'approved'),
+						isNull(reviewItem.questionId)
+					)
+				)
+				.orderBy(asc(question.createdAt), asc(question.position))
+				.limit(limit);
+		},
+
+		async countScheduledSince(userId, since) {
+			const [found] = await db
+				.select({ scheduled: count() })
+				.from(reviewItem)
+				.where(
+					and(eq(reviewItem.userId, userId), gte(reviewItem.createdAt, since))
+				);
+			return found?.scheduled ?? 0;
+		},
+
+		async listDueDates(userId, from, until) {
+			const rows = await db
+				.select({ dueAt: reviewItem.dueAt })
+				.from(reviewItem)
+				.innerJoin(
+					question,
+					and(
+						eq(question.userId, reviewItem.userId),
+						eq(question.id, reviewItem.questionId)
+					)
+				)
+				.where(
+					and(
+						eq(reviewItem.userId, userId),
+						gte(reviewItem.dueAt, from),
+						lt(reviewItem.dueAt, until),
+						eq(question.status, 'approved')
+					)
+				);
+			return rows.map(({ dueAt }) => dueAt);
+		},
+
+		async countAnswersSince(userId, since) {
+			const [found] = await db
+				.select({
+					answered: count(),
+					correct:
+						sql<number>`count(*) filter (where ${answer.correct})`.mapWith(
+							Number
+						),
+					questions: countDistinct(answer.questionId),
+				})
+				.from(answer)
+				.where(and(eq(answer.userId, userId), gte(answer.answeredAt, since)));
+			return found ?? { answered: 0, correct: 0, questions: 0 };
 		},
 
 		// the oldest set first, each in the order the AI wrote it

@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { masteryKey } from '@/features/courses/query-keys';
+import { todayKey } from '@/features/today/hooks';
 import { api, ApiError } from '@/lib/api';
 import { approveTopic, pendingCount, replaceQuestion } from './review-cache';
 import { allQuestionSetsKey } from './set-hooks';
@@ -121,6 +122,8 @@ export function useAnswerInChat(questionIds: string[]) {
 				saved,
 			]);
 			void queryClient.invalidateQueries({ queryKey: masteryKey });
+			// an answered question is scheduled, so it leaves today's study list
+			void queryClient.invalidateQueries({ queryKey: todayKey });
 		},
 		onError: (error) => {
 			if (error instanceof ApiError && error.status === 409) {

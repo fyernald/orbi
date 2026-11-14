@@ -8,7 +8,7 @@ import { OrbitRing } from '@/components/orbit-ring';
 import { SlideIn } from '@/components/slide-in';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { courseRoute } from '@/lib/routes';
+import { courseRoute, todayListRoute } from '@/lib/routes';
 import type { MapItem } from '../question-map';
 import { summarize, summaryHeadline, type StudyRun } from '../session';
 import { MissedQuestions } from './missed-questions';
@@ -24,6 +24,9 @@ type SessionSummaryProps = {
 	questions: StudyQuestion[];
 	answers: StudyRun['answers'];
 	items: MapItem[];
+	// from today's study list: these questions are done for today, so the way
+	// on is back to the list, not "Study again"
+	today: boolean;
 	restarting: boolean;
 	onRestart: () => void;
 };
@@ -36,6 +39,7 @@ export function SessionSummary({
 	questions,
 	answers,
 	items,
+	today,
 	restarting,
 	onRestart,
 }: SessionSummaryProps) {
@@ -95,14 +99,20 @@ export function SessionSummary({
 				end={
 					<>
 						<div className="flex flex-col gap-2">
-							<Button
-								onClick={onRestart}
-								disabled={restarting}
-								className="h-10 rounded-full px-4"
-							>
-								{restarting ? <Spinner /> : <RotateCcw />}
-								Study again
-							</Button>
+							{today ? (
+								<Button asChild className="h-10 rounded-full px-4">
+									<Link href={todayListRoute}>Back to today's list</Link>
+								</Button>
+							) : (
+								<Button
+									onClick={onRestart}
+									disabled={restarting}
+									className="h-10 rounded-full px-4"
+								>
+									{restarting ? <Spinner /> : <RotateCcw />}
+									Study again
+								</Button>
+							)}
 							<Button
 								asChild
 								variant="outline"
