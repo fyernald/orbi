@@ -2,7 +2,6 @@
 
 import type { Course, QuestionSet, TutorAction } from '@orbi/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TopicNotesSheet } from '@/features/notes/components/topic-notes-sheet';
 import { QuestionSetSheet } from '@/features/questions/components/question-set-sheet';
 import { TopicQuestionsSheet } from '@/features/questions/components/topic-questions-sheet';
 import { scopeOf } from '@/features/tutor/chat';
@@ -13,9 +12,10 @@ import type {
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useTopics } from '../hooks';
-import { useOpenTopic } from '../use-open-topic';
+import { useCourseAddress } from '../use-course-address';
 import { useTopicSheet } from '../use-topic-sheet';
 import { MobilePaneTabs, type WorkspacePane } from './mobile-pane-tabs';
+import { NotesPane } from './notes-pane';
 import { StudyPane } from './study-pane';
 import { StudyPlanCard } from './study-plan-card';
 import { TopicsPane } from './topics-pane';
@@ -42,9 +42,16 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	const [topicsOpen, setTopicsOpen] = useState(true);
 	const [studyOpen, setStudyOpen] = useState(true);
 	const [mobilePane, setMobilePane] = useState<WorkspacePane>('tutor');
-	// in the address, so a reload or Back opens the same chat
-	const { topicId: selectedTopicId, openTopic } = useOpenTopic(course.id);
-	const notesSheet = useTopicSheet();
+	// in the address, so a reload or Back opens the same chat, or the same notes
+	const {
+		topicId: selectedTopicId,
+		notesTopicId,
+		openTopic,
+		openNotes,
+		closeNotes,
+		fixAddress,
+	} = useCourseAddress(course.id);
+	const notesOpen = notesTopicId !== null;
 	const questionsSheet = useTopicSheet();
 	// kept while the sheet closes, like the topic sheets
 	const [openedSet, setOpenedSet] = useState<QuestionSet>();
@@ -56,13 +63,16 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 			? { version: 1, scope: scopeOf(start.topicId ?? null), ...start }
 			: undefined
 	);
-	// a link can name a topic that was deleted since: the course chat opens instead
+	// a link can name a topic that was deleted since: the course chat opens
+	// instead, and notes of a deleted topic close
 	useEffect(() => {
-		if (!topics.data || !selectedTopicId) return;
-		if (!topics.data.some((item) => item.id === selectedTopicId)) {
-			openTopic(null, { replace: true });
-		}
-	}, [topics.data, selectedTopicId, openTopic]);
+		const list = topics.data;
+		if (!list) return;
+		const gone = (topicId: string | null) =>
+			topicId !== null && !list.some((item) => item.id === topicId);
+		if (gone(selectedTopicId)) fixAddress({ topicId: null });
+		if (gone(notesTopicId)) fixAddress({ notesTopicId: null });
+	}, [topics.data, selectedTopicId, notesTopicId, fixAddress]);
 	// the chats with a reply running and the scope of each, for the limit on parallel
 	// replies and the topic list
 	const [busyChats, setBusyChats] = useState<ReadonlyMap<string, string>>(
@@ -85,6 +95,8 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	// a request about a topic opens that topic's chat; others go to the open chat
 	const sendToTutor = (changes: Omit<ComposerPreset, 'version'>) => {
 		if (changes.topicId) openTopic(changes.topicId);
+		// the student sees the chat the request goes to
+		else if (notesOpen) closeNotes();
 		const scope = changes.topicId ?? scopeOf(selectedTopicId);
 		setPreset((current) => ({
 			version: (current?.version ?? 0) + 1,
@@ -100,6 +112,12 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 	};
 
 	const startTool = (action: TutorAction) => sendToTutor({ action });
+
+	// the notes show in place of the chat, which waits behind them as it was
+	const showNotes = (topicId: string) => {
+		openNotes(topicId);
+		setMobilePane('tutor');
+	};
 
 	// picking a topic in the message box opens that topic's chat; what the student
 	// typed goes with them
@@ -144,7 +162,11 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 
 	return (
 		<div className="flex flex-1 flex-col">
-			<MobilePaneTabs value={mobilePane} onChange={setMobilePane} />
+			<MobilePaneTabs
+				value={mobilePane}
+				onChange={setMobilePane}
+				notesOpen={notesOpen}
+			/>
 			<div
 				className={cn(
 					// one row of fixed height, so each pane scrolls on its own;
@@ -160,7 +182,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onRetry={() => topics.refetch()}
 					selectedTopicId={selectedTopicId}
 					onSelect={selectTopic}
-					onOpenNotes={notesSheet.openFor}
+					onOpenNotes={showNotes}
 					onOpenQuestions={questionsSheet.openFor}
 					addTopicRequest={addTopicRequest}
 					busyScopes={busyScopes}
@@ -171,7 +193,7 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					topics={topics.data}
 					selectedTopicId={selectedTopicId}
 					onClearTopic={() => openTopic(null)}
-					onOpenNotes={notesSheet.openFor}
+					onOpenNotes={showNotes}
 					preset={preset}
 					onStart={sendToTutor}
 					busyChats={busyChats}
@@ -182,8 +204,22 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					onToggleTopics={() => setTopicsOpen((value) => !value)}
 					studyOpen={studyOpen}
 					onToggleStudy={() => setStudyOpen((value) => !value)}
-					className={paneClass('tutor')}
+					// hidden, not closed, so its chats keep their replies and drafts
+					className={cn(paneClass('tutor'), notesOpen && 'hidden lg:hidden')}
 				/>
+				{notesOpen && (
+					<NotesPane
+						courseId={course.id}
+						topic={topicById(notesTopicId)}
+						onBack={closeNotes}
+						topicsOpen={topicsOpen}
+						onToggleTopics={() => setTopicsOpen((value) => !value)}
+						studyOpen={studyOpen}
+						onToggleStudy={() => setStudyOpen((value) => !value)}
+						returnFocusTo="tutor-pane-title"
+						className={paneClass('tutor')}
+					/>
+				)}
 				<StudyPane
 					courseId={course.id}
 					onStartTool={startTool}
@@ -195,12 +231,6 @@ export function CourseWorkspace({ course, start }: CourseWorkspaceProps) {
 					studyPlan={<StudyPlanCard course={course} topics={topics.data} />}
 				/>
 			</div>
-			<TopicNotesSheet
-				courseId={course.id}
-				topic={topicById(notesSheet.topicId)}
-				open={notesSheet.open}
-				onOpenChange={notesSheet.setOpen}
-			/>
 			<TopicQuestionsSheet
 				courseId={course.id}
 				topic={topicById(questionsSheet.topicId)}
