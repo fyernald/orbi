@@ -1,9 +1,9 @@
 'use client';
 
 import type { Note } from '@orbi/shared';
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { isLongNote } from '../note-preview';
+import { isNotePreviewClipped } from '../note-preview';
 import { noteTime } from '../note-time';
 import { EditNoteForm } from './edit-note-form';
 import { NoteActions } from './note-actions';
@@ -17,10 +17,24 @@ type NoteCardProps = {
 // happens in place too
 export function NoteCard({ courseId, note }: NoteCardProps) {
 	const [expanded, setExpanded] = useState(false);
+	const [hasOverflow, setHasOverflow] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const actions = useRef<HTMLButtonElement>(null);
-	const long = isLongNote(note.content);
+	const preview = useRef<HTMLParagraphElement>(null);
 	const time = noteTime(note, new Date());
+
+	// measured only while the note is cut, before paint, so the button never pops in
+	useLayoutEffect(() => {
+		const element = preview.current;
+		if (!element || expanded) return;
+
+		const measure = () => setHasOverflow(isNotePreviewClipped(element));
+		measure();
+
+		const observer = new ResizeObserver(measure);
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, [editing, expanded, note.content]);
 
 	if (editing) {
 		return (
@@ -55,14 +69,15 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 				</div>
 			</header>
 			<p
+				ref={preview}
 				className={cn(
 					'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground',
-					long && !expanded && 'line-clamp-5'
+					!expanded && 'line-clamp-5'
 				)}
 			>
 				{note.content}
 			</p>
-			{long && (
+			{(hasOverflow || expanded) && (
 				<button
 					type="button"
 					onClick={() => setExpanded((value) => !value)}
