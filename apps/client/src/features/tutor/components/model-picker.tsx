@@ -5,15 +5,10 @@ import { ChevronDown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { MenuScrollArea, menuItemHeight } from './menu-scroll-area';
 import { ModelLogo } from './model-logo';
+import { ModelMenu } from './model-menu';
 
 type ModelPickerProps = {
 	models: AiModel[];
@@ -47,36 +42,7 @@ export function ModelPicker({
 					<ChevronDown className="size-3.5 text-muted-foreground" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="end"
-				sideOffset={6}
-				className="w-68 rounded-xl p-1.5 shadow-sm"
-			>
-				<DropdownMenuLabel className="px-2 py-1.5 text-[13px] font-normal text-muted-foreground">
-					Model
-				</DropdownMenuLabel>
-				<MenuScrollArea>
-					<DropdownMenuRadioGroup value={selectedId} onValueChange={onSelect}>
-						{models.map((model) => (
-							<DropdownMenuRadioItem
-								key={model.id}
-								value={model.id}
-								className={cn(menuItemHeight, 'gap-2.5 rounded-lg px-2')}
-							>
-								<span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-									<ModelLogo provider={model.provider} />
-								</span>
-								<span className="flex min-w-0 flex-col">
-									<span className="truncate font-medium">{model.label}</span>
-									<span className="truncate text-[13px] text-muted-foreground">
-										{model.goodAt}
-									</span>
-								</span>
-							</DropdownMenuRadioItem>
-						))}
-					</DropdownMenuRadioGroup>
-				</MenuScrollArea>
-			</DropdownMenuContent>
+			<ModelMenu models={models} selectedId={selectedId} onSelect={onSelect} />
 		</DropdownMenu>
 	);
 }

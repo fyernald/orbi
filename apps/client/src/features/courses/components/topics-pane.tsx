@@ -4,14 +4,15 @@ import type { Course, Topic } from '@orbi/shared';
 import { Layers, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LoadError } from '@/components/load-error';
 import { Button } from '@/components/ui/button';
 import { COURSE_SCOPE } from '@/features/tutor/chat';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { useTopicScores } from '../mastery-hooks';
 import { AddTopicInline } from './add-topic-inline';
 import { CourseActions } from './course-actions';
 import { CourseIntro } from './course-intro';
-import { LoadError } from '@/components/load-error';
 import { PaneHeader } from './pane-header';
 import { ReplyingDot } from './replying-dot';
 import { TopicListItem } from './topic-list-item';
@@ -49,6 +50,7 @@ export function TopicsPane({
 	className,
 }: TopicsPaneProps) {
 	const router = useRouter();
+	const scoreOf = useTopicScores(course.id);
 	const [query, setQuery] = useState('');
 	const [adding, setAdding] = useState(false);
 	const [seenRequest, setSeenRequest] = useState(addTopicRequest);
@@ -148,6 +150,7 @@ export function TopicsPane({
 									key={topic.id}
 									topic={topic}
 									color={course.color}
+									score={scoreOf?.(topic.id)}
 									selected={topic.id === selectedTopicId}
 									onSelect={() => onSelect(topic.id)}
 									onOpenNotes={() => onOpenNotes(topic.id)}

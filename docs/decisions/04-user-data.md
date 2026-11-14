@@ -58,28 +58,31 @@ The **Basis** column is the reason the law allows it:
 | Education level, field of study            | `profile.education_level`, `field_of_study` | Question difficulty, terms, and examples from that field            | Until changed or deleted     | Service |
 | Interests                                  | `profile.interests`                         | Examples in explanations, Home suggestions                          | Until changed or deleted     | Service |
 | Explanation style                          | `profile.explanation_style`                 | How the tutor writes answers                                        | Until changed or deleted     | Service |
-| Daily minutes, usual study time            | `profile.daily_minutes`, `study_time`       | Size of today's study list and when reminders are sent              | Until changed or deleted     | Service |
+| Daily minutes, usual study time            | `profile.daily_minutes`, `study_time`       | Size of today's study list, and the suggested reminder time         | Until changed or deleted     | Service |
+| Daily reminder on or off, its time (US-24) | `profile.reminder_enabled`, `reminder_time` | When the study reminder email is sent, if at all                    | Until changed or deleted     | Service |
 | Language, time zone                        | `profile.locale`, `timezone`                | Language of the AI, and where a day starts for the list and streaks | Until changed or deleted     | Service |
 | Analytics choice and time (planned, US-37) | `profile`                                   | Remembers the answer on every device                                | Until changed or deleted     | Consent |
 
 #### Study content
 
-| Data                                                 | Stored in              | Why Orbi needs it                                                 | Kept for                                      | Basis   |
-| ---------------------------------------------------- | ---------------------- | ----------------------------------------------------------------- | --------------------------------------------- | ------- |
-| Courses (name, description, colour, goal) and topics | `course`, `topic`      | How the student organises their studies                           | Until the student deletes them or the account | Service |
-| Notes                                                | `note`                 | The tutor and the questions are made from them                    | Until the student deletes them or the account | Service |
-| Tutor chats and messages, with the model and timings | `chat`, `chat_message` | The chat history, and the context the AI needs for the next reply | Until the student deletes them or the account | Service |
-| Practice questions, with the AI provider and model   | `question`             | Study sessions, and knowing which model wrote which question      | Until the student deletes them or the account | Service |
-| Answers (choice, right or wrong, time, where)        | `answer`               | Mastery score, spaced repetition, today's study list              | Until the question or the account is deleted  | Service |
+| Data                                                          | Stored in              | Why Orbi needs it                                                   | Kept for                                      | Basis   |
+| ------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- | --------------------------------------------- | ------- |
+| Courses (name, description, colour, goal) and topics          | `course`, `topic`      | How the student organises their studies                             | Until the student deletes them or the account | Service |
+| Notes                                                         | `note`                 | The tutor and the questions are made from them                      | Until the student deletes them or the account | Service |
+| Tutor chats and messages, with the model and timings          | `chat`, `chat_message` | The chat history, and the context the AI needs for the next reply   | Until the student deletes them or the account | Service |
+| Practice questions, with the AI provider and model            | `question`             | Study sessions, and knowing which model wrote which question        | Until the student deletes them or the account | Service |
+| Answers (choice, right or wrong, time, where)                 | `answer`               | Mastery score, spaced repetition, today's study list                | Until the question or the account is deleted  | Service |
+| Explanations of wrong answers, with the AI provider and model | `answer_explanation`   | Shows why a choice was wrong again without a second AI call (US-07) | Until the question or the account is deleted  | Service |
 
 #### Server and hosting
 
-| Data                                                                                             | Stored in                                              | Why Orbi needs it                     | Kept for                                            | Basis    |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------- | --------------------------------------------------- | -------- |
-| API request log: method, path (tokens masked), IP address, errors without what the student wrote | Docker log files on the VPS (`apps/server/src/log.ts`) | Finding bugs and attacks              | At most 3 files of 10 MB per service, so a few days | Security |
-| nginx access log: IP address, path, browser, time                                                | `/var/log/nginx` on the VPS                            | Finding attacks and outages           | 14 days (Debian's logrotate)                        | Security |
-| Database backups (everything above in the database)                                              | The VPS, and an encrypted copy off the server (T-16)   | Getting the data back after a failure | 14 days on the VPS, 30 days off the server          | Security |
-| Error reports (planned, T-14): error, stack trace, page path, browser, the user id               | Sentry, EU region (Frankfurt)                          | Finding bugs students hit             | 30 days (Sentry's free plan)                        | Security |
+| Data                                                                                                                                                                     | Stored in                                              | Why Orbi needs it                     | Kept for                                            | Basis    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------- | --------------------------------------------------- | -------- |
+| API request log: method, path (tokens masked), IP address, errors without what the student wrote                                                                         | Docker log files on the VPS (`apps/server/src/log.ts`) | Finding bugs and attacks              | At most 3 files of 10 MB per service, so a few days | Security |
+| nginx access log: IP address, path, browser, time                                                                                                                        | `/var/log/nginx` on the VPS                            | Finding attacks and outages           | 14 days (Debian's logrotate)                        | Security |
+| Database backups (everything above in the database)                                                                                                                      | The VPS, and an encrypted copy off the server (T-16)   | Getting the data back after a failure | 14 days on the VPS, 30 days off the server          | Security |
+| Error reports (T-14): error, stack trace, API route or page path, browser                                                                                                | Sentry, EU region (Frankfurt)                          | Finding bugs students hit             | 30 days (Sentry's free plan)                        | Security |
+| Traces of a share of requests and page loads: route or page path (no query), timings, database query text without values, AI model and token counts, Web Vitals, browser | Sentry, EU region (Frankfurt)                          | Finding slow pages and requests       | 30 days (Sentry's free plan)                        | Security |
 
 #### Browser
 
@@ -150,7 +153,7 @@ The student picks the model (0002, rule 6). Every model in `apps/server/src/ai/c
 | The email provider            | Name, email, and the email text                            | Sends confirmation and reset emails |
 | The off-server backup storage | Encrypted backups it cannot read                           | Keeps a copy if the VPS is lost     |
 | Google, Anthropic, DeepSeek   | What section 6 lists, only for the model the student picks | The tutor and practice questions    |
-| Sentry (planned)              | Error reports (section 3)                                  | Finding bugs                        |
+| Sentry                        | Error reports and traces (section 3)                       | Finding bugs and slow pages         |
 
 The privacy page names the hosting, email, and backup providers and their countries once the team has picked them.
 

@@ -53,6 +53,7 @@ export function AskStudentCard({
 
 	return (
 		<form
+			method="post"
 			onSubmit={submit}
 			aria-labelledby={`${id}-question`}
 			className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4"
@@ -92,7 +93,7 @@ export function AskStudentCard({
 							maxLength={ASK_STUDENT_ANSWER_MAX_LENGTH}
 							rows={2}
 							autoFocus
-							placeholder="Write your answer"
+							placeholder="Write your answer…"
 							className="field-sizing-content min-h-16 w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
 						/>
 					</>
@@ -115,7 +116,7 @@ export function AskStudentCard({
 						disabled={!answer}
 						className="h-8 rounded-lg px-3"
 					>
-						Continue
+						Send answer
 					</Button>
 				</div>
 			)}

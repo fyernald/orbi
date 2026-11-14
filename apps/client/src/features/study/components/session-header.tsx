@@ -2,16 +2,20 @@ import { X } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { courseRoute } from '@/lib/routes';
+import type { MapItem } from '../question-map';
+import { QuestionStrip } from './question-strip';
+import { SessionTitle } from './session-title';
 
 type SessionHeaderProps = {
 	courseId: string;
 	courseName: string;
 	topicName: string;
 	// left out when there is nothing to answer
-	progress?: { shown: number; done: number; total: number };
+	progress?: { shown: number; items: MapItem[] };
 };
 
-// every answer is saved as it is given, so leaving early loses nothing
+// The top of the page while it is one column; wider pages show this in the side
+// parts. Every answer is saved as it is given, so leaving early loses nothing.
 export function SessionHeader({
 	courseId,
 	courseName,
@@ -19,14 +23,13 @@ export function SessionHeader({
 	progress,
 }: SessionHeaderProps) {
 	return (
-		<header className="flex flex-col gap-4">
+		<header className="flex flex-col gap-4 @5xl:hidden">
 			<div className="flex items-start gap-3">
-				<div className="flex min-w-0 flex-1 flex-col gap-0.5">
-					<p className="truncate text-sm text-muted-foreground">{courseName}</p>
-					<h1 className="truncate text-2xl font-semibold tracking-tight">
-						{topicName}
-					</h1>
-				</div>
+				<SessionTitle
+					courseName={courseName}
+					topicName={topicName}
+					className="flex-1"
+				/>
 				<Button
 					asChild
 					variant="ghost"
@@ -40,21 +43,11 @@ export function SessionHeader({
 			</div>
 			{progress && (
 				<div className="flex items-center gap-3">
-					<div
-						role="progressbar"
-						aria-label="Questions answered"
-						aria-valuemin={0}
-						aria-valuemax={progress.total}
-						aria-valuenow={progress.done}
-						className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-					>
-						<div
-							className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
-							style={{ width: `${(progress.done / progress.total) * 100}%` }}
-						/>
+					<div className="flex-1">
+						<QuestionStrip items={progress.items} />
 					</div>
 					<span className="text-xs text-muted-foreground tabular-nums">
-						{progress.shown} of {progress.total}
+						{progress.shown} of {progress.items.length}
 					</span>
 				</div>
 			)}

@@ -28,6 +28,22 @@ export const createNoteInput = z.object({
 // an edit saves the whole note again, with the same rules as a new one
 export const updateNoteInput = createNoteInput;
 
+// a PDF is read on the server and its text saved as notes, split by pages into
+// parts of at most PDF_NOTE_MAX_LENGTH characters (about 3 pages), so the tutor can
+// read the parts it needs and the notes stay easy to read
+export const PDF_MAX_SIZE = 20 * 1024 * 1024;
+export const PDF_MAX_SIZE_LABEL = '20 MB';
+export const PDF_NOTE_MAX_LENGTH = 6_000;
+export const PDF_MAX_NOTES = 100;
+// pdf.js reads every page on the server before Orbi can tell how much text there
+// is, so a file with more pages is refused before it is read
+export const PDF_MAX_PAGES = 300;
+
+// the PDF itself is the request body; its name comes in the address
+export const pdfUploadQuery = z.object({
+	fileName: z.string().trim().min(1, 'The file needs a name.').max(255),
+});
+
 export const noteParams = topicParams.extend({
 	noteId: z.uuid('Note not found.'),
 });
@@ -42,6 +58,15 @@ export const note = z.object({
 	updatedAt: z.iso.datetime(),
 });
 
+// the same PDF uploaded to the same topic again is not read twice: its notes
+// are given back with reused set, so no copies end up in the tutor's notes
+export const pdfUploadResult = z.object({
+	notes: z.array(note),
+	reused: z.boolean(),
+});
+
 export type CreateNoteInput = z.infer<typeof createNoteInput>;
 export type UpdateNoteInput = z.infer<typeof updateNoteInput>;
+export type PdfUploadQuery = z.infer<typeof pdfUploadQuery>;
+export type PdfUploadResult = z.infer<typeof pdfUploadResult>;
 export type Note = z.infer<typeof note>;

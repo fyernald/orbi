@@ -3,13 +3,13 @@
 import type { TutorRequestInput } from '@orbi/shared';
 import { useController, type Control } from 'react-hook-form';
 import { composerActionList, composerActions } from '../actions';
-import type { Topic } from '../mock-data';
+import type { ComposerTopic } from '../composer';
 import { ActionPicker } from './action-picker';
 import { TopicPicker } from './topic-picker';
 
 type ComposerContextProps = {
 	control: Control<TutorRequestInput>;
-	topics: Topic[];
+	topics: ComposerTopic[];
 	// the course's name, when the whole course is a choice
 	wholeCourse?: string;
 	// set when picking a topic does more than fill the field (it opens that topic's chat)

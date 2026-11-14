@@ -30,12 +30,20 @@ apps/server/src/modules/courses/
 ### 2. Wiring: factory functions, connected in one place
 
 ```ts
-// apps/server/src/index.ts is the only file that connects the parts
-const courses = createCourseService({ repo: createCourseRepository(db) });
-const app = buildApp({ auth, services: { courses } });
+// apps/server/src/services.ts connects every repository and service
+export function createServices({ db, pdf, models }: ServiceDeps) {
+	return {
+		courses: createCourseService({ repo: createCourseRepository(db) }),
+		// ...
+	};
+}
+
+// apps/server/src/index.ts reads the environment and passes in the real parts
+const app = buildApp({ auth, services: createServices({ db, pdf, models }) });
 ```
 
 - Every part is made by a `createX(deps)` function that returns an object with an interface type. Parts get what they need passed in. They never import `db` or another service directly.
+- `createServices` is the one place that connects the parts. `index.ts` and the test app (`testing.ts`) both call it, so the tests run the same graph as production. A new dependency is added there, not in either caller.
 - Tests pass in PGlite or a fake instead of the real database.
 - No dependency-injection library.
 
@@ -81,6 +89,7 @@ export const createCourseInput = z.object({
 ```
 
 - Unknown errors become `500` with a generic message. The details go to the log, never to the user.
+- The one exception is `/api/auth/*`. Better Auth answers its own `{ "code": "INVALID_EMAIL_OR_PASSWORD", "message": "..." }`, because its client library (`lib/auth-client.ts`) reads that shape. The client turns those codes into messages in `features/auth/errors.ts`.
 
 ### 6. AI: providers behind one interface, the user picks the model
 
@@ -128,7 +137,8 @@ apps/client/src/
 | Sidebar collapsed or open                   | A cookie, so the server draws it right after a refresh |
 | Form values, field errors, submitting       | React Hook Form, validated with the shared Zod schemas |
 | Small UI state (a menu is open)             | `useState` in the component                            |
-| Light, dark, or system theme                | `next-themes`, saved in the browser                    |
+| Light or dark mode                          | `next-themes`, saved in the browser                    |
+| Colour theme (Berry, Ocean, Violet, Forest) | A cookie, so the server draws it right after a refresh |
 
 - Who may see a page is decided **on the server** before anything is sent: the `/app` and login layouts call `getServerSession()` (`features/auth/server.ts`) and redirect. The browser never shows a page it should not, not even for a moment. Before that, `src/proxy.ts` sends anyone without a session cookie away from `/app`. It only looks at the cookie, so it never replaces the real check.
 - A layout check does not run again when the user moves between pages under it. So a server page that renders the user's data calls `getServerSession()` itself (it is cached per request, so this costs nothing), and the API checks the session on every request.

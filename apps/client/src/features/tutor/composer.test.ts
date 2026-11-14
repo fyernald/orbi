@@ -78,9 +78,28 @@ describe('sendBlockedReason', () => {
 		).toBe('Mock exam is coming soon.');
 	});
 
-	it('does not send files the tutor cannot read yet', () => {
+	it('sends once the attached PDFs are saved', () => {
 		expect(
 			sendBlockedReason({ values: values(), attachments: [readyFile] })
-		).toMatch(/cannot read files yet/);
+		).toBeNull();
+	});
+
+	it('waits for PDFs that are still uploading', () => {
+		const uploading = { ...readyFile, status: 'uploading' as const };
+		expect(
+			sendBlockedReason({ values: values(), attachments: [uploading] })
+		).toMatch(/Wait until/);
+	});
+
+	it('names a file that could not be saved', () => {
+		const failed: Attachment = {
+			...readyFile,
+			status: 'error',
+			error: 'Not saved',
+			errorDetail: 'This PDF has no text Orbi can read.',
+		};
+		expect(sendBlockedReason({ values: values(), attachments: [failed] })).toBe(
+			'notes.pdf: This PDF has no text Orbi can read. Remove it to send.'
+		);
 	});
 });

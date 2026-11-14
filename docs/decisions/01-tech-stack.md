@@ -1,6 +1,6 @@
 # 0001: Tech stack
 
-- **Status:** Accepted. The AI rules are updated by [0002: App patterns](02-app-patterns.md) (several providers, the user picks the model).
+- **Status:** Accepted. The AI rules are updated by [0002: App patterns](02-app-patterns.md) (several providers, the user picks the model) and [0003: Tutor chat](03-tutor-chat.md) (the AI SDK is the provider layer, and chat replies stream from the API). Rules 3 and 5 below say where.
 - **Date:** 2026-10-16
 - **Deciders:** Team Byte4
 - **Related:** Task T-01 (Project setup)
@@ -168,7 +168,7 @@ PostgreSQL, Drizzle, Better Auth, Nodemailer, Vitest, Playwright, and Fastify ar
    - Unit tested in isolation (Vitest).
    - Easy to reuse in a mobile app later.
 
-3. **The AI service sits behind an interface.**
+3. **The AI service sits behind an interface.** _Replaced by [0003 §2](03-tutor-chat.md#2-the-ai-sdk-is-the-provider-layer): the AI SDK is that interface, and `QuestionGenerator` was removed._
    - `QuestionGenerator` hides which AI provider is used.
    - Swap from Gemini to Groq without changing the rest of the app.
    - Implemented in `apps/server`, but interface lives in `packages/core`.
@@ -178,7 +178,7 @@ PostgreSQL, Drizzle, Better Auth, Nodemailer, Vitest, Playwright, and Fastify ar
    - Keys are never sent to the browser and never committed.
    - Real keys live in the git-ignored `.env` at the repository root, read by the server only; `.env.example` is committed.
 
-5. **Async AI work runs in a separate container.**
+5. **Async AI work runs in a separate container.** _Changed by [0003 §1](03-tutor-chat.md#1-chat-replies-stream-straight-from-the-api): chat replies and their questions stream from the API. The worker stays for slow batch work nobody watches live, and is not built yet._
    - `orbi-worker` polls `generation_jobs` table and calls Gemini.
    - Main backend stays responsive.
    - Failed jobs are retried automatically.

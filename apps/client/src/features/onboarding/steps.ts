@@ -207,10 +207,9 @@ export function toFormValues(
 		preferredName: firstName(accountName),
 		fieldOfStudy: '',
 	};
-	for (const [field, value] of Object.entries(saved)) {
-		if (value !== null && field !== 'onboardedAt') {
-			values[field as AnswerField] = value;
-		}
+	// only the onboarding answers; the profile also holds settings like the reminder
+	for (const field of onboardingAnswers.keyof().options) {
+		if (saved[field] !== null) values[field] = saved[field];
 	}
 	return values as Partial<OnboardingAnswers>;
 }

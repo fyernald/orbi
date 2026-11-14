@@ -6,6 +6,7 @@ import { useId, useState, type KeyboardEvent, type Ref } from 'react';
 import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { DUPLICATE_TOPIC_MESSAGE, hasTopicNamed } from '../topic-names';
 
 type TopicChipsInputProps = {
 	value: string[];
@@ -35,8 +36,8 @@ export function TopicChipsInput({
 			return;
 		}
 		const name = parsed.data;
-		if (value.some((topic) => topic.toLowerCase() === name.toLowerCase())) {
-			setProblem('This topic is already in the list.');
+		if (hasTopicNamed(value, name)) {
+			setProblem(DUPLICATE_TOPIC_MESSAGE);
 			return;
 		}
 		onChange([...value, name]);

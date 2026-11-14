@@ -114,8 +114,30 @@ export const onboardingAnswers = z.object({
 	timezone: z.string().refine(isTimeZone, 'Choose a valid time zone.'),
 });
 
-// onboarding saves the answers of one question at a time
-export const updateProfileInput = onboardingAnswers.partial();
+// a time of day as "18:00"
+export const reminderTime = z
+	.string()
+	.regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Pick a time.');
+
+// the daily study reminder email (US-24), set on the settings page
+export const reminderSettings = z.object({
+	reminderEnabled: z.boolean(),
+	// in the user's own time zone
+	reminderTime,
+});
+
+// the model new chats start on (T-38), set on the settings page; null goes back
+// to the server's default. The server checks the id against its model list.
+export const defaultModelSettings = z.object({
+	defaultModelId: z.string().min(1, 'Choose a model.').nullable(),
+});
+
+// onboarding saves the answers of one question at a time, settings the reminder
+// and the default model
+export const updateProfileInput = onboardingAnswers
+	.extend(reminderSettings.shape)
+	.extend(defaultModelSettings.shape)
+	.partial();
 
 // what the API sends back; a question not answered yet is null or an empty list
 export const profile = z.object({
@@ -130,6 +152,11 @@ export const profile = z.object({
 	studyTime: z.enum(STUDY_TIMES).nullable(),
 	locale: z.enum(LOCALES).nullable(),
 	timezone: z.string().nullable(),
+	reminderEnabled: z.boolean(),
+	// null until the user picks one
+	reminderTime: reminderTime.nullable(),
+	// null until the student picks one; it may no longer be on the server's list
+	defaultModelId: z.string().nullable(),
 	// null until onboarding is finished; the app stays closed until then
 	onboardedAt: z.iso.datetime().nullable(),
 });
@@ -141,5 +168,7 @@ export type DailyMinutes = (typeof DAILY_MINUTES)[number];
 export type StudyTime = (typeof STUDY_TIMES)[number];
 export type Locale = (typeof LOCALES)[number];
 export type OnboardingAnswers = z.infer<typeof onboardingAnswers>;
+export type ReminderSettings = z.infer<typeof reminderSettings>;
+export type DefaultModelSettings = z.infer<typeof defaultModelSettings>;
 export type UpdateProfileInput = z.infer<typeof updateProfileInput>;
 export type Profile = z.infer<typeof profile>;

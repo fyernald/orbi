@@ -34,7 +34,7 @@ export function TutorStarterList({ starters, onStart }: TutorStarterListProps) {
 							>
 								<Icon className="size-4 shrink-0 text-muted-foreground" />
 								<span className="min-w-0 flex-1">{label}</span>
-								<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+								<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
 							</button>
 						</li>
 					);

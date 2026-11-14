@@ -1,18 +1,24 @@
 import type {
 	Course,
+	CourseTopic,
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
+	UpdateCourseInput,
+	UpdateTopicInput,
 } from '@orbi/shared';
 import { and, asc, count, countDistinct, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
-import { course, note, topic } from '../../db/schema';
+import { chat, course, note, topic } from '../../db/schema';
 
 export interface CourseRepository {
 	listCourses(userId: string): Promise<Course[]>;
 	findCourse(userId: string, courseId: string): Promise<Course | undefined>;
 	insertCourse(userId: string, input: CreateCourseInput): Promise<Course>;
 	listTopics(userId: string, courseId: string): Promise<Topic[]>;
+	// the topics of every course, the one with the newest tutor chat first; topics
+	// without a chat follow in course and topic order
+	listAllTopics(userId: string): Promise<CourseTopic[]>;
 	insertTopic(
 		userId: string,
 		courseId: string,
@@ -24,16 +30,16 @@ export interface CourseRepository {
 		topicId: string
 	): Promise<Topic | undefined>;
 	// each returns false when nothing of this user matched
-	renameCourse(
+	updateCourse(
 		userId: string,
 		courseId: string,
-		name: string
+		changes: UpdateCourseInput
 	): Promise<boolean>;
-	renameTopic(
+	updateTopic(
 		userId: string,
 		courseId: string,
 		topicId: string,
-		name: string
+		changes: UpdateTopicInput
 	): Promise<boolean>;
 	deleteCourse(userId: string, courseId: string): Promise<boolean>;
 	deleteTopic(
@@ -71,6 +77,7 @@ const topicColumns = {
 	courseId: topic.courseId,
 	name: topic.name,
 	position: topic.position,
+	planDoneOn: topic.planDoneOn,
 };
 
 const topicWithNoteCount = { ...topicColumns, noteCount: count(note.id) };
@@ -143,6 +150,32 @@ export function createCourseRepository(db: Db): CourseRepository {
 				.groupBy(topic.id)
 				.orderBy(asc(topic.position), asc(topic.createdAt)),
 
+		listAllTopics: (userId) =>
+			db
+				.select({
+					id: topic.id,
+					courseId: topic.courseId,
+					courseName: course.name,
+					name: topic.name,
+				})
+				.from(topic)
+				.innerJoin(
+					course,
+					and(eq(course.userId, topic.userId), eq(course.id, topic.courseId))
+				)
+				.leftJoin(
+					chat,
+					and(eq(chat.userId, topic.userId), eq(chat.topicId, topic.id))
+				)
+				.where(eq(topic.userId, userId))
+				.groupBy(topic.id, course.id)
+				.orderBy(
+					sql`max(${chat.updatedAt}) desc nulls last`,
+					asc(course.createdAt),
+					asc(topic.position),
+					asc(topic.createdAt)
+				),
+
 		async insertTopic(userId, courseId, input) {
 			const [created] = await db
 				.insert(topic)
@@ -167,22 +200,22 @@ export function createCourseRepository(db: Db): CourseRepository {
 			return found;
 		},
 
-		async renameCourse(userId, courseId, name) {
-			const renamed = await db
+		async updateCourse(userId, courseId, changes) {
+			const updated = await db
 				.update(course)
-				.set({ name })
+				.set(changes)
 				.where(ownCourse(userId, courseId))
 				.returning({ id: course.id });
-			return renamed.length > 0;
+			return updated.length > 0;
 		},
 
-		async renameTopic(userId, courseId, topicId, name) {
-			const renamed = await db
+		async updateTopic(userId, courseId, topicId, changes) {
+			const updated = await db
 				.update(topic)
-				.set({ name })
+				.set(changes)
 				.where(ownTopic(userId, courseId, topicId))
 				.returning({ id: topic.id });
-			return renamed.length > 0;
+			return updated.length > 0;
 		},
 
 		// its topics, notes, questions, answers, and chats go with it (ON DELETE CASCADE)

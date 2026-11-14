@@ -30,9 +30,14 @@ export type ResolvedModel = {
 	entry: AiModel;
 };
 
+// what a student hears when they ask for a model this server cannot call
+export const MODEL_NOT_IN_LIST = 'Choose a model from the list.';
+
 // the catalog models this server can call, and the AI SDK model behind each one
 export interface ModelRegistry {
-	list(): AiModels;
+	// preferredId is the student's own default; it is used when this server can call it
+	list(preferredId?: string | null): AiModels;
+	has(modelId: string): boolean;
 	resolve(modelId: string, options: ModelOptions): ResolvedModel | undefined;
 }
 
@@ -53,11 +58,17 @@ export function createModelRegistry({
 		available[0]?.id ??
 		null;
 
+	const has = (modelId: string) =>
+		available.some((entry) => entry.id === modelId);
+
 	return {
-		list: () => ({
+		list: (preferredId) => ({
 			models: available.map(toPublic),
-			defaultModelId: fallbackId,
+			defaultModelId:
+				preferredId && has(preferredId) ? preferredId : fallbackId,
 		}),
+
+		has,
 
 		resolve(modelId, options) {
 			const entry = available.find((item) => item.id === modelId);

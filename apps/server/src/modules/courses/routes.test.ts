@@ -231,6 +231,7 @@ describe('topics', () => {
 			name: 'Limits',
 			position: 0,
 			noteCount: 0,
+			planDoneOn: null,
 		});
 
 		const list = await send(ada, 'GET', url);
@@ -242,6 +243,53 @@ describe('topics', () => {
 			['Limits', 0],
 			['Taylor series', 1],
 		]);
+	});
+
+	it('lists the topics of every course, the one with the newest chat first', async () => {
+		const katherine = await signUpTestUser(app, 'katherine@test.dev');
+		const post = (url: string, payload: object) =>
+			send(katherine, 'POST', url, payload);
+		const calculus = (
+			await post('/api/courses', newCourse({ name: 'Calculus II' }))
+		).json();
+		await post(`/api/courses/${calculus.id}/topics`, { name: 'Limits' });
+		await post(`/api/courses/${calculus.id}/topics`, { name: 'Series' });
+		const biology = (
+			await post(
+				'/api/courses',
+				newCourse({ name: 'Biology', topics: ['Cells'] })
+			)
+		).json();
+		await createCourse(grace, 'Not hers');
+
+		const byCourse = (await send(katherine, 'GET', '/api/topics')).json();
+		const cells = byCourse.find((t: { name: string }) => t.name === 'Cells');
+		await createTutorRepository(db).createChat(await userIdOf(katherine), {
+			id: randomUUID(),
+			courseId: biology.id,
+			topicId: cells.id,
+			title: 'What is a cell?',
+		});
+		const byChat = (await send(katherine, 'GET', '/api/topics')).json();
+
+		const names = (topics: { courseName: string; name: string }[]) =>
+			topics.map((t) => `${t.courseName} · ${t.name}`);
+		expect(names(byCourse)).toEqual([
+			'Calculus II · Limits',
+			'Calculus II · Series',
+			'Biology · Cells',
+		]);
+		expect(names(byChat)).toEqual([
+			'Biology · Cells',
+			'Calculus II · Limits',
+			'Calculus II · Series',
+		]);
+		expect(byChat[0]).toEqual({
+			id: cells.id,
+			courseId: biology.id,
+			courseName: 'Biology',
+			name: 'Cells',
+		});
 	});
 
 	it('answers 404 for a course that does not exist', async () => {
@@ -298,6 +346,7 @@ describe('renaming', () => {
 			name: 'DNA and RNA',
 			position: 0,
 			noteCount: 1,
+			planDoneOn: null,
 		});
 	});
 
@@ -333,6 +382,59 @@ describe('renaming', () => {
 
 		expect(response.statusCode).toBe(404);
 		expect(response.json().error.message).toBe('Topic not found.');
+	});
+});
+
+describe('study plan', () => {
+	it('sets and clears the exam date of a course', async () => {
+		const { courseId } = await createFilledCourse(ada);
+
+		const set = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			examDate: '2027-01-15',
+		});
+		const cleared = await send(ada, 'PATCH', `/api/courses/${courseId}`, {
+			examDate: null,
+		});
+
+		expect(set.statusCode).toBe(200);
+		expect(set.json()).toMatchObject({
+			examDate: '2027-01-15',
+			name: 'Genetics',
+		});
+		expect(cleared.json().examDate).toBeNull();
+	});
+
+	it('ticks a topic off and back on', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+		const url = `/api/courses/${courseId}/topics/${topicId}`;
+
+		const done = await send(ada, 'PATCH', url, { planDoneOn: '2026-11-08' });
+		const topics = (
+			await send(ada, 'GET', `/api/courses/${courseId}/topics`)
+		).json();
+		const undone = await send(ada, 'PATCH', url, { planDoneOn: null });
+
+		expect(done.json()).toMatchObject({
+			name: 'DNA',
+			planDoneOn: '2026-11-08',
+		});
+		expect(topics[0].planDoneOn).toBe('2026-11-08');
+		expect(undone.json().planDoneOn).toBeNull();
+	});
+
+	it('rejects a change with nothing in it', async () => {
+		const { courseId, topicId } = await createFilledCourse(ada);
+
+		const course = await send(ada, 'PATCH', `/api/courses/${courseId}`, {});
+		const topic = await send(
+			ada,
+			'PATCH',
+			`/api/courses/${courseId}/topics/${topicId}`,
+			{}
+		);
+
+		expect(course.statusCode).toBe(400);
+		expect(topic.statusCode).toBe(400);
 	});
 });
 

@@ -3,11 +3,9 @@ import Link from 'next/link';
 import { OrbiLogo } from '@/components/brand/orbi-logo';
 import { Button } from '@/components/ui/button';
 import { routes } from '@/lib/routes';
-import { studyStatus } from '../mock-data';
 import { PageTitle } from './page-title';
-import { ReviewButton } from './review-button';
-import { StreakLink } from './streak-link';
-import { ThemeMenu } from './theme-menu';
+import { PalettePicker } from './palette-picker';
+import { ThemeSwitch } from './theme-switch';
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 	return (
@@ -26,9 +24,10 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			</Link>
 			<PageTitle className="hidden text-sm font-medium md:flex" />
 			<div className="ml-auto flex items-center gap-2">
-				<ThemeMenu />
-				<StreakLink days={studyStatus.streakDays} />
-				<ReviewButton dueCount={studyStatus.dueCount} />
+				<PalettePicker />
+				<ThemeSwitch />
+				{/* StreakLink (US-14) and ReviewButton (US-10) go here once the API
+				sends the student's real streak and due count */}
 			</div>
 		</header>
 	);

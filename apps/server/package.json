@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
 		"build": "tsup",
-		"start": "node --env-file-if-exists=../../.env dist/index.js",
+		"start": "node --env-file-if-exists=../../.env --import ./dist/instrument.js dist/index.js",
 		"typecheck": "tsc --noEmit",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
@@ -17,8 +17,10 @@
 		"@ai-sdk/anthropic": "^4.0.94",
 		"@ai-sdk/deepseek": "3.0.77",
 		"@ai-sdk/google": "^4.0.109",
+		"@fastify/rate-limit": "^11.2.1",
 		"@orbi/core": "workspace:*",
 		"@orbi/shared": "workspace:*",
+		"@sentry/node": "11.11.0",
 		"ai": "^7.0.159",
 		"better-auth": "^1.7.12",
 		"drizzle-orm": "^0.45.4",
@@ -26,6 +28,7 @@
 		"fastify-type-provider-zod": "^7.0.0",
 		"nodemailer": "^10.2.1",
 		"pg": "^8.23.1",
+		"unpdf": "2.1.0",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {

@@ -1,5 +1,6 @@
 import type {
 	Course,
+	CourseTopic,
 	CreateCourseInput,
 	CreateTopicInput,
 	Topic,
@@ -14,17 +15,18 @@ export interface CourseService {
 	getCourse(userId: string, courseId: string): Promise<Course>;
 	createCourse(userId: string, input: CreateCourseInput): Promise<Course>;
 	listTopics(userId: string, courseId: string): Promise<Topic[]>;
+	listAllTopics(userId: string): Promise<CourseTopic[]>;
 	createTopic(
 		userId: string,
 		courseId: string,
 		input: CreateTopicInput
 	): Promise<Topic>;
-	renameCourse(
+	updateCourse(
 		userId: string,
 		courseId: string,
 		input: UpdateCourseInput
 	): Promise<Course>;
-	renameTopic(
+	updateTopic(
 		userId: string,
 		courseId: string,
 		topicId: string,
@@ -56,23 +58,25 @@ export function createCourseService({
 			return repo.listTopics(userId, courseId);
 		},
 
+		listAllTopics: (userId) => repo.listAllTopics(userId),
+
 		// a topic needs a course the user owns
 		async createTopic(userId, courseId, input) {
 			await getCourse(userId, courseId);
 			return repo.insertTopic(userId, courseId, input);
 		},
 
-		async renameCourse(userId, courseId, { name }) {
-			if (!(await repo.renameCourse(userId, courseId, name))) {
+		async updateCourse(userId, courseId, input) {
+			if (!(await repo.updateCourse(userId, courseId, input))) {
 				throw new NotFoundError('Course not found.');
 			}
 			return getCourse(userId, courseId);
 		},
 
-		async renameTopic(userId, courseId, topicId, { name }) {
-			const renamed = await repo.renameTopic(userId, courseId, topicId, name);
+		async updateTopic(userId, courseId, topicId, input) {
+			const updated = await repo.updateTopic(userId, courseId, topicId, input);
 			const found =
-				renamed && (await repo.findTopic(userId, courseId, topicId));
+				updated && (await repo.findTopic(userId, courseId, topicId));
 			if (!found) throw new NotFoundError('Topic not found.');
 			return found;
 		},

@@ -1,6 +1,7 @@
 import {
 	course,
 	courseParams,
+	courseTopic,
 	createCourseInput,
 	createTopicInput,
 	topic,
@@ -53,6 +54,13 @@ export function createCourseRoutes({
 				courses.listTopics(await requireUser(request), request.params.courseId)
 		);
 
+		// the topics of every course, for Home's message box
+		api.get(
+			'/topics',
+			{ schema: { response: { 200: z.array(courseTopic) } } },
+			async (request) => courses.listAllTopics(await requireUser(request))
+		);
+
 		api.post(
 			'/courses/:courseId/topics',
 			{
@@ -83,7 +91,7 @@ export function createCourseRoutes({
 				},
 			},
 			async (request) =>
-				courses.renameCourse(
+				courses.updateCourse(
 					await requireUser(request),
 					request.params.courseId,
 					request.body
@@ -102,7 +110,7 @@ export function createCourseRoutes({
 			async (request) => {
 				const userId = await requireUser(request);
 				const { courseId, topicId } = request.params;
-				return courses.renameTopic(userId, courseId, topicId, request.body);
+				return courses.updateTopic(userId, courseId, topicId, request.body);
 			}
 		);
 

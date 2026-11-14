@@ -4,3 +4,10 @@ packages:
 
 ignoredBuiltDependencies:
   - esbuild
+
+# Fixed versions of packages that come in through other packages, until those packages
+# ship them. CI checks the dependencies on every pull request (.github/workflows/ci.yml).
+overrides:
+  # GHSA-333x-w4r6-6crp and others: through fastify (4.x) and ajv (3.x)
+  fast-uri@>=3.0.0 <3.1.9: ^3.1.9
+  fast-uri@>=4.0.0 <4.2.3: ^4.2.3

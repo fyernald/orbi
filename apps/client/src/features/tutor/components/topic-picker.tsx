@@ -15,13 +15,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
-import type { Topic } from '../mock-data';
+import type { ComposerTopic } from '../composer';
 import { MenuScrollArea, menuItemHeight } from './menu-scroll-area';
 import { PickerButton } from './picker-button';
 
 type TopicPickerProps = {
-	topics: Topic[];
-	selected: Topic | undefined;
+	topics: ComposerTopic[];
+	selected: ComposerTopic | undefined;
 	// '' picks the whole course
 	onSelect: (topicId: string) => void;
 	// the course's name, to offer the whole course as a choice
@@ -92,7 +92,7 @@ export function TopicPicker({
 					<>
 						{topics.length > 0 && (
 							<DropdownMenuLabel className="px-2 py-1.5 text-[13px] font-normal text-muted-foreground">
-								Recent topics
+								Topics
 							</DropdownMenuLabel>
 						)}
 						<MenuScrollArea>

@@ -7,12 +7,12 @@ import { ModelPicker } from './model-picker';
 import { SendButton } from './send-button';
 import { StopButton } from './stop-button';
 import { ThinkToggle } from './think-toggle';
-import { ThinkWarning } from './think-warning';
 
 type ComposerToolbarProps = {
 	control: Control<TutorRequestInput>;
 	models: AiModel[];
-	onFiles: (files: File[]) => void;
+	// without it the Attach button is hidden
+	onFiles?: (files: File[]) => void;
 	sendLabel: string;
 	blockedReason: string | null;
 	busy: boolean;
@@ -36,13 +36,12 @@ export function ComposerToolbar({
 
 	return (
 		<div className="flex items-center gap-1.5 p-1">
-			<AttachButton onFiles={onFiles} />
+			{onFiles && <AttachButton onFiles={onFiles} />}
 			<div className="ml-auto flex items-center gap-1">
 				<ThinkToggle
 					on={thinkingField.value}
 					onChange={thinkingField.onChange}
 				/>
-				<ThinkWarning />
 				<ModelPicker
 					models={models}
 					selectedId={modelField.value}

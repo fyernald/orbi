@@ -1,0 +1,1 @@
+ALTER TABLE "profile" ADD COLUMN "default_model_id" text;

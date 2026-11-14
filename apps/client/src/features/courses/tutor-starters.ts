@@ -1,4 +1,5 @@
 import type { Course, Topic, TutorAction } from '@orbi/shared';
+import { composerActions } from '@/features/tutor/actions';
 
 export type TutorStarter = {
 	label: string;
@@ -7,8 +8,16 @@ export type TutorStarter = {
 	message: string;
 };
 
-// ready-made first requests for the tutor, built from the course's own topics
-export function tutorStarters(course: Course, topics: Topic[]): TutorStarter[] {
+// an action that is not built yet is not suggested
+const isBuilt = (action: TutorAction) => !composerActions[action].soon;
+
+// ready-made first requests for the tutor, built from the course's own topics;
+// only for actions that work, so a starter comes back once its action is built
+export function tutorStarters(
+	course: Course,
+	topics: Topic[],
+	isAvailable: (action: TutorAction) => boolean = isBuilt
+): TutorStarter[] {
 	const [first, second] = topics;
 	if (!first) return [];
 
@@ -40,5 +49,5 @@ export function tutorStarters(course: Course, topics: Topic[]): TutorStarter[] {
 			message: '',
 		});
 	}
-	return starters;
+	return starters.filter(({ action }) => isAvailable(action));
 }

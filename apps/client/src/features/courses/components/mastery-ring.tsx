@@ -1,6 +1,6 @@
 import type { CourseColor } from '@orbi/shared';
+import { OrbitRing } from '@/components/orbit-ring';
 import { cn } from '@/lib/utils';
-import { orbitPoint } from '../orbit';
 
 // full class names, so Tailwind finds them
 const ringTones: Record<CourseColor, string> = {
@@ -11,57 +11,42 @@ const ringTones: Record<CourseColor, string> = {
 	red: 'text-tone-red-foreground',
 };
 
-const CENTER = 22;
-const RADIUS = 19;
-
 type MasteryRingProps = {
 	// 0 to 100, or null while there is no score yet
 	value: number | null;
 	color: CourseColor;
+	// read out instead of the ring, which screen readers skip
+	label?: string;
+	// the % in the middle; a small ring leaves it to the text beside it
+	showValue?: boolean;
 	className?: string;
 };
 
-// how much of a course is known, as a moon on its orbit;
-// without a score the ring is dashed and the moon waits at the top
-export function MasteryRing({ value, color, className }: MasteryRingProps) {
-	const moon = orbitPoint(value ?? 0, RADIUS, CENTER);
-
-	return (
-		<span
-			aria-hidden="true"
-			className={cn('relative size-11 shrink-0', ringTones[color], className)}
+// how much of a course is known, as a moon on its orbit
+export function MasteryRing({
+	value,
+	color,
+	label,
+	showValue = true,
+	className,
+}: MasteryRingProps) {
+	const ring = (
+		<OrbitRing
+			value={value}
+			className={cn('size-11', ringTones[color], className)}
 		>
-			<svg viewBox="0 0 44 44" className="size-full">
-				<circle
-					cx={CENTER}
-					cy={CENTER}
-					r={RADIUS}
-					fill="none"
-					strokeWidth={2}
-					strokeDasharray={value === null ? '3 3' : undefined}
-					className="stroke-border"
-				/>
-				{value !== null && (
-					<circle
-						cx={CENTER}
-						cy={CENTER}
-						r={RADIUS}
-						fill="none"
-						strokeWidth={2}
-						strokeLinecap="round"
-						pathLength={100}
-						strokeDasharray={`${value} 100`}
-						transform={`rotate(-90 ${CENTER} ${CENTER})`}
-						className="stroke-current"
-					/>
-				)}
-				<circle cx={moon.x} cy={moon.y} r={3.5} className="fill-current" />
-			</svg>
-			{value !== null && (
-				<span className="absolute inset-0 grid place-items-center text-[11px] font-semibold text-foreground tabular-nums">
+			{showValue && value !== null && (
+				<span className="text-[11px] font-semibold text-foreground tabular-nums">
 					{value}%
 				</span>
 			)}
-		</span>
+		</OrbitRing>
+	);
+	if (!label) return ring;
+	return (
+		<>
+			{ring}
+			<span className="sr-only">{label}</span>
+		</>
 	);
 }

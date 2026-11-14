@@ -8,9 +8,10 @@ import {
 	type QueryClient,
 } from '@tanstack/react-query';
 import { z } from 'zod';
-import { topicsKey } from '@/features/courses/query-keys';
+import { courseMasteryKey, topicsKey } from '@/features/courses/query-keys';
 import { api } from '@/lib/api';
 import { reviewKey } from './hooks';
+import { questionSetsKey } from './set-hooks';
 
 // the questions of a topic live under the topic, like its notes
 export const topicQuestionsKey = (courseId: string, topicId: string) =>
@@ -30,7 +31,8 @@ export function useTopicQuestions(courseId: string, topicId: string) {
 }
 
 // Changes the topic's list at once. A question waiting for review is also in the
-// review list, so that loads again; a study session loads fresh each time it opens
+// review list, so that loads again, and a deleted question takes its answers out
+// of the score; a study session loads fresh each time it opens
 function updateTopicQuestions(
 	queryClient: QueryClient,
 	courseId: string,
@@ -42,6 +44,7 @@ function updateTopicQuestions(
 		(questions) => questions && change(questions)
 	);
 	void queryClient.invalidateQueries({ queryKey: reviewKey });
+	void queryClient.invalidateQueries({ queryKey: courseMasteryKey(courseId) });
 }
 
 // a reported question comes back rejected, and the list leaves rejected ones out
@@ -80,14 +83,19 @@ export function useUpdateQuestion(courseId: string, topicId: string) {
 	});
 }
 
+// the set it came from counts one question less
 export function useDeleteQuestion(courseId: string, topicId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (id: string) =>
 			api.delete(`${questionsPath(courseId, topicId)}/${id}`),
-		onSuccess: (_, id) =>
+		onSuccess: (_, id) => {
 			updateTopicQuestions(queryClient, courseId, topicId, (questions) =>
 				questions.filter((saved) => saved.id !== id)
-			),
+			);
+			void queryClient.invalidateQueries({
+				queryKey: questionSetsKey(courseId),
+			});
+		},
 	});
 }

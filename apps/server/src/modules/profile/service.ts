@@ -3,6 +3,7 @@ import {
 	type Profile,
 	type UpdateProfileInput,
 } from '@orbi/shared';
+import { MODEL_NOT_IN_LIST, type ModelRegistry } from '../../ai/models';
 import { ValidationError } from '../../errors';
 import type { ProfileRepository } from './repository';
 
@@ -25,20 +26,32 @@ const emptyProfile: Profile = {
 	studyTime: null,
 	locale: null,
 	timezone: null,
+	reminderEnabled: false,
+	reminderTime: null,
+	defaultModelId: null,
 	onboardedAt: null,
 };
 
 export function createProfileService({
 	repo,
+	models,
 }: {
 	repo: ProfileRepository;
+	// only a model this server can call is saved as the default
+	models: Pick<ModelRegistry, 'has'>;
 }): ProfileService {
 	const getProfile = async (userId: string) =>
 		(await repo.findProfile(userId)) ?? emptyProfile;
 
 	return {
 		getProfile,
-		saveProfile: (userId, input) => repo.saveProfile(userId, input),
+		async saveProfile(userId, input) {
+			const { defaultModelId } = input;
+			if (defaultModelId && !models.has(defaultModelId)) {
+				throw new ValidationError(MODEL_NOT_IN_LIST);
+			}
+			return repo.saveProfile(userId, input);
+		},
 
 		// the app opens only when every question has an answer
 		async finishOnboarding(userId) {

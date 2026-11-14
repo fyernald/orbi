@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { APICallError } from 'ai';
+import { NOTE_CONTENT_MAX_LENGTH } from '@orbi/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
-import { createTestApp, signUpTestUser } from '../../testing';
+import { createTestPdf } from '../../pdf/testing';
+import { createTestApp, signUpTestUser, TEST_ORIGIN } from '../../testing';
 import type { UsageLine } from '../../ai/usage';
 import { createReplyLimiter } from './reply-limiter';
 
@@ -34,7 +37,7 @@ beforeEach(() => {
 
 const send = (
 	cookie: string,
-	method: 'GET' | 'POST',
+	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	url: string,
 	payload?: object
 ) => app.inject({ method, url, headers: { cookie }, payload });
@@ -156,6 +159,42 @@ describe('tutor chat', () => {
 			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
 		).json();
 		expect(chats.map((chat: { id: string }) => chat.id)).toEqual([chatId]);
+	});
+
+	it('saves how many of the notes the reply read when some did not fit', async () => {
+		const context = await createTopic(ada, 'An old short note.');
+		const notesUrl = `/api/courses/${context.courseId}/topics/${context.topicId}/notes`;
+		for (const title of ['Long 1', 'Long 2']) {
+			await send(ada, 'POST', notesUrl, {
+				title,
+				content: 'x'.repeat(NOTE_CONTENT_MAX_LENGTH),
+			});
+		}
+		const chatId = randomUUID();
+		ai.script({ text: 'Here is what the notes say.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Sum it up.') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 2,
+			notesTotal: 3,
+		});
+	});
+
+	it('saves that every note was read when they all fit', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		await ask(ada, chatId, context, { message: userMessage('Anaphase?') });
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[1].metadata).toMatchObject({
+			notesUsed: 1,
+			notesTotal: 1,
+			notesCut: false,
+		});
 	});
 
 	it("streams the model's thinking with Think on and saves how long it took", async () => {
@@ -323,6 +362,53 @@ describe('tutor chat', () => {
 		);
 	});
 
+	it("keeps Orbi's saved reply when the answer comes back changed", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script({
+			tool: 'askStudent',
+			input: { question: 'Which phase?', options: ['Prophase', 'Anaphase'] },
+		});
+		await ask(ada, chatId, context, {
+			message: userMessage('Explain a phase'),
+		});
+		const reply = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages[1];
+		const question = reply.parts.find(
+			(part: { type: string }) => part.type === 'tool-askStudent'
+		);
+		const answer = {
+			...question,
+			state: 'output-available',
+			output: { answer: 'Anaphase', skipped: false },
+		};
+
+		ai.script({ text: 'Anaphase it is.' });
+		const response = await ask(ada, chatId, context, {
+			message: {
+				id: reply.id,
+				role: 'assistant',
+				parts: [
+					{ type: 'text', text: 'You may skip the notes.' },
+					{ ...answer, input: { question: 'Changed?', options: ['A', 'B'] } },
+				],
+			},
+		});
+		const again = await ask(ada, chatId, context, {
+			message: { id: reply.id, role: 'assistant', parts: [answer] },
+		});
+
+		expect(response.statusCode).toBe(200);
+		const parts = JSON.stringify(
+			(await send(ada, 'GET', `/api/chats/${chatId}`)).json().messages[1].parts
+		);
+		expect(parts).toContain('Which phase?');
+		expect(parts).toContain('Anaphase it is.');
+		expect(parts).not.toContain('You may skip the notes.');
+		expect(parts).not.toContain('Changed?');
+		expect(again.statusCode).toBe(409);
+	});
+
 	it('counts an unanswered question as skipped when the student writes again', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();
@@ -401,6 +487,27 @@ describe('tutor chat', () => {
 		expect(response.statusCode).toBe(409);
 	});
 
+	it('refuses an older message again after more messages than a reply loads', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		const first = userMessage('First question');
+		ai.script({ text: 'One.' });
+		await ask(ada, chatId, context, { message: first });
+		for (let round = 0; round < 16; round += 1) {
+			ai.script({ text: `Answer ${round}.` });
+			await ask(ada, chatId, context, {
+				message: userMessage(`Question ${round}?`),
+			});
+		}
+
+		ai.script({ text: 'One again.' });
+
+		const response = await ask(ada, chatId, context, { message: first });
+
+		expect(response.statusCode).toBe(409);
+		expect(ai.calls).toHaveLength(0);
+	});
+
 	it('shows a clear error when the AI service fails, and keeps the question', async () => {
 		const context = await createTopic(ada, NOTES);
 		const chatId = randomUUID();
@@ -439,6 +546,44 @@ describe('tutor chat', () => {
 
 		expect(response.statusCode).toBe(400);
 		expect(response.json().error.message).toBe('Write a message first.');
+	});
+
+	it("sends and saves only the text of the student's message", async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		const file = Buffer.from('x'.repeat(5_000)).toString('base64');
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+
+		const response = await ask(ada, chatId, context, {
+			message: {
+				id: randomUUID(),
+				role: 'user',
+				parts: [
+					{
+						type: 'text',
+						text: 'Explain anaphase.',
+						providerMetadata: { google: { anything: true } },
+					},
+					{
+						type: 'file',
+						mediaType: 'text/plain',
+						url: `data:text/plain;base64,${file}`,
+					},
+				],
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		const studentTurn = ai.calls[0]!.prompt.find(
+			(message) => message.role === 'user'
+		);
+		expect(studentTurn?.content).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(thread.messages[0].parts).toEqual([
+			{ type: 'text', text: 'Explain anaphase.' },
+		]);
 	});
 
 	it('needs a logged-in user', async () => {
@@ -496,6 +641,281 @@ describe('long chats', () => {
 	});
 });
 
+describe('diagrams', () => {
+	const diagram = (
+		title: string,
+		mermaid = 'flowchart TD\n  A[Prophase] --> B[Metaphase]'
+	) => ({
+		tool: 'createDiagram',
+		input: {
+			title,
+			kind: 'flowchart',
+			mermaid,
+			description: 'The phases of mitosis in order.',
+		},
+	});
+
+	it('draws a diagram in the reply and keeps follow-up questions for it', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(diagram('Phases of mitosis'), {
+			text: 'Prophase comes before metaphase.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Draw the phases of mitosis'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const reply = thread.messages[1];
+		const drawn = reply.parts.find(
+			(part: { type: string }) => part.type === 'tool-createDiagram'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.title).toBe('Phases of mitosis');
+
+		// a visual is part of an explanation, so the reply still gets follow-ups
+		ai.script({
+			tool: 'suggestFollowUps',
+			input: { questions: ['What happens in anaphase?'] },
+		});
+		const followUps = await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+		expect(followUps.json().questions).toEqual(['What happens in anaphase?']);
+	});
+
+	it('gives the AI another try when its Mermaid breaks the rules', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			diagram('Phases', '```mermaid\nflowchart TD\n  A --> B\n```'),
+			diagram('Phases'),
+			{ text: 'Here they are.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw the phases'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		// the model reads what to fix; the student only sees that it is being redone
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain(
+			'without code fences'
+		);
+	});
+
+	it('stops a reply at two visuals', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(diagram('One'), diagram('Two'), diagram('Three'), {
+			text: 'That is enough diagrams.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Draw everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+		expect(JSON.stringify(ai.calls[3]!.prompt)).toContain(
+			'already shows 2 visuals'
+		);
+	});
+});
+
+describe('charts', () => {
+	const plot = (expression: string) => ({
+		tool: 'createChart',
+		input: {
+			title: 'The normal curve',
+			type: 'function',
+			xLabel: 'z',
+			yLabel: 'Density',
+			series: [{ name: 'Normal', expression }],
+			xMin: -3,
+			xMax: 3,
+			description: 'The bell-shaped normal curve from -3 to 3.',
+		},
+	});
+
+	it('draws a chart in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(plot('exp(-x^2/2)/sqrt(2*pi)'), {
+			text: 'Most values sit near 0.',
+		});
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const drawn = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createChart'
+		);
+		expect(drawn.state).toBe('output-available');
+		expect(drawn.input.series[0].expression).toBe('exp(-x^2/2)/sqrt(2*pi)');
+	});
+
+	it('gives the AI another try when a formula cannot be read', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(plot('exp(-x²/2)'), plot('exp(-x^2/2)'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Plot the normal curve'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('cannot be used');
+	});
+
+	it('counts charts and diagrams together toward the visual limit', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(
+			plot('sin(x)'),
+			plot('cos(x)'),
+			{
+				tool: 'createDiagram',
+				input: {
+					title: 'Three',
+					kind: 'flowchart',
+					mermaid: 'flowchart TD\n  A --> B',
+					description: 'A third visual.',
+				},
+			},
+			{ text: 'Two is enough.' }
+		);
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me everything'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(2);
+	});
+});
+
+describe('interactive tools', () => {
+	const zScore = (shadeTo: string) => ({
+		tool: 'createInteractive',
+		input: {
+			title: 'Area under the normal curve',
+			controls: [
+				{
+					name: 'z',
+					label: 'z-score',
+					type: 'slider',
+					min: -3,
+					max: 3,
+					step: 0.1,
+					value: 1,
+				},
+			],
+			values: [{ name: 'p', label: 'P(Z ≤ z)', expression: 'normcdf(z)' }],
+			chart: {
+				xLabel: 'z',
+				yLabel: 'Density',
+				xMin: -4,
+				xMax: 4,
+				curves: [{ name: 'Normal', expression: 'normpdf(x)', shadeTo }],
+			},
+			description: 'The normal curve shaded up to z.',
+		},
+	});
+
+	it('builds a tool in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(zScore('z'), { text: 'Drag z and watch the area grow.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me what a z-score means'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createInteractive'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.values[0].expression).toBe('normcdf(z)');
+	});
+
+	it('gives the AI another try when a formula uses a name it does not have', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(zScore('x'), zScore('z'), { text: 'Here it is.' });
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me a z-score'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('Unknown name');
+	});
+});
+
+describe('mini-apps', () => {
+	const sortSteps = (js: string) => ({
+		tool: 'createMiniApp',
+		input: {
+			title: 'Bubble sort step by step',
+			html: '<button id="step">Next step</button><div id="bars"></div>',
+			js,
+			description: 'Bars that swap places one step at a time.',
+		},
+	});
+
+	it('builds a mini-app in the reply', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(sortSteps('let step = 0;'), { text: 'Press Next step.' });
+
+		await ask(ada, chatId, context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		const built = thread.messages[1].parts.find(
+			(part: { type: string }) => part.type === 'tool-createMiniApp'
+		);
+		expect(built.state).toBe('output-available');
+		expect(built.input.js).toBe('let step = 0;');
+	});
+
+	it('gives the AI another try when the code does not parse', async () => {
+		const context = await createTopic(ada, NOTES);
+		ai.script(sortSteps('let step = ;'), sortSteps('let step = 0;'), {
+			text: 'Here it is.',
+		});
+
+		const response = await ask(ada, randomUUID(), context, {
+			message: userMessage('Show me bubble sort'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(
+			chunks.filter((chunk) => chunk.type === 'tool-output-available')
+		).toHaveLength(1);
+		expect(JSON.stringify(ai.calls[1]!.prompt)).toContain('syntax error');
+	});
+});
+
 describe('the whole-course chat', () => {
 	it('answers from the notes of every topic', async () => {
 		const context = await createTopic(ada, NOTES);
@@ -513,6 +933,10 @@ describe('the whole-course chat', () => {
 		// practice questions need a topic, so the model is not offered the tool
 		expect(ai.calls[0]!.tools?.map((tool) => tool.name)).toEqual([
 			'askStudent',
+			'createDiagram',
+			'createChart',
+			'createInteractive',
+			'createMiniApp',
 		]);
 	});
 
@@ -608,16 +1032,20 @@ describe('chats per topic', () => {
 });
 
 describe('replies at the same time', () => {
-	it('refuses a reply over the limit and frees the place when one ends', async () => {
-		const models = createScriptedModels();
-		const limited = await createTestApp(createMemoryMailer(), {
+	const models = createScriptedModels();
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let context: Context;
+
+	// a new app with its own in-memory database; slow to start, so it is made here
+	// and not inside the test, which has a much shorter timeout
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 			models: models.registry,
 			limiter: createReplyLimiter(1),
 		});
-		const cookie = await signUpTestUser(limited, 'mae@test.dev');
-		const post = (url: string, payload: object) =>
-			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		cookie = await signUpTestUser(limited, 'mae@test.dev');
 		const course = (
 			await post('/api/courses', {
 				name: 'Biology',
@@ -633,15 +1061,26 @@ describe('replies at the same time', () => {
 				headers: { cookie },
 			})
 		).json();
-		const body = (text: string) => ({
-			courseId: course.id,
-			chatTopicId: null,
-			topicId: topic.id,
-			modelId: 'gemini-flash',
-			action: 'ask',
-			trigger: 'submit-message',
-			message: userMessage(text),
-		});
+		context = { courseId: course.id, topicId: topic.id };
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const post = (url: string, payload: object) =>
+		limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+
+	const body = (text: string) => ({
+		...context,
+		chatTopicId: null,
+		modelId: 'gemini-flash',
+		action: 'ask',
+		trigger: 'submit-message',
+		message: userMessage(text),
+	});
+
+	it('refuses a reply over the limit and frees the place when one ends', async () => {
 		models.script({ text: 'Slow answer.', delayMs: 300 }, { text: 'Next.' });
 
 		const [slow, refused] = await Promise.all([
@@ -654,7 +1093,6 @@ describe('replies at the same time', () => {
 			`/api/chats/${randomUUID()}/messages`,
 			body('Third')
 		);
-		await limited.close();
 
 		expect(slow.statusCode).toBe(200);
 		expect(refused.statusCode).toBe(429);
@@ -662,6 +1100,85 @@ describe('replies at the same time', () => {
 			'You can have 3 replies running at once. Wait for one to finish.'
 		);
 		expect(after.statusCode).toBe(200);
+	});
+});
+
+describe('the daily AI budget', () => {
+	const models = createScriptedModels();
+	let budgeted: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let context: Context;
+
+	// every mock model call uses 15 tokens (10 in, 5 out), so two calls pass and
+	// leave the student over the budget of 20
+	beforeAll(async () => {
+		budgeted = await createTestApp(createMemoryMailer(), {
+			requireEmailVerification: false,
+			models: models.registry,
+			budget: createTokenBudget({ dailyTokens: 20 }),
+		});
+		cookie = await signUpTestUser(budgeted, 'barbara@test.dev');
+		const course = (
+			await post('/api/courses', {
+				name: 'Biology',
+				color: 'teal',
+				goal: 'keep_up',
+				topics: ['Mitosis'],
+			})
+		).json();
+		const [topic] = (
+			await budgeted.inject({
+				method: 'GET',
+				url: `/api/courses/${course.id}/topics`,
+				headers: { cookie },
+			})
+		).json();
+		context = { courseId: course.id, topicId: topic.id };
+	});
+
+	afterAll(async () => {
+		await budgeted.close();
+	});
+
+	const post = (url: string, payload: object) =>
+		budgeted.inject({ method: 'POST', url, headers: { cookie }, payload });
+
+	const askIn = (chatId: string, text: string) =>
+		post(`/api/chats/${chatId}/messages`, {
+			...context,
+			chatTopicId: null,
+			modelId: 'gemini-flash',
+			action: 'ask',
+			trigger: 'submit-message',
+			message: userMessage(text),
+		});
+
+	it('refuses new model calls once the day is used up', async () => {
+		const chatId = randomUUID();
+		models.script({ text: 'One.' }, { text: 'Two.' });
+
+		const first = await askIn(chatId, 'First');
+		const second = await askIn(chatId, 'Second');
+		const third = await askIn(chatId, 'Third');
+		const thread = await budgeted.inject({
+			method: 'GET',
+			url: `/api/chats/${chatId}`,
+			headers: { cookie },
+		});
+		const followUps = await post(
+			`/api/chats/${chatId}/messages/${thread.json().messages.at(-1).id}/follow-ups`,
+			{ exclude: ['Why?'] }
+		);
+
+		expect(first.statusCode).toBe(200);
+		expect(second.statusCode).toBe(200);
+		expect(third.statusCode).toBe(429);
+		expect(third.json().error.message).toBe(
+			"You have used today's AI budget. It resets at midnight."
+		);
+		expect(followUps.statusCode).toBe(429);
+		// the third reply and the follow-up questions never reached the model
+		expect(models.calls).toHaveLength(2);
 	});
 });
 
@@ -869,6 +1386,102 @@ describe('follow-up questions', () => {
 	});
 });
 
+describe('follow-up questions and the reply limit', () => {
+	const places = createReplyLimiter(1);
+	let limited: Awaited<ReturnType<typeof createTestApp>>;
+	let cookie: string;
+	let userId: string;
+	let chatId: string;
+	let replyId: string;
+
+	beforeAll(async () => {
+		limited = await createTestApp(createMemoryMailer(), {
+			requireEmailVerification: false,
+			models: ai.registry,
+			limiter: places,
+		});
+		cookie = await signUpTestUser(limited, 'katherine@test.dev');
+		const post = (url: string, payload: object) =>
+			limited.inject({ method: 'POST', url, headers: { cookie }, payload });
+		const session = await limited.inject({
+			method: 'GET',
+			url: '/api/auth/get-session',
+			headers: { cookie, origin: TEST_ORIGIN },
+		});
+		userId = session.json().user.id;
+
+		const course = (
+			await post('/api/courses', {
+				name: 'Biology',
+				color: 'teal',
+				goal: 'keep_up',
+				topics: ['Mitosis'],
+			})
+		).json();
+		const [topic] = (
+			await limited.inject({
+				method: 'GET',
+				url: `/api/courses/${course.id}/topics`,
+				headers: { cookie },
+			})
+		).json();
+		chatId = randomUUID();
+		ai.script({ text: 'In anaphase the sister chromatids separate.' });
+		await post(`/api/chats/${chatId}/messages`, {
+			courseId: course.id,
+			chatTopicId: null,
+			topicId: topic.id,
+			modelId: 'gemini-flash',
+			action: 'ask',
+			trigger: 'submit-message',
+			message: userMessage('What happens in anaphase?'),
+		});
+		const thread = await limited.inject({
+			method: 'GET',
+			url: `/api/chats/${chatId}`,
+			headers: { cookie },
+		});
+		replyId = thread.json().messages[1].id;
+	});
+
+	afterAll(async () => {
+		await limited.close();
+	});
+
+	const refresh = () =>
+		limited.inject({
+			method: 'POST',
+			url: `/api/chats/${chatId}/messages/${replyId}/follow-ups`,
+			headers: { cookie },
+			payload: { exclude: ['What pulls the chromatids apart?'] },
+		});
+
+	it('refuses them while every place is taken, without asking the model', async () => {
+		const release = places.acquire(userId)!;
+
+		const response = await refresh();
+		release();
+
+		expect(response.statusCode).toBe(429);
+		expect(response.json().error.code).toBe('too_many_requests');
+		expect(ai.calls).toHaveLength(0);
+	});
+
+	it('frees the place when the questions come back', async () => {
+		const questions = { questions: ['Can you give me an example?'] };
+		ai.script(
+			{ tool: 'suggestFollowUps', input: questions },
+			{ tool: 'suggestFollowUps', input: questions }
+		);
+
+		const first = await refresh();
+		const second = await refresh();
+
+		expect(first.statusCode).toBe(200);
+		expect(second.statusCode).toBe(200);
+	});
+});
+
 describe('token use', () => {
 	// what the model was sent besides the instructions
 	const chatSent = (call = 0) =>
@@ -997,10 +1610,20 @@ describe('token use', () => {
 });
 
 describe('without an AI key', () => {
-	it('says the tutor is not set up', async () => {
-		const bare = await createTestApp(createMemoryMailer(), {
+	let bare: Awaited<ReturnType<typeof createTestApp>>;
+
+	// slow to start, so it is made here and not inside the test
+	beforeAll(async () => {
+		bare = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 		});
+	});
+
+	afterAll(async () => {
+		await bare.close();
+	});
+
+	it('says the tutor is not set up', async () => {
 		const cookie = await signUpTestUser(bare, 'nali@test.dev');
 		const course = (
 			await bare.inject({
@@ -1042,12 +1665,175 @@ describe('without an AI key', () => {
 				message: userMessage('Hi'),
 			},
 		});
-		await bare.close();
 
 		expect(models.json()).toEqual({ models: [], defaultModelId: null });
 		expect(response.statusCode).toBe(503);
 		expect(response.json().error.message).toBe(
 			'The AI tutor is not set up on this server yet.'
+		);
+	});
+});
+
+describe('attached PDFs', () => {
+	const uploadPdf = async (cookie: string, { courseId, topicId }: Context) =>
+		(
+			await app.inject({
+				method: 'POST',
+				url: `/api/courses/${courseId}/topics/${topicId}/notes/pdf?fileName=Lecture%203.pdf`,
+				headers: { cookie, 'content-type': 'application/pdf' },
+				payload: Buffer.from(createTestPdf(['Solve 2x + 4 = 10'])),
+			})
+		).json().notes as { id: string }[];
+
+	it('saves them with the message and tells the model, also later', async () => {
+		const context = await createTopic(ada, NOTES);
+		const [pdfNote] = await uploadPdf(ada, context);
+		const [othersNote] = await uploadPdf(grace, await createTopic(grace));
+		const chatId = randomUUID();
+		const attachment = {
+			fileName: 'Lecture 3.pdf',
+			noteIds: [pdfNote!.id, othersNote!.id],
+		};
+
+		ai.script({ text: 'x = 3' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Can you solve this?'),
+			attachments: [attachment],
+		});
+		ai.script({ text: 'It is the PDF from before.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Check the PDF I attached before'),
+		});
+
+		const [question] = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages;
+		expect(question.metadata.attachments).toEqual([
+			{ fileName: 'Lecture 3.pdf', noteIds: [pdfNote!.id] },
+		]);
+		const later = JSON.stringify(ai.calls[0]!.prompt);
+		expect(later).toContain('attached \\"Lecture 3.pdf\\" to this message');
+		expect(later).toContain('file=\\"Lecture 3.pdf\\"');
+		expect(later).toContain('attached in this chat first');
+	});
+
+	it('tells the follow-up questions which PDF the student sent', async () => {
+		const context = await createTopic(ada);
+		const [pdfNote] = await uploadPdf(ada, context);
+		const chatId = randomUUID();
+		ai.script({ text: 'x = 3, because 2x = 6.' });
+		await ask(ada, chatId, context, {
+			message: userMessage('Can you solve this?'),
+			attachments: [{ fileName: 'Lecture 3.pdf', noteIds: [pdfNote!.id] }],
+		});
+		const [, reply] = (await send(ada, 'GET', `/api/chats/${chatId}`)).json()
+			.messages;
+
+		ai.script({ tool: 'suggestFollowUps', input: { questions: ['Why 2x?'] } });
+		await send(
+			ada,
+			'POST',
+			`/api/chats/${chatId}/messages/${reply.id}/follow-ups`,
+			{ exclude: [] }
+		);
+
+		const prompt = JSON.stringify(ai.calls[0]!.prompt);
+		expect(prompt).toContain('attached \\"Lecture 3.pdf\\"');
+		expect(prompt).toContain('Solve 2x + 4 = 10');
+	});
+});
+
+describe('renaming and deleting a chat', () => {
+	// a topic with one saved chat
+	async function savedChat(cookie: string) {
+		const context = await createTopic(cookie, NOTES);
+		const chatId = randomUUID();
+		ai.script({ text: 'In anaphase the chromatids separate.' });
+		await ask(cookie, chatId, context, {
+			message: userMessage('What happens in anaphase?'),
+		});
+		return { ...context, chatId };
+	}
+
+	it('renames a chat without moving it in the list', async () => {
+		const { courseId, chatId } = await savedChat(ada);
+		const before = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '  Anaphase basics  ',
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			id: chatId,
+			title: 'Anaphase basics',
+			updatedAt: before.updatedAt,
+		});
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${courseId}/chats`)
+		).json();
+		expect(chats[0].title).toBe('Anaphase basics');
+	});
+
+	it('refuses an empty name', async () => {
+		const { chatId } = await savedChat(ada);
+
+		const response = await send(ada, 'PATCH', `/api/chats/${chatId}`, {
+			title: '   ',
+		});
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('deletes a chat with its messages, and keeps the questions it made', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		ai.script(
+			{ tool: 'createQuestions', input: { questions: fiveQuestions } },
+			{ text: 'Here are 5 questions.' }
+		);
+		await ask(ada, chatId, context, {
+			action: 'questions',
+			message: userMessage('Make questions from my notes'),
+		});
+
+		const response = await send(ada, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(response.statusCode).toBe(204);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
+		);
+		const chats = (
+			await send(ada, 'GET', `/api/courses/${context.courseId}/chats`)
+		).json();
+		expect(chats).toEqual([]);
+		const questions = (
+			await send(
+				ada,
+				'GET',
+				`/api/courses/${context.courseId}/topics/${context.topicId}/questions`
+			)
+		).json();
+		expect(questions).toHaveLength(5);
+	});
+
+	it("answers 404 for another user's chat, and for one already deleted", async () => {
+		const { chatId } = await savedChat(ada);
+
+		const rename = await send(grace, 'PATCH', `/api/chats/${chatId}`, {
+			title: 'Mine now',
+		});
+		const remove = await send(grace, 'DELETE', `/api/chats/${chatId}`);
+
+		expect(rename.statusCode).toBe(404);
+		expect(rename.json().error.message).toBe('Chat not found.');
+		expect(remove.statusCode).toBe(404);
+		expect((await send(ada, 'GET', `/api/chats/${chatId}`)).statusCode).toBe(
+			200
+		);
+
+		await send(ada, 'DELETE', `/api/chats/${chatId}`);
+		expect((await send(ada, 'DELETE', `/api/chats/${chatId}`)).statusCode).toBe(
+			404
 		);
 	});
 });

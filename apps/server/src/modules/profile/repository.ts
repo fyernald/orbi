@@ -22,6 +22,9 @@ const profileColumns = {
 	studyTime: profile.studyTime,
 	locale: profile.locale,
 	timezone: profile.timezone,
+	reminderEnabled: profile.reminderEnabled,
+	reminderTime: profile.reminderTime,
+	defaultModelId: profile.defaultModelId,
 	onboardedAt: profile.onboardedAt,
 };
 
@@ -31,9 +34,15 @@ type ProfileRow = Pick<
 >;
 
 // the database keeps plain text and numbers; the shared schema checked them on the way in
-const toProfile = ({ onboardedAt, ...row }: ProfileRow): Profile =>
+const toProfile = ({
+	onboardedAt,
+	reminderTime,
+	...row
+}: ProfileRow): Profile =>
 	({
 		...row,
+		// Postgres sends a time as "18:00:00"
+		reminderTime: reminderTime?.slice(0, 5) ?? null,
 		onboardedAt: onboardedAt?.toISOString() ?? null,
 	}) as Profile;
 

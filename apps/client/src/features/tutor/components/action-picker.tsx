@@ -9,8 +9,8 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SoonBadge } from '@/components/soon-badge';
 import type { ComposerAction } from '../actions';
-import { BetaBadge } from './beta-badge';
 import { PickerButton } from './picker-button';
 
 type ActionPickerProps = {
@@ -51,13 +51,14 @@ export function ActionPicker({
 						<DropdownMenuRadioItem
 							key={action.id}
 							value={action.id}
+							disabled={action.soon}
 							className="items-start gap-2.5 rounded-lg px-2 py-2"
 						>
 							<action.icon className="mt-0.5 text-muted-foreground" />
 							<span className="flex min-w-0 flex-col gap-0.5">
 								<span className="flex items-center gap-1.5 font-medium">
 									{action.label}
-									{action.beta && <BetaBadge />}
+									{action.soon && <SoonBadge />}
 								</span>
 								<span className="text-[13px] text-muted-foreground">
 									{action.description}

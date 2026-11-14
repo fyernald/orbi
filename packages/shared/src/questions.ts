@@ -65,6 +65,18 @@ export const question = z.object({
 	correctChoice: z.int(),
 	explanation: z.string().nullable(),
 	status: z.enum(QUESTION_STATUSES),
+	// the set the tutor made it in; null for one the student wrote
+	setId: z.uuid().nullable(),
+	createdAt: z.iso.datetime(),
+});
+
+// the questions one tutor reply made, for the course's Study pane
+export const questionSet = z.object({
+	id: z.uuid(),
+	topicId: z.uuid(),
+	topicName: z.string(),
+	// without the rejected ones
+	questionCount: z.int(),
 	createdAt: z.iso.datetime(),
 });
 
@@ -92,6 +104,7 @@ export const approveTopicQuestionsOutput = z.object({
 });
 
 export type Question = z.infer<typeof question>;
+export type QuestionSet = z.infer<typeof questionSet>;
 export type ReviewTopic = z.infer<typeof reviewTopic>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionInput>;
 
@@ -223,6 +236,22 @@ export const sessionAnswer = chatAnswer.extend({
 	explanation: z.string().nullable(),
 });
 
+// why a wrong choice is wrong, written by the AI from the topic's notes (US-07); the
+// same question and choice always give back the saved one
+export const answerExplanation = z.object({
+	questionId: z.uuid(),
+	choice: z.int(),
+	text: z.string(),
+});
+
+// how well the student knows a topic, from 0 to 100; null before its first answer
+export const topicMastery = z.object({
+	topicId: z.uuid(),
+	score: z.int().min(0).max(100).nullable(),
+});
+
 export type StudyQuestion = z.infer<typeof studyQuestion>;
+export type TopicMastery = z.infer<typeof topicMastery>;
 export type StudySession = z.infer<typeof studySession>;
 export type SessionAnswer = z.infer<typeof sessionAnswer>;
+export type AnswerExplanation = z.infer<typeof answerExplanation>;

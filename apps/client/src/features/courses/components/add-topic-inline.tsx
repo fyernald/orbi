@@ -7,7 +7,8 @@ import { useForm } from 'react-hook-form';
 import { KeyHint } from '@/components/key-hint';
 import { Spinner } from '@/components/ui/spinner';
 import { apiErrorMessage } from '@/lib/api';
-import { useCreateTopic } from '../hooks';
+import { useCreateTopic, useTopics } from '../hooks';
+import { DUPLICATE_TOPIC_MESSAGE, hasTopicNamed } from '../topic-names';
 
 type AddTopicInlineProps = {
 	courseId: string;
@@ -24,6 +25,8 @@ export function AddTopicInline({
 	onClose,
 }: AddTopicInlineProps) {
 	const create = useCreateTopic(courseId);
+	// the topics the pane already shows, from the same query
+	const topics = useTopics(courseId);
 	const hintId = useId();
 	const form = useForm<CreateTopicInput>({
 		resolver: zodResolver(createTopicInput),
@@ -37,14 +40,20 @@ export function AddTopicInline({
 
 	return (
 		<form
-			onSubmit={form.handleSubmit((values) =>
+			method="post"
+			onSubmit={form.handleSubmit((values) => {
+				const names = topics.data?.map(({ name }) => name) ?? [];
+				if (hasTopicNamed(names, values.name)) {
+					form.setError('name', { message: DUPLICATE_TOPIC_MESSAGE });
+					return;
+				}
 				create.mutate(values, {
 					onSuccess: () => {
 						form.reset();
 						form.setFocus('name');
 					},
-				})
-			)}
+				});
+			})}
 			noValidate
 			className="flex flex-col gap-1.5"
 		>
@@ -71,7 +80,9 @@ export function AddTopicInline({
 				className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-xs text-muted-foreground"
 			>
 				{message ? (
-					<span className="text-destructive">{message}</span>
+					<span role="alert" className="text-destructive">
+						{message}
+					</span>
 				) : (
 					<>
 						<span className="flex items-center gap-1">

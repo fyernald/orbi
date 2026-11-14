@@ -1,5 +1,7 @@
 import {
 	aiModels,
+	answerExplanation,
+	answerQuestionInput,
 	chatMessagesPage,
 	chatParams,
 	chatSummary,
@@ -9,31 +11,33 @@ import {
 	followUpParams,
 	followUps,
 	followUpsInput,
+	questionParams,
+	renameChatInput,
 	sendChatMessageInput,
 } from '@orbi/shared';
 import { createUIMessageStreamResponse } from 'ai';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { routeLimit, type RateLimits } from '../../rate-limit';
 import type { RequireUser } from '../auth/session';
 import type { TutorService } from './service';
 
 type TutorRoutesDeps = {
 	tutor: TutorService;
 	requireUser: RequireUser;
+	limits: RateLimits;
 };
 
 export function createTutorRoutes({
 	tutor,
 	requireUser,
+	limits,
 }: TutorRoutesDeps): FastifyPluginAsyncZod {
 	return async (api) => {
 		api.get(
 			'/models',
 			{ schema: { response: { 200: aiModels } } },
-			async (request) => {
-				await requireUser(request);
-				return tutor.listModels();
-			}
+			async (request) => tutor.listModels(await requireUser(request))
 		);
 
 		api.get(
@@ -53,6 +57,35 @@ export function createTutorRoutes({
 			{ schema: { params: chatParams, response: { 200: chatThread } } },
 			async (request) =>
 				tutor.getChat(await requireUser(request), request.params.chatId)
+		);
+
+		api.patch(
+			'/chats/:chatId',
+			{
+				schema: {
+					params: chatParams,
+					body: renameChatInput,
+					response: { 200: chatSummary },
+				},
+			},
+			async (request) =>
+				tutor.renameChat(
+					await requireUser(request),
+					request.params.chatId,
+					request.body
+				)
+		);
+
+		api.delete(
+			'/chats/:chatId',
+			{ schema: { params: chatParams } },
+			async (request, reply) => {
+				await tutor.deleteChat(
+					await requireUser(request),
+					request.params.chatId
+				);
+				return reply.status(204).send();
+			}
 		);
 
 		api.get(
@@ -81,6 +114,7 @@ export function createTutorRoutes({
 					body: followUpsInput,
 					response: { 200: followUps },
 				},
+				config: routeLimit(limits.followUps),
 			},
 			async (request) =>
 				tutor.suggestFollowUps(
@@ -88,6 +122,26 @@ export function createTutorRoutes({
 					request.params.chatId,
 					request.params.messageId,
 					request.body
+				)
+		);
+
+		// why a wrong answer in a study session is wrong; a saved one comes back without
+		// asking the model again
+		api.post(
+			'/questions/:questionId/explanation',
+			{
+				schema: {
+					params: questionParams,
+					body: answerQuestionInput,
+					response: { 200: answerExplanation },
+				},
+				config: routeLimit(limits.explainAnswer),
+			},
+			async (request) =>
+				tutor.explainAnswer(
+					await requireUser(request),
+					request.params.questionId,
+					request.body.choice
 				)
 		);
 
