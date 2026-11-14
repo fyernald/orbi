@@ -38,7 +38,7 @@ export function pdfNotes(
 		}
 	});
 
-	const name = fileName.replace(/\.pdf$/i, '').trim() || 'PDF notes';
+	const name = pdfName(fileName);
 	if (parts.length === 1) {
 		return [{ title: fitTitle(name, ''), content: parts[0]!.text }];
 	}
@@ -51,8 +51,12 @@ export function pdfNotes(
 	}));
 }
 
+// the file name without .pdf, the start of every note title made from it
+export const pdfName = (fileName: string): string =>
+	fileName.replace(/\.pdf$/i, '').trim() || 'PDF notes';
+
 // a page longer than one note is cut at line breaks where it can be
-function splitText(text: string, maxLength: number): string[] {
+export function splitText(text: string, maxLength: number): string[] {
 	const chunks: string[] = [];
 	let rest = text;
 	while (rest.length > maxLength) {
@@ -65,8 +69,8 @@ function splitText(text: string, maxLength: number): string[] {
 	return chunks;
 }
 
-// the page range always fits; a long file name is shortened instead
-function fitTitle(name: string, suffix: string): string {
+// the suffix always fits; a long file name is shortened instead
+export function fitTitle(name: string, suffix: string): string {
 	const room = NOTE_TITLE_MAX_LENGTH - suffix.length;
 	const short =
 		name.length <= room ? name : `${name.slice(0, room - 1).trimEnd()}…`;

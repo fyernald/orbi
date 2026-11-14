@@ -142,6 +142,10 @@ export const topic = pgTable(
 	]
 );
 
+// a note the student sees, or the full text of a PDF, kept out of the notes list:
+// the student sees the key points Orbi wrote from it, the tutor reads the full text
+export const noteKind = pgEnum('note_kind', ['note', 'pdf_text']);
+
 export const note = pgTable(
 	'note',
 	{
@@ -154,6 +158,7 @@ export const note = pgTable(
 		// the same file uploaded again reuses its notes
 		sourceName: varchar('source_name', { length: 255 }),
 		sourceHash: varchar('source_hash', { length: 64 }),
+		kind: noteKind('kind').default('note').notNull(),
 		...timestamps,
 	},
 	(t) => [

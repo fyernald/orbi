@@ -15,6 +15,8 @@ import type { BetaService } from './modules/beta/service';
 import { createCourseRoutes } from './modules/courses/routes';
 import { createCspReportRoutes } from './modules/csp-report/routes';
 import type { CourseService } from './modules/courses/service';
+import { createKeyPointRoutes } from './modules/notes/key-points/routes';
+import type { PrepareKeyPoints } from './modules/notes/key-points/writer';
 import { createNoteRoutes } from './modules/notes/routes';
 import type { NoteService } from './modules/notes/service';
 import { createProfileRoutes } from './modules/profile/routes';
@@ -33,6 +35,7 @@ export type AppDeps = {
 		beta: BetaService;
 		courses: CourseService;
 		notes: NoteService;
+		keyPoints: PrepareKeyPoints;
 		profiles: ProfileService;
 		questions: QuestionService;
 		tutor: TutorService;
@@ -92,6 +95,13 @@ export function buildApp({
 			);
 			api.register(
 				createNoteRoutes({ notes: services.notes, requireUser, limits })
+			);
+			api.register(
+				createKeyPointRoutes({
+					prepareKeyPoints: services.keyPoints,
+					requireUser,
+					limits,
+				})
 			);
 			api.register(
 				createProfileRoutes({ profiles: services.profiles, requireUser })

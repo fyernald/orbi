@@ -28,9 +28,9 @@ export const createNoteInput = z.object({
 // an edit saves the whole note again, with the same rules as a new one
 export const updateNoteInput = createNoteInput;
 
-// a PDF is read on the server and its text saved as notes, split by pages into
-// parts of at most PDF_NOTE_MAX_LENGTH characters (about 3 pages), so the tutor can
-// read the parts it needs and the notes stay easy to read
+// a PDF is read on the server and its full text kept out of the notes list, split
+// by pages into parts of at most PDF_NOTE_MAX_LENGTH characters (about 3 pages), so
+// the tutor can read the parts it needs; the student sees the key points Orbi writes
 export const PDF_MAX_SIZE = 20 * 1024 * 1024;
 export const PDF_MAX_SIZE_LABEL = '20 MB';
 export const PDF_NOTE_MAX_LENGTH = 6_000;
@@ -54,19 +54,62 @@ export const note = z.object({
 	topicId: z.uuid(),
 	title: z.string(),
 	content: z.string(),
+	// the PDF the note was written from, null for a note the student wrote
+	sourceName: z.string().nullable(),
 	createdAt: z.iso.datetime(),
 	updatedAt: z.iso.datetime(),
 });
 
-// the same PDF uploaded to the same topic again is not read twice: its notes
-// are given back with reused set, so no copies end up in the tutor's notes
+// a SHA-256 of the PDF's bytes names the file on its topic
+export const fileHash = z
+	.string()
+	.regex(/^[0-9a-f]{64}$/, 'This PDF was not found. Upload it again.');
+
+// The full text is saved as hidden parts (textIds), which a chat message can
+// attach. notes are the key points already written from this file, empty until
+// they are. The same PDF uploaded to the same topic again is not read twice:
+// reused is set, so no copies end up in the tutor's notes.
 export const pdfUploadResult = z.object({
+	fileHash,
+	textIds: z.array(z.uuid()),
 	notes: z.array(note),
 	reused: z.boolean(),
 });
+
+// a PDF Orbi has read on a topic that has no notes yet: attached in the chat, or
+// its key points were cancelled. The student can write them or remove the file
+export const savedPdf = z.object({
+	fileHash,
+	name: z.string(),
+	savedAt: z.iso.datetime(),
+});
+
+export const pdfParams = topicParams.extend({ fileHash });
+
+// Orbi writes the key points of an uploaded PDF with the model the student picked
+// (US-44); it never picks another model
+export const keyPointsInput = z.object({
+	fileHash,
+	modelId: z.string().min(1, 'Choose a model from the list.').max(100),
+});
+
+// the key points stream as one JSON object per line: the parts done so far, then
+// the saved notes, or an error, after which nothing is saved
+export const keyPointsEvent = z.discriminatedUnion('type', [
+	z.object({
+		type: z.literal('progress'),
+		done: z.number().int().min(0),
+		total: z.number().int().min(1),
+	}),
+	z.object({ type: z.literal('done'), notes: z.array(note) }),
+	z.object({ type: z.literal('error'), message: z.string() }),
+]);
 
 export type CreateNoteInput = z.infer<typeof createNoteInput>;
 export type UpdateNoteInput = z.infer<typeof updateNoteInput>;
 export type PdfUploadQuery = z.infer<typeof pdfUploadQuery>;
 export type PdfUploadResult = z.infer<typeof pdfUploadResult>;
+export type SavedPdf = z.infer<typeof savedPdf>;
+export type KeyPointsInput = z.infer<typeof keyPointsInput>;
+export type KeyPointsEvent = z.infer<typeof keyPointsEvent>;
 export type Note = z.infer<typeof note>;

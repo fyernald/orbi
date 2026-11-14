@@ -7,6 +7,7 @@ import { TooManyRequestsError } from './errors';
 export type RateLimits = {
 	default: number;
 	pdfUpload: number;
+	keyPoints: number;
 	followUps: number;
 	sessionAnswer: number;
 	explainAnswer: number;
@@ -16,6 +17,8 @@ export type RateLimits = {
 export const RATE_LIMITS: RateLimits = {
 	default: 200,
 	pdfUpload: 10,
+	// each one is a run of model calls over a whole PDF
+	keyPoints: 10,
 	followUps: 20,
 	sessionAnswer: 60,
 	// each new one is a model call

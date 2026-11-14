@@ -36,9 +36,9 @@ export function sendBlockedReason({
 			return 'Pick a topic first. Practice questions belong to one topic.';
 		}
 	}
-	// an attached PDF is saved to the topic's notes, and the tutor reads it there
+	// an attached PDF is read on the server first, and the tutor reads its text
 	if (attachments.some((file) => file.status === 'uploading')) {
-		return 'Wait until your PDFs are saved to the notes.';
+		return 'Wait until Orbi has read your PDFs.';
 	}
 	const failed = attachments.find((file) => file.status === 'error');
 	if (failed) {

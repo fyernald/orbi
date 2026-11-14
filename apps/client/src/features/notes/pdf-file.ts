@@ -13,10 +13,10 @@ export function pdfFileError(file: File): string | null {
 export function pdfSavedMessage(
 	fileName: string,
 	noteCount: number,
-	reused = false
+	alreadyWritten = false
 ) {
-	if (reused) return `${fileName} is already in your notes.`;
+	if (alreadyWritten) return `${fileName} already has notes.`;
 	return noteCount === 1
-		? `Saved ${fileName} as a note.`
-		: `Saved ${fileName} as ${noteCount} notes, split by pages.`;
+		? `Orbi wrote the key points of ${fileName} as a note.`
+		: `Orbi wrote the key points of ${fileName} in ${noteCount} notes.`;
 }

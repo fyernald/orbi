@@ -3,8 +3,10 @@ import {
 	note,
 	noteParams,
 	PDF_MAX_SIZE,
+	pdfParams,
 	pdfUploadQuery,
 	pdfUploadResult,
+	savedPdf,
 	topicParams,
 	updateNoteInput,
 } from '@orbi/shared';
@@ -84,13 +86,35 @@ export function createNoteRoutes({
 			async (request, reply) => {
 				const userId = await requireUser(request);
 				const { courseId, topicId } = request.params;
-				const result = await notes.createNotesFromPdf(
-					userId,
-					courseId,
-					topicId,
-					{ fileName: request.query.fileName, data: request.body }
-				);
+				const result = await notes.savePdf(userId, courseId, topicId, {
+					fileName: request.query.fileName,
+					data: request.body,
+				});
 				return reply.status(result.reused ? 200 : 201).send(result);
+			}
+		);
+
+		// PDFs Orbi has read on the topic that have no notes yet
+		api.get(
+			'/courses/:courseId/topics/:topicId/notes/pdfs',
+			{
+				schema: { params: topicParams, response: { 200: z.array(savedPdf) } },
+			},
+			async (request) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId } = request.params;
+				return notes.listUnwrittenPdfs(userId, courseId, topicId);
+			}
+		);
+
+		api.delete(
+			'/courses/:courseId/topics/:topicId/notes/pdfs/:fileHash',
+			{ schema: { params: pdfParams } },
+			async (request, reply) => {
+				const userId = await requireUser(request);
+				const { courseId, topicId, fileHash } = request.params;
+				await notes.deletePdf(userId, courseId, topicId, fileHash);
+				return reply.status(204).send();
 			}
 		);
 

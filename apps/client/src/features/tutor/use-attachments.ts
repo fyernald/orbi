@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useUploadPdf } from '@/features/notes/hooks';
+import { useUploadPdf } from '@/features/notes/pdf-hooks';
 import { apiErrorMessage } from '@/lib/api';
 import {
 	attachmentError,
@@ -14,8 +14,9 @@ import {
 // is picked (the whole-course chat)
 export type AttachmentTarget = { courseId: string; topicId: string } | null;
 
-// the files attached to the note composer, each uploading on its own and saved
-// as notes of the target topic
+// the files attached to the note composer, each uploading on its own; Orbi
+// keeps a PDF's text on the target topic, out of the notes list, and the tutor
+// reads it with the message
 export function useAttachments(target: AttachmentTarget) {
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const uploads = useRef(new Map<string, AbortController>());
@@ -40,11 +41,12 @@ export function useAttachments(target: AttachmentTarget) {
 			signal: controller.signal,
 			onProgress: (progress) => update(attachment.id, { progress }),
 		})
-			.then(({ notes, reused }) =>
+			.then(({ textIds, reused }) =>
 				update(attachment.id, {
 					status: 'ready',
 					progress: 1,
-					noteIds: notes.map(({ id }) => id),
+					// the PDF's full text, which the tutor reads with the message
+					noteIds: textIds,
 					reused,
 				})
 			)

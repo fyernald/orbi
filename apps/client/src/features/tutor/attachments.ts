@@ -18,13 +18,13 @@ export type Attachment = {
 	// a short reason for the chip, and the whole one for the tooltip
 	error?: string;
 	errorDetail?: string;
-	// once saved: the notes the PDF became, and whether they were there already
+	// once saved: the parts of the PDF's text, and whether they were there already
 	noteIds?: string[];
 	reused?: boolean;
 };
 
 // the kinds Orbi can read; the others are known so they get an icon and a clear
-// reason. A PDF is saved as notes of the topic
+// reason. Orbi keeps a PDF's text on the topic for the tutor
 const readableKinds: AttachmentKind[] = ['pdf'];
 
 const kindByExtension: Record<string, AttachmentKind> = {

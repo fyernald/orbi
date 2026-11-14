@@ -6,9 +6,9 @@ import { createNoteService } from './service';
 // the topic is there when the service checks it, then deleted before the insert
 const deletedWhileSaving = {
 	topicExists: async () => true,
-	listSourceNotes: async () => [],
+	findPdfText: async () => undefined,
 	insertNote: async () => undefined,
-	insertSourceNotes: async () => undefined,
+	savePdfText: async () => undefined,
 } as Partial<NoteRepository> as NoteRepository;
 
 const pdf: PdfReader = { readPages: async () => ['Prophase and metaphase'] };
@@ -29,7 +29,7 @@ describe('saving to a topic deleted at the same time', () => {
 
 	it('answers that the topic was not found for a PDF', async () => {
 		await expect(
-			service.createNotesFromPdf('ada', 'course', 'topic', {
+			service.savePdf('ada', 'course', 'topic', {
 				fileName: 'cells.pdf',
 				data: new Uint8Array([1, 2, 3]),
 			})

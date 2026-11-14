@@ -2,25 +2,25 @@
 
 import type { Note } from '@orbi/shared';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
 import { isNotePreviewClipped } from '../note-preview';
 import { noteTime } from '../note-time';
 import { EditNoteForm } from './edit-note-form';
 import { NoteActions } from './note-actions';
+import { NoteContent } from './note-content';
+import { NoteSource } from './note-source';
 
 type NoteCardProps = {
 	courseId: string;
 	note: Note;
 };
 
-// a saved note, shown as it was pasted; long ones open in place, and an edit
-// happens in place too
+// a saved note; long ones open in place, and an edit happens in place too
 export function NoteCard({ courseId, note }: NoteCardProps) {
 	const [expanded, setExpanded] = useState(false);
 	const [hasOverflow, setHasOverflow] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const actions = useRef<HTMLButtonElement>(null);
-	const preview = useRef<HTMLParagraphElement>(null);
+	const preview = useRef<HTMLDivElement>(null);
 	const time = noteTime(note, new Date());
 
 	// measured only while the note is cut, before paint, so the button never pops in
@@ -68,15 +68,8 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 					/>
 				</div>
 			</header>
-			<p
-				ref={preview}
-				className={cn(
-					'text-sm leading-relaxed break-words whitespace-pre-wrap text-subtle-foreground',
-					!expanded && 'line-clamp-5'
-				)}
-			>
-				{note.content}
-			</p>
+			{note.sourceName && <NoteSource name={note.sourceName} />}
+			<NoteContent ref={preview} note={note} expanded={expanded} />
 			{(hasOverflow || expanded) && (
 				<button
 					type="button"

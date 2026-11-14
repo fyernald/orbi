@@ -12,17 +12,12 @@ import {
 	type SendChatMessageInput,
 } from '@orbi/shared';
 import { generateText } from 'ai';
-import {
-	MODEL_NOT_IN_LIST,
-	type ModelOptions,
-	type ModelRegistry,
-	type ResolvedModel,
-} from '../../ai/models';
+import { createModelResolver } from '../../ai/model-resolver';
+import type { ModelRegistry } from '../../ai/models';
 import type { LogUsage } from '../../ai/usage';
 import {
 	NotFoundError,
 	ServiceUnavailableError,
-	TooManyRequestsError,
 	ValidationError,
 } from '../../errors';
 import type { UsageService } from '../usage/service';
@@ -47,6 +42,7 @@ import {
 import { selectNotes } from './prompt';
 import { replyErrorMessage } from './reply-errors';
 import {
+	createPlaceTaker,
 	createReplyLimiter,
 	releaseOnAbort,
 	type ReplyLimiter,
@@ -140,28 +136,8 @@ export function createTutorService({
 	logUsage?: LogUsage;
 	now?: () => Date;
 }): TutorService {
-	function resolveModel(modelId: string, options: ModelOptions): ResolvedModel {
-		const resolved = models.resolve(modelId, options);
-		if (resolved) return resolved;
-		if (models.list().models.length === 0) {
-			throw new ServiceUnavailableError(
-				'The AI tutor is not set up on this server yet.'
-			);
-		}
-		throw new ValidationError(MODEL_NOT_IN_LIST);
-	}
-
-	// Every model call takes one of the student's places, so neither replies nor
-	// follow-up questions can run past the limit; the caller frees it when done
-	function takePlace(userId: string) {
-		const release = limiter.acquire(userId);
-		if (!release) {
-			throw new TooManyRequestsError(
-				`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
-			);
-		}
-		return release;
-	}
+	const resolveModel = createModelResolver(models);
+	const takePlace = createPlaceTaker(limiter);
 
 	async function requireChat(userId: string, chatId: string) {
 		const chat = await repo.findChat(userId, chatId);

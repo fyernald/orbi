@@ -45,7 +45,7 @@ describe('note repository', () => {
 
 	it('gives back undefined for PDF notes on a topic that is gone', async () => {
 		await expect(
-			repo.insertSourceNotes('ada', randomUUID(), [fields, fields], source)
+			repo.savePdfText('ada', randomUUID(), [fields, fields], source)
 		).resolves.toBeUndefined();
 	});
 

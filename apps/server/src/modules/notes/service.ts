@@ -5,6 +5,7 @@ import {
 	type CreateNoteInput,
 	type Note,
 	type PdfUploadResult,
+	type SavedPdf,
 	type UpdateNoteInput,
 } from '@orbi/shared';
 import { NotFoundError, ValidationError } from '../../errors';
@@ -24,14 +25,26 @@ export interface NoteService {
 		topicId: string,
 		input: CreateNoteInput
 	): Promise<Note>;
-	// the PDF's text is saved as notes, more than one when it is long; the same
-	// file again gives back the notes it was saved as before
-	createNotesFromPdf(
+	// The PDF's text is saved out of the notes list, for the tutor and for the key
+	// points Orbi writes next. The same file again is not read again: its text, and
+	// the notes already written from it, are given back.
+	savePdf(
 		userId: string,
 		courseId: string,
 		topicId: string,
 		upload: PdfUpload
 	): Promise<PdfUploadResult>;
+	listUnwrittenPdfs(
+		userId: string,
+		courseId: string,
+		topicId: string
+	): Promise<SavedPdf[]>;
+	deletePdf(
+		userId: string,
+		courseId: string,
+		topicId: string,
+		fileHash: string
+	): Promise<void>;
 	updateNote(
 		userId: string,
 		courseId: string,
@@ -110,27 +123,46 @@ export function createNoteService({
 			return created;
 		},
 
-		async createNotesFromPdf(userId, courseId, topicId, { fileName, data }) {
+		async savePdf(userId, courseId, topicId, { fileName, data }) {
 			await requireTopic(userId, courseId, topicId);
-			const hash = createHash('sha256').update(data).digest('hex');
+			const fileHash = createHash('sha256').update(data).digest('hex');
+			const result = (textIds: string[], reused: boolean) =>
+				repo
+					.listPdfNotes(userId, topicId, fileHash)
+					.then((notes) => ({ fileHash, textIds, notes, reused }));
 			return queue.run(userId, async () => {
-				// a deleted note is not brought back: the parts still there are given back.
-				// Checked here first, so a file sent again is not read again
-				const saved = await repo.listSourceNotes(userId, topicId, hash);
-				if (saved.length > 0) return { notes: saved, reused: true };
+				// checked here first, so a file sent again is not read again
+				const saved = await repo.findPdfText(userId, topicId, fileHash);
+				if (saved) return result(saved.ids, true);
 
-				const notes = pdfNotes(fileName, await readPdf(data));
-				if (notes.length === 0) throw new ValidationError(pdfMessages.noText);
-				if (notes.length > PDF_MAX_NOTES) {
+				const parts = pdfNotes(fileName, await readPdf(data));
+				if (parts.length === 0) throw new ValidationError(pdfMessages.noText);
+				if (parts.length > PDF_MAX_NOTES) {
 					throw new ValidationError(pdfMessages.tooLong);
 				}
-				const created = await repo.insertSourceNotes(userId, topicId, notes, {
+				const created = await repo.savePdfText(userId, topicId, parts, {
 					name: fileName,
-					hash,
+					hash: fileHash,
 				});
 				if (!created) throw topicNotFound();
-				return created;
+				return result(created.textIds, created.reused);
 			});
+		},
+
+		async listUnwrittenPdfs(userId, courseId, topicId) {
+			await requireTopic(userId, courseId, topicId);
+			const pdfs = await repo.listUnwrittenPdfs(userId, topicId);
+			return pdfs.map(({ savedAt, ...pdf }) => ({
+				...pdf,
+				savedAt: savedAt.toISOString(),
+			}));
+		},
+
+		async deletePdf(userId, courseId, topicId, fileHash) {
+			await requireTopic(userId, courseId, topicId);
+			if (!(await repo.deletePdfText(userId, topicId, fileHash))) {
+				throw new NotFoundError('PDF not found.');
+			}
 		},
 
 		// a title cleared while editing is named after the first line again

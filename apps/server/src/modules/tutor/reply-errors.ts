@@ -15,8 +15,12 @@ export function timeoutAsError<Chunk extends { type: string }>(
 	};
 }
 
-// the student sees this text; provider details go to the log only
-export function replyErrorMessage(error: unknown): string {
+// the student sees this text; provider details go to the log only. fallback
+// is for an error none of the known kinds
+export function replyErrorMessage(
+	error: unknown,
+	fallback = 'Orbi could not answer. Try again.'
+): string {
 	// after its retries the AI SDK wraps the provider's error
 	const cause = RetryError.isInstance(error) ? error.lastError : error;
 	if (
@@ -38,5 +42,5 @@ export function replyErrorMessage(error: unknown): string {
 			return 'The AI service is having problems. Try again in a minute.';
 		}
 	}
-	return 'Orbi could not answer. Try again.';
+	return fallback;
 }
