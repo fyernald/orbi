@@ -11,3 +11,9 @@ overrides:
   # GHSA-333x-w4r6-6crp and others: through fastify (4.x) and ajv (3.x)
   fast-uri@>=3.0.0 <3.1.9: ^3.1.9
   fast-uri@>=4.0.0 <4.2.3: ^4.2.3
+  # GHSA-g3hv-75wg-m249: minimatch 10 through typescript-eslint and ts-morph (shadcn).
+  # No 10.x fix exists; both only call minimatch(), which 11 still has.
+  minimatch@>=7.0.0 <11.0.1: ^11.0.1
+  # GHSA-67mh-4wv8-2f99: esbuild 0.18 through drizzle-kit's @esbuild-kit loader,
+  # which only calls transform() and transformSync().
+  esbuild@<0.25.0: ^0.25.0
