@@ -3,30 +3,45 @@
 import type { Note } from '@orbi/shared';
 import { apiErrorMessage } from '@/lib/api';
 import { useUpdateNote } from '../hooks';
-import { useNoteForm } from '../use-note-form';
+import { editNoteDraftKey } from '../note-drafts';
+import { useDraftedNoteForm } from '../use-note-form';
 import { NoteEditor } from './note-editor';
 
 type EditNoteFormProps = {
 	courseId: string;
 	note: Note;
+	focusOnOpen: boolean;
 	onDone: () => void;
 };
 
-export function EditNoteForm({ courseId, note, onDone }: EditNoteFormProps) {
+// an edit left unsaved opens again with the note; Cancel drops it
+export function EditNoteForm({
+	courseId,
+	note,
+	focusOnOpen,
+	onDone,
+}: EditNoteFormProps) {
 	const update = useUpdateNote(courseId, note.topicId);
-	const form = useNoteForm({ title: note.title, content: note.content });
+	const { form, clearDraft } = useDraftedNoteForm(editNoteDraftKey(note.id), {
+		title: note.title,
+		content: note.content,
+	});
+	const finish = () => {
+		clearDraft();
+		onDone();
+	};
 
 	return (
 		<NoteEditor
 			form={form}
 			onSave={(values) =>
-				update.mutate({ noteId: note.id, ...values }, { onSuccess: onDone })
+				update.mutate({ noteId: note.id, ...values }, { onSuccess: finish })
 			}
 			pending={update.isPending}
 			error={apiErrorMessage(update.error)}
 			saveLabel="Save changes"
-			onCancel={onDone}
-			focusOnOpen
+			onCancel={finish}
+			focusOnOpen={focusOnOpen}
 		/>
 	);
 }

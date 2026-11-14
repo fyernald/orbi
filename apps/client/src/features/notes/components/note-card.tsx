@@ -2,6 +2,7 @@
 
 import type { Note } from '@orbi/shared';
 import { useLayoutEffect, useRef, useState } from 'react';
+import { editNoteDraftKey, noteDrafts } from '../note-drafts';
 import { isNotePreviewClipped } from '../note-preview';
 import { noteTime } from '../note-time';
 import { EditNoteForm } from './edit-note-form';
@@ -14,11 +15,14 @@ type NoteCardProps = {
 	note: Note;
 };
 
-// a saved note; long ones open in place, and an edit happens in place too
+// a saved note; long ones open in place, and an edit happens in place too. An
+// edit left unsaved is still open when the student comes back to the notes.
 export function NoteCard({ courseId, note }: NoteCardProps) {
 	const [expanded, setExpanded] = useState(false);
 	const [hasOverflow, setHasOverflow] = useState(false);
-	const [editing, setEditing] = useState(false);
+	const [editing, setEditing] = useState<'kept' | 'started' | null>(() =>
+		noteDrafts.has(editNoteDraftKey(note.id)) ? 'kept' : null
+	);
 	const actions = useRef<HTMLButtonElement>(null);
 	const preview = useRef<HTMLDivElement>(null);
 	const time = noteTime(note, new Date());
@@ -41,8 +45,10 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 			<EditNoteForm
 				courseId={courseId}
 				note={note}
+				// the field takes focus when the student starts the edit only
+				focusOnOpen={editing === 'started'}
 				onDone={() => {
-					setEditing(false);
+					setEditing(null);
 					requestAnimationFrame(() => actions.current?.focus());
 				}}
 			/>
@@ -63,7 +69,7 @@ export function NoteCard({ courseId, note }: NoteCardProps) {
 					<NoteActions
 						courseId={courseId}
 						note={note}
-						onEdit={() => setEditing(true)}
+						onEdit={() => setEditing('started')}
 						buttonRef={actions}
 					/>
 				</div>

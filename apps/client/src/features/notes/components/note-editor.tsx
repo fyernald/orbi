@@ -61,8 +61,6 @@ export function NoteEditor({
 			onSubmit={save}
 			onKeyDown={handleKeyDown}
 			noValidate
-			// the notes sheet leaves Esc to an edit, so it cancels the edit only
-			data-note-editor={onCancel ? 'edit' : 'new'}
 			className="flex flex-col gap-2"
 		>
 			<div

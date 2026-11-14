@@ -9,6 +9,7 @@ export function AddNotesButton({ collapsed }: { collapsed: boolean }) {
 		<SidebarTooltip label="Add notes" show={collapsed}>
 			<Link
 				href={routes.courses}
+				data-tour="add-notes"
 				className="flex h-10 items-center gap-2.5 overflow-hidden rounded-xl bg-primary pr-3 pl-[15px] text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 			>
 				<Plus className="size-[18px] shrink-0" strokeWidth={2.25} />
