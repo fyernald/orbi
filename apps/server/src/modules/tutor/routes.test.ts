@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { APICallError } from 'ai';
 import { NOTE_CONTENT_MAX_LENGTH } from '@orbi/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTokenBudget } from '../../ai/budget';
 import { createScriptedModels } from '../../ai/testing';
 import { createMemoryMailer } from '../../mail/testing';
 import { createTestPdf } from '../../pdf/testing';
@@ -1103,19 +1102,25 @@ describe('replies at the same time', () => {
 	});
 });
 
-describe('the daily AI budget', () => {
+describe('the AI usage limits', () => {
 	const models = createScriptedModels();
 	let budgeted: Awaited<ReturnType<typeof createTestApp>>;
 	let cookie: string;
 	let context: Context;
 
-	// every mock model call uses 15 tokens (10 in, 5 out), so two calls pass and
-	// leave the student over the budget of 20
+	// every mock model call uses 15 tokens (10 in, 5 out) of Gemini Flash, 60
+	// credits, so two calls pass and leave the student past the hourly limit of 100
+	// and its extra allowance
 	beforeAll(async () => {
 		budgeted = await createTestApp(createMemoryMailer(), {
 			requireEmailVerification: false,
 			models: models.registry,
-			budget: createTokenBudget({ dailyTokens: 20 }),
+			usageLimits: {
+				hourCredits: 100,
+				weekCredits: 10_000,
+				gracePercent: 10,
+				totalCredits: 1_000_000,
+			},
 		});
 		cookie = await signUpTestUser(budgeted, 'barbara@test.dev');
 		const course = (
@@ -1153,7 +1158,7 @@ describe('the daily AI budget', () => {
 			message: userMessage(text),
 		});
 
-	it('refuses new model calls once the day is used up', async () => {
+	it('refuses new model calls once the hour is used up', async () => {
 		const chatId = randomUUID();
 		models.script({ text: 'One.' }, { text: 'Two.' });
 
@@ -1173,9 +1178,10 @@ describe('the daily AI budget', () => {
 		expect(first.statusCode).toBe(200);
 		expect(second.statusCode).toBe(200);
 		expect(third.statusCode).toBe(429);
-		expect(third.json().error.message).toBe(
-			"You have used today's AI budget. It resets at midnight."
-		);
+		expect(third.json().error).toEqual({
+			code: 'usage_limit',
+			message: "You have used this hour's AI limit. It resets in 1 hour.",
+		});
 		expect(followUps.statusCode).toBe(429);
 		// the third reply and the follow-up questions never reached the model
 		expect(models.calls).toHaveLength(2);

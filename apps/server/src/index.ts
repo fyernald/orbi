@@ -1,6 +1,5 @@
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { createTokenBudget } from './ai/budget';
 import { createModelRegistry, createProviderFactories } from './ai/models';
 import { buildApp } from './app';
 import { createAuth } from './auth';
@@ -41,8 +40,9 @@ const services = createServices({
 	pdf: createWorkerPdfReader(),
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
+		enabledModelIds: config.aiEnabledModels,
 	}),
-	budget: createTokenBudget({ dailyTokens: config.aiDailyTokens }),
+	usageLimits: config.usageLimits,
 	logError: (error) => {
 		app.log.error(error);
 		errors.report(error);

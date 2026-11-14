@@ -26,12 +26,36 @@ describe('createModelRegistry', () => {
 		expect(defaultModelId).toBe(models[0]!.id);
 	});
 
-	it('never sends the provider model name to the client', () => {
+	it('never sends the provider model name or credit weight to the client', () => {
 		const registry = createModelRegistry({
 			providers: { google: mockFactory },
 		});
 
 		expect(registry.list().models[0]).not.toHaveProperty('providerModelId');
+		expect(registry.list().models[0]).not.toHaveProperty('creditWeight');
+	});
+
+	it('offers only the enabled models, even when other keys are set', () => {
+		const registry = createModelRegistry({
+			providers: {
+				google: mockFactory,
+				anthropic: mockFactory,
+				deepseek: mockFactory,
+			},
+			enabledModelIds: ['deepseek-flash', 'deepseek-pro', 'claude-haiku'],
+		});
+
+		expect(registry.list().models.map((model) => model.id)).toEqual([
+			'claude-haiku',
+			'deepseek-flash',
+			'deepseek-pro',
+		]);
+		// Gemini Flash is the catalog default, so the first enabled default takes over
+		expect(registry.list().defaultModelId).toBe('deepseek-flash');
+		// a saved Gemini default falls back the same way
+		expect(registry.list('gemini-pro').defaultModelId).toBe('deepseek-flash');
+		expect(registry.resolve('gemini-flash', off)).toBeUndefined();
+		expect(registry.resolve('claude-sonnet', off)).toBeUndefined();
 	});
 
 	it('resolves only models it lists', () => {

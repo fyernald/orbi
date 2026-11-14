@@ -1,4 +1,3 @@
-import type { TokenBudget } from './ai/budget';
 import { createModelRegistry, type ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import { buildApp } from './app';
@@ -9,6 +8,7 @@ import type { BreachedPasswordCheck } from './modules/auth/breached-password';
 import { createMemoryMailer } from './mail/testing';
 import type { RateLimits } from './rate-limit';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
+import type { UsageLimits } from './modules/usage/limits';
 import { createPdfReader, type PdfReader } from './pdf/reader';
 import { createServices } from './services';
 
@@ -27,8 +27,8 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
-	// by default a student has the production budget of tokens per day
-	budget?: TokenBudget;
+	// by default the beta's AI usage limits
+	usageLimits?: UsageLimits;
 	// gets the token counts of every model call
 	logUsage?: LogUsage;
 	// pass one to put rows in place that no route can make, like the tutor's questions
@@ -51,7 +51,7 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
-		budget,
+		usageLimits,
 		logUsage,
 		db: givenDb,
 		pdf = createPdfReader(),
@@ -73,7 +73,7 @@ export async function createTestApp(
 		pdf,
 		models,
 		limiter,
-		budget,
+		usageLimits,
 		logError: () => {},
 		logUsage,
 	});

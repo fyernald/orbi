@@ -19,6 +19,7 @@ erDiagram
     chat ||--o{ chat_message : contains
     user ||--o{ session : "logs in with"
     user ||--o{ account : "logs in with"
+    user ||--o| ai_usage : "uses AI"
 
     user {
         text id PK
@@ -125,6 +126,14 @@ erDiagram
         double ease
         timestamptz due_at
     }
+    ai_usage {
+        text user_id PK,FK
+        timestamptz hour_started_at
+        bigint hour_credits
+        timestamptz week_started_at
+        bigint week_credits
+        bigint total_credits
+    }
     answer_explanation {
         uuid id PK
         text user_id FK
@@ -150,6 +159,7 @@ Every table also has `created_at` and `updated_at`.
 | `question`                                   | A practice question. Only multiple choice for now: `choices` and the index of the `correct_choice`. AI questions start as `pending` until the student approves them (US-05), and keep the provider, the model, and the chat message that made them. `position` keeps the order the AI wrote a set in.                                                                                                                                                                                                                                                                                                                                                                               |
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `review_item`                                | When a question comes back for review (US-09). One row per question, with the SM-2 values: `repetitions` (right answers in a row), `interval_days`, `ease`, and `due_at`. The scheduler adds the row the first time the student answers the question and updates it after every answer, so a question with no row has not been scheduled yet. Answers in the chat and in study sessions both count. A right answer before the question is due keeps its schedule (see `packages/core/src/review-scheduler.ts`), so `updated_at` is when the schedule last changed.                                                                                                                  |
+| `ai_usage`                                   | The AI credits a student used (T-77): a credit is a token times the model's weight. One row per student, with the hour and the week that are running (when each started and the credits since) and every credit ever used, for the beta's total budget. One statement adds credits, so two replies that end at once both count, and a window that has ended starts again then. See [decision 0003](decisions/03-tutor-chat.md).                                                                                                                                                                                                                                                     |
 | `answer_explanation`                         | Why a wrong choice is wrong, written by the AI from the topic's notes when the student asks after a wrong answer in a study session (US-07). One row per question and choice, with the model that wrote it, so asking again reads it back instead of calling the AI.                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Rules the database enforces
@@ -162,6 +172,7 @@ Every table also has `created_at` and `updated_at`.
 - **A wrong choice is explained once.** A unique index on `(user_id, question_id, choice)` keeps one explanation per choice, so two clicks at the same time still save only one. It also backs the foreign key to `question`, so deleting a question deletes its explanations.
 - **A review item is well formed.** There is at most one per question (the primary key is `(user_id, question_id)`), `repetitions` and `interval_days` are never negative, and `ease` never goes below 1.3, the SM-2 minimum.
 - **One profile per user.** `profile.user_id` is the primary key.
+- **AI credits are never negative.** A check on `ai_usage` keeps every count at 0 or more. Deleting a user deletes their row, so their credits leave the beta's total.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).
 
 ## Why it differs from the drafts in #3

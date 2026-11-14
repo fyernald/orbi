@@ -28,7 +28,7 @@ export function createAnswerExplainer({
 	explanations,
 	repo,
 	resolveDefaultModel,
-	requireBudget,
+	requireRoom,
 	takePlace,
 	trackStep,
 	logError,
@@ -37,8 +37,8 @@ export function createAnswerExplainer({
 	repo: Pick<TutorRepository, 'listNotesForReply'>;
 	// the server's default model, with Think off
 	resolveDefaultModel: () => ResolvedModel;
-	// gives the student's time zone, or throws when today's budget is used up
-	requireBudget: (userId: string) => Promise<string | null>;
+	// throws when the student is over an AI usage limit
+	requireRoom: (userId: string) => Promise<void>;
 	// takes one of the student's places for a model call; the caller frees it
 	takePlace: (userId: string) => () => void;
 	trackStep: TrackStep;
@@ -66,7 +66,7 @@ export function createAnswerExplainer({
 		if (saved) return { questionId, choice, text: saved };
 
 		const resolved = resolveDefaultModel();
-		const timeZone = await requireBudget(userId);
+		await requireRoom(userId);
 		const notes = await repo.listNotesForReply(
 			userId,
 			{ topicId: question.topicId },
@@ -93,7 +93,6 @@ export function createAnswerExplainer({
 				maxRetries: 1,
 				onStepEnd: trackStep({
 					userId,
-					timeZone,
 					modelId: resolved.entry.id,
 					action: 'explainAnswer',
 				}),

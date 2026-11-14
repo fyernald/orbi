@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { DAILY_TOKENS_DEFAULT } from './ai/budget';
+import { MODEL_CATALOG } from './ai/catalog';
 import type { SmtpOptions } from './mail/mailer';
+import { USAGE_LIMITS_DEFAULT, type UsageLimits } from './modules/usage/limits';
 
 // the share of API requests traced when SENTRY_TRACES_SAMPLE_RATE is not set
 export const TRACES_SAMPLE_RATE_DEFAULT = 0.2;
@@ -20,6 +21,9 @@ const sentryVars = {
 };
 
 const sentrySchema = z.object(sentryVars);
+
+const credits = (fallback: number) =>
+	z.coerce.number().int().positive().default(fallback);
 
 const envSchema = z
 	.object({
@@ -45,12 +49,29 @@ const envSchema = z
 		GEMINI_API_KEY: z.string().optional(),
 		ANTHROPIC_API_KEY: z.string().optional(),
 		DEEPSEEK_API_KEY: z.string().optional(),
-		// how many AI tokens each student may use per day, input and output together
-		AI_DAILY_TOKENS_PER_STUDENT: z.coerce
+		// only these catalog models are offered, for example
+		// "deepseek-flash,deepseek-pro,claude-haiku"; empty offers every model with a key
+		AI_ENABLED_MODELS: z.preprocess(
+			(value) =>
+				typeof value === 'string' && value.trim() ? value : undefined,
+			z
+				.string()
+				.transform((value) => value.split(',').map((id) => id.trim()))
+				.pipe(z.array(z.enum(MODEL_CATALOG.map((entry) => entry.id))))
+				.optional()
+		),
+		// AI usage limits per student, in credits (a token times the model's weight)
+		AI_HOURLY_CREDITS: credits(USAGE_LIMITS_DEFAULT.hourCredits),
+		AI_WEEKLY_CREDITS: credits(USAGE_LIMITS_DEFAULT.weekCredits),
+		// the extra allowance on top of each limit, so a thought can be finished
+		AI_GRACE_PERCENT: z.coerce
 			.number()
 			.int()
-			.positive()
-			.default(DAILY_TOKENS_DEFAULT),
+			.min(0)
+			.max(100)
+			.default(USAGE_LIMITS_DEFAULT.gracePercent),
+		// every student together; when it is used up, the AI stops for everyone
+		AI_TOTAL_CREDITS: credits(USAGE_LIMITS_DEFAULT.totalCredits),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -87,7 +108,9 @@ export type Config = {
 	auth: { secret: string; baseURL: string };
 	smtp: SmtpOptions | null;
 	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
-	aiDailyTokens: number;
+	// undefined offers every model whose provider has a key
+	aiEnabledModels?: string[];
+	usageLimits: UsageLimits;
 	sentry: SentryConfig | null;
 };
 
@@ -145,7 +168,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			anthropic: vars.ANTHROPIC_API_KEY || undefined,
 			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
-		aiDailyTokens: vars.AI_DAILY_TOKENS_PER_STUDENT,
+		aiEnabledModels: vars.AI_ENABLED_MODELS,
+		usageLimits: {
+			hourCredits: vars.AI_HOURLY_CREDITS,
+			weekCredits: vars.AI_WEEKLY_CREDITS,
+			gracePercent: vars.AI_GRACE_PERCENT,
+			totalCredits: vars.AI_TOTAL_CREDITS,
+		},
 		sentry: sentryConfig(vars),
 	};
 }

@@ -20,4 +20,5 @@ export * from './statistics';
 export * from './today';
 export * from './tutor';
 export * from './tutor-tools';
+export * from './usage';
 export * from './visuals';
