@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { Button } from '@/components/ui/button';
+import { useUsageBlock } from '@/features/usage/hooks';
 import {
 	canFollowUp,
 	chatErrorMessage,
@@ -140,6 +141,8 @@ export function TutorChat({
 	}, [hasMessages, onHasMessages]);
 
 	const busy = chat.status === 'submitted' || chat.status === 'streaming';
+	// an AI usage limit is used up, so follow-up questions cannot be asked either
+	const usageBlock = useUsageBlock();
 	useEffect(() => {
 		onBusyChange?.(busy);
 	}, [busy, onBusyChange]);
@@ -235,7 +238,7 @@ export function TutorChat({
 							chatId={chatId}
 							messageId={followUpReply.id}
 							saved={followUpReply.metadata?.followUps}
-							disabled={Boolean(limitReason)}
+							disabled={Boolean(limitReason || usageBlock)}
 							// the same topic and model as the reply
 							onAsk={(question) =>
 								send({

@@ -4,6 +4,7 @@ import { answerExplanation, sessionAnswer, studySession } from '@orbi/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { masteryKey } from '@/features/courses/query-keys';
 import { todayKey } from '@/features/today/hooks';
+import { usageKey } from '@/features/usage/hooks';
 import { api } from '@/lib/api';
 
 const studyKey = (courseId: string, topicId: string, today: boolean) =>
@@ -48,8 +49,11 @@ export function useAnswerInSession() {
 // why a wrong answer is wrong, written by the AI; the server keeps it, so asking
 // again for the same choice gives back the same text
 export function useExplainAnswer() {
+	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ id, choice }: { id: string; choice: number }) =>
 			api.post(`/questions/${id}/explanation`, answerExplanation, { choice }),
+		// a new explanation is a model call
+		onSettled: () => queryClient.invalidateQueries({ queryKey: usageKey }),
 	});
 }

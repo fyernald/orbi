@@ -14,6 +14,7 @@ import {
 	type TutorUIMessage,
 } from './chat';
 import { questionSetsKey } from '@/features/questions/set-hooks';
+import { usageKey } from '@/features/usage/hooks';
 import { chatKey, courseChatsKey } from './query-keys';
 
 // The chat with the tutor. Only the newest message goes to the server, which keeps
@@ -80,8 +81,12 @@ export function useTutorChat({
 			void queryClient.invalidateQueries({
 				queryKey: questionSetsKey(courseId),
 			});
+			// the reply used AI, so the usage meter and warnings move on
+			void queryClient.invalidateQueries({ queryKey: usageKey });
 		},
 		onError: (error) => {
+			// a refused reply can mean a limit was reached
+			void queryClient.invalidateQueries({ queryKey: usageKey });
 			if (!isRejectedRequest(error)) return;
 			if (!sendingNew.current) {
 				onRejected('', error);

@@ -7,6 +7,7 @@ import { CoursesSection } from './courses-section';
 import { MainNav } from './main-nav';
 import { MiniAppsSection } from './mini-apps-section';
 import { SidebarHeader } from './sidebar-header';
+import { SidebarUsage } from './sidebar-usage';
 
 type SidebarProps = {
 	collapsed: boolean;
@@ -44,6 +45,7 @@ export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
 				<MiniAppsSection apps={miniApps} collapsed={collapsed} />
 				<CoursesSection courses={courses.data} collapsed={collapsed} />
 			</div>
+			<SidebarUsage collapsed={collapsed} />
 			<AccountMenu collapsed={collapsed} />
 		</nav>
 	);

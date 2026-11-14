@@ -2,6 +2,7 @@
 
 import { RotateCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useUsageBlock } from '@/features/usage/hooks';
 import { apiErrorMessage } from '@/lib/api';
 import { useExplainAnswer } from '../hooks';
 
@@ -18,19 +19,26 @@ export function WrongAnswerExplanation({
 	choice,
 }: WrongAnswerExplanationProps) {
 	const explain = useExplainAnswer();
+	const usageBlock = useUsageBlock();
 	const ask = () => explain.mutate({ id: questionId, choice });
 
 	if (explain.isIdle) {
 		return (
-			<Button
-				type="button"
-				variant="outline"
-				onClick={ask}
-				className="h-9 self-start rounded-full px-3.5 text-[13px]"
-			>
-				<Sparkles className="text-primary" />
-				Explain my mistake
-			</Button>
+			<div className="flex flex-col gap-1.5">
+				<Button
+					type="button"
+					variant="outline"
+					onClick={ask}
+					disabled={usageBlock !== null}
+					className="h-9 self-start rounded-full px-3.5 text-[13px]"
+				>
+					<Sparkles className="text-primary" />
+					Explain my mistake
+				</Button>
+				{usageBlock && (
+					<p className="text-xs text-muted-foreground">{usageBlock}</p>
+				)}
+			</div>
 		);
 	}
 

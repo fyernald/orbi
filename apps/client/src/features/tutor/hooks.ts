@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { z } from 'zod';
+import { usageKey } from '@/features/usage/hooks';
 import { api } from '@/lib/api';
 import { fromChatMessage } from './chat';
 import type { OpenChat } from './open-chats';
@@ -124,9 +125,13 @@ export function useFollowUps(
 	const url = `/chats/${chatId}/messages/${messageId}/follow-ups`;
 	const shown = useRef<string[]>([]);
 
+	// new questions are a model call, so the usage meter moves on after them
+	const refreshUsage = () =>
+		void queryClient.invalidateQueries({ queryKey: usageKey });
 	const suggestions = useQuery({
 		queryKey: key,
-		queryFn: () => api.post(url, followUps, { exclude: [] }),
+		queryFn: () =>
+			api.post(url, followUps, { exclude: [] }).finally(refreshUsage),
 		initialData: saved && { questions: saved },
 		staleTime: Infinity,
 		retry: false,
@@ -139,6 +144,7 @@ export function useFollowUps(
 			].slice(-FOLLOW_UPS_MAX * 4);
 			return api.post(url, followUps, { exclude: shown.current });
 		},
+		onSettled: refreshUsage,
 		onSuccess: (data) => {
 			queryClient.setQueryData(key, data);
 			// the chat has the new ones saved now
