@@ -8,7 +8,7 @@ import {
 	type TutorRequestInput,
 } from '@orbi/shared';
 import { useEffect, useEffectEvent } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { composerActions } from '../actions';
 import { messageAttachments } from '../attachments';
 import { sendBlockedReason, type ComposerTopic } from '../composer';
@@ -91,9 +91,14 @@ export function NoteComposer({
 			message: '',
 		},
 	});
-	const values = form.watch();
+	// only what this component shows; watching the whole form here re-rendered
+	// the menus on every key, which made Radix throw "Maximum update depth exceeded"
+	const [actionId, pickedTopicId] = useWatch({
+		control: form.control,
+		name: ['action', 'topicId'],
+	});
 	const { attachments, add, remove, clearSaved } = useAttachments(
-		courseId && values.topicId ? { courseId, topicId: values.topicId } : null
+		courseId && pickedTopicId ? { courseId, topicId: pickedTopicId } : null
 	);
 	const { isDragging, dropZoneProps } = useFileDrop(add);
 	const canAttach = courseId !== undefined;
@@ -123,21 +128,22 @@ export function NoteComposer({
 		applyPreset();
 	}, [presetVersion]);
 
-	const action = composerActions[values.action];
+	const action = composerActions[actionId];
 	const noModels = models.isSuccess && models.data.models.length === 0;
-	const blockedReason = noModels
-		? 'The AI tutor is not set up on this server yet.'
-		: (limitReason ??
-			sendBlockedReason({
-				values,
-				attachments,
-				allowWholeCourse: wholeCourse !== undefined,
-			}));
+	const blockedReason = (values: Partial<TutorRequestInput>) =>
+		noModels
+			? 'The AI tutor is not set up on this server yet.'
+			: (limitReason ??
+				sendBlockedReason({
+					values,
+					attachments,
+					allowWholeCourse: wholeCourse !== undefined,
+				}));
 	const focusMessage = () => form.setFocus('message');
 
 	const send = (request: TutorRequestInput) => {
 		if (busy) return;
-		if (blockedReason || !onSend) {
+		if (blockedReason(request) || !onSend) {
 			focusMessage();
 			return;
 		}
