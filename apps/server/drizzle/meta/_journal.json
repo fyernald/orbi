@@ -169,6 +169,13 @@
       "when": 1794661522802,
       "tag": "0023_note-kind",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794665310179,
+      "tag": "0024_tour-seen",
+      "breakpoints": true
     }
   ]
 }

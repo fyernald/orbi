@@ -23,6 +23,7 @@ const empty: Profile = {
 	reminderTime: null,
 	defaultModelId: null,
 	onboardedAt: null,
+	tourSeenAt: null,
 };
 
 const stepOf = (id: string) =>

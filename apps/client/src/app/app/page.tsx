@@ -4,12 +4,13 @@ import { HomeGreeting } from '@/features/home/components/home-greeting';
 import { SuggestionChips } from '@/features/home/components/suggestion-chips';
 import { getServerProfile } from '@/features/profile/server';
 import { TodayCard } from '@/features/today/components/today-card';
+import { AppTour } from '@/features/tour/components/app-tour';
 
 export const metadata: Metadata = { title: 'Home' };
 
 // the /app layout has checked the session and loaded the profile; this call shares its result
 export default async function HomePage() {
-	const { preferredName } = await getServerProfile();
+	const { preferredName, tourSeenAt } = await getServerProfile();
 
 	// On a wide screen, today's review sits beside the message box instead of under
 	// it, so it is seen first and the page is not a thin column. Without the panel
@@ -20,12 +21,16 @@ export default async function HomePage() {
 				<div className="flex min-w-0 flex-1 flex-col gap-6 md:gap-8">
 					<HomeGreeting name={preferredName ?? ''} />
 					<div className="flex flex-col gap-6">
-						<HomeComposer />
+						{/* the tour points at the message box, or what shows in its place */}
+						<div data-tour="composer">
+							<HomeComposer />
+						</div>
 						<SuggestionChips />
 					</div>
 				</div>
 				<TodayCard />
 			</div>
+			<AppTour autoStart={tourSeenAt === null} />
 		</section>
 	);
 }

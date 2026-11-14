@@ -96,6 +96,9 @@ export const profile = pgTable('profile', {
 	defaultModelId: text('default_model_id'),
 	// set once every onboarding question is answered; the app stays closed until then
 	onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
+	// set once the student finishes or skips the tour of the app (US-46), so it
+	// does not start again, on any device
+	tourSeenAt: timestamp('tour_seen_at', { withTimezone: true }),
 	...timestamps,
 });
 

@@ -17,6 +17,8 @@ type SidebarLinkProps = {
 	inPanel?: boolean;
 	// not built yet: shown with a Soon label, as text that cannot be clicked
 	soon?: boolean;
+	// a part the tour of the app points at
+	tour?: string;
 };
 
 // the icon stays in the same place in both widths, so only the text moves
@@ -29,6 +31,7 @@ export function SidebarLink({
 	trailing,
 	inPanel = false,
 	soon = false,
+	tour,
 }: SidebarLinkProps) {
 	const content = (
 		<>
@@ -57,6 +60,7 @@ export function SidebarLink({
 			<SidebarTooltip label={`${label} (coming soon)`} show={collapsed}>
 				<span
 					aria-disabled="true"
+					data-tour={tour}
 					className={cn(layout, 'cursor-default text-muted-foreground')}
 				>
 					{content}
@@ -69,6 +73,7 @@ export function SidebarLink({
 		<SidebarTooltip label={label} show={collapsed}>
 			<Link
 				href={href}
+				data-tour={tour}
 				aria-current={active ? 'page' : undefined}
 				className={cn(
 					layout,

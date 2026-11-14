@@ -11,6 +11,8 @@ export interface ProfileService {
 	getProfile(userId: string): Promise<Profile>;
 	saveProfile(userId: string, input: UpdateProfileInput): Promise<Profile>;
 	finishOnboarding(userId: string): Promise<Profile>;
+	// finished or skipped: the tour does not start by itself again
+	finishTour(userId: string): Promise<Profile>;
 }
 
 // a new user has no profile row yet; they get one with every question open
@@ -30,6 +32,7 @@ const emptyProfile: Profile = {
 	reminderTime: null,
 	defaultModelId: null,
 	onboardedAt: null,
+	tourSeenAt: null,
 };
 
 export function createProfileService({
@@ -61,5 +64,7 @@ export function createProfileService({
 			}
 			return repo.markOnboarded(userId);
 		},
+
+		finishTour: (userId) => repo.markTourSeen(userId),
 	};
 }

@@ -31,6 +31,8 @@ export function ModelPicker({
 					type="button"
 					variant="ghost"
 					aria-label={`Model: ${label}`}
+					// the tour of the app points at the model menu on Home
+					data-tour="model"
 					className="h-9 gap-1.5 rounded-full px-2.5 text-[13px] text-subtle-foreground"
 				>
 					{selected ? (

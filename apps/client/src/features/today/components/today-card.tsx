@@ -48,6 +48,7 @@ export function TodayCard() {
 	return (
 		<section
 			data-today
+			data-tour="today"
 			id="today"
 			aria-labelledby="today-title"
 			className={`${panel} scroll-mt-20`}

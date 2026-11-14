@@ -16,6 +16,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 				size="icon-lg"
 				onClick={onOpenMenu}
 				aria-label="Open menu"
+				data-tour="menu"
 				className="-ml-1.5 rounded-xl text-subtle-foreground md:hidden"
 			>
 				<Menu className="size-5" />

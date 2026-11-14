@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getServerProfile } from '@/features/profile/server';
 import { DefaultModelSettingsCard } from '@/features/settings/components/default-model-settings';
 import { ReminderSettingsCard } from '@/features/settings/components/reminder-settings';
+import { TourSettingsCard } from '@/features/settings/components/tour-settings';
 import { toReminderValues } from '@/features/settings/reminder';
 
 export const metadata: Metadata = { title: 'Settings' };
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
 				saved={toReminderValues(saved)}
 				timezone={saved.timezone}
 			/>
+			<TourSettingsCard />
 		</section>
 	);
 }

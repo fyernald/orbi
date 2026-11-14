@@ -8,6 +8,7 @@ export interface ProfileRepository {
 	// creates the profile the first time the user saves an answer
 	saveProfile(userId: string, input: UpdateProfileInput): Promise<Profile>;
 	markOnboarded(userId: string): Promise<Profile>;
+	markTourSeen(userId: string): Promise<Profile>;
 }
 
 const profileColumns = {
@@ -26,6 +27,7 @@ const profileColumns = {
 	reminderTime: profile.reminderTime,
 	defaultModelId: profile.defaultModelId,
 	onboardedAt: profile.onboardedAt,
+	tourSeenAt: profile.tourSeenAt,
 };
 
 type ProfileRow = Pick<
@@ -36,6 +38,7 @@ type ProfileRow = Pick<
 // the database keeps plain text and numbers; the shared schema checked them on the way in
 const toProfile = ({
 	onboardedAt,
+	tourSeenAt,
 	reminderTime,
 	...row
 }: ProfileRow): Profile =>
@@ -44,6 +47,7 @@ const toProfile = ({
 		// Postgres sends a time as "18:00:00"
 		reminderTime: reminderTime?.slice(0, 5) ?? null,
 		onboardedAt: onboardedAt?.toISOString() ?? null,
+		tourSeenAt: tourSeenAt?.toISOString() ?? null,
 	}) as Profile;
 
 export function createProfileRepository(db: Db): ProfileRepository {
@@ -71,6 +75,19 @@ export function createProfileRepository(db: Db): ProfileRepository {
 				// finishing twice keeps the first time
 				.set({ onboardedAt: sql`coalesce(${profile.onboardedAt}, now())` })
 				.where(eq(profile.userId, userId))
+				.returning(profileColumns);
+			return toProfile(saved!);
+		},
+
+		async markTourSeen(userId) {
+			const [saved] = await db
+				.insert(profile)
+				.values({ userId, tourSeenAt: sql`now()` })
+				// a tour seen again from the settings keeps the first time
+				.onConflictDoUpdate({
+					target: profile.userId,
+					set: { tourSeenAt: sql`coalesce(${profile.tourSeenAt}, now())` },
+				})
 				.returning(profileColumns);
 			return toProfile(saved!);
 		},

@@ -17,7 +17,7 @@ export function ReviewButton() {
 
 	return (
 		<Button asChild className="h-9 rounded-full px-4">
-			<Link href={todayListRoute}>
+			<Link href={todayListRoute} data-tour="review">
 				<span className="tabular-nums">{count} today</span>
 				<span aria-hidden="true" className="hidden sm:inline">
 					·
