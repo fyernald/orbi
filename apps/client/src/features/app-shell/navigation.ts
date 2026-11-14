@@ -6,6 +6,7 @@ import {
 	House,
 	type LucideIcon,
 } from 'lucide-react';
+import type { TourTarget } from '@/features/tour/steps';
 import { routes } from '@/lib/routes';
 import type { Tone } from '@/lib/tones';
 
@@ -17,6 +18,8 @@ export type NavLink = {
 	icon: LucideIcon;
 	// shown, but not built yet: the link is not clickable until it is
 	soon?: boolean;
+	// what the tour of the app (US-46) calls it
+	tour?: TourTarget;
 };
 
 export type MiniApp = NavLink & {
@@ -25,7 +28,12 @@ export type MiniApp = NavLink & {
 
 export const mainNav: NavLink[] = [
 	{ label: 'Home', href: routes.app, icon: House },
-	{ label: 'Courses & notes', href: routes.courses, icon: BookOpen },
+	{
+		label: 'Courses & notes',
+		href: routes.courses,
+		icon: BookOpen,
+		tour: 'courses',
+	},
 	{ label: 'Progress', href: routes.progress, icon: ChartColumn, soon: true },
 ];
 

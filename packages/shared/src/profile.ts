@@ -159,6 +159,8 @@ export const profile = z.object({
 	defaultModelId: z.string().nullable(),
 	// null until onboarding is finished; the app stays closed until then
 	onboardedAt: z.iso.datetime().nullable(),
+	// null until the student finishes or skips the tour of the app (US-46)
+	tourSeenAt: z.iso.datetime().nullable(),
 });
 
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];

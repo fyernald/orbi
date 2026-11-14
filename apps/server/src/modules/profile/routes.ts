@@ -31,5 +31,11 @@ export function createProfileRoutes({
 			{ schema: { response: { 200: profile } } },
 			async (request) => profiles.finishOnboarding(await requireUser(request))
 		);
+
+		api.post(
+			'/profile/tour',
+			{ schema: { response: { 200: profile } } },
+			async (request) => profiles.finishTour(await requireUser(request))
+		);
 	};
 }

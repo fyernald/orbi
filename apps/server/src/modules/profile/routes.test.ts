@@ -66,6 +66,7 @@ describe('profile', () => {
 			reminderTime: null,
 			defaultModelId: null,
 			onboardedAt: null,
+			tourSeenAt: null,
 		});
 	});
 
@@ -172,6 +173,35 @@ describe('profile', () => {
 			onboardedAt: expect.any(String),
 		});
 		expect(second.json().onboardedAt).toBe(first.json().onboardedAt);
+	});
+
+	it('remembers the tour was seen, and keeps the first time', async () => {
+		const margaret = await signUpTestUser(app, 'margaret@test.dev');
+		await send(margaret, 'PATCH', '/api/profile', allAnswers);
+
+		const first = await send(margaret, 'POST', '/api/profile/tour');
+		const again = await send(margaret, 'POST', '/api/profile/tour');
+		const saved = await send(margaret, 'GET', '/api/profile');
+
+		expect(first.statusCode).toBe(200);
+		expect(first.json().tourSeenAt).toEqual(expect.any(String));
+		expect(again.json().tourSeenAt).toBe(first.json().tourSeenAt);
+		expect(saved.json()).toMatchObject({
+			preferredName: 'Ada',
+			tourSeenAt: first.json().tourSeenAt,
+		});
+	});
+
+	it('remembers the tour for a user without answers yet', async () => {
+		const alan = await signUpTestUser(app, 'alan@test.dev');
+
+		const response = await send(alan, 'POST', '/api/profile/tour');
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toMatchObject({
+			preferredName: null,
+			tourSeenAt: expect.any(String),
+		});
 	});
 
 	it('never shows one user the profile of another', async () => {

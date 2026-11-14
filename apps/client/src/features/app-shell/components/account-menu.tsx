@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronsUpDown, LogOut, Settings2 } from 'lucide-react';
+import { ChevronsUpDown, Compass, LogOut, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import {
 	DropdownMenu,
@@ -11,7 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useSession, useSignOut } from '@/features/auth/hooks';
-import { routes } from '@/lib/routes';
+import { routes, tourRoute } from '@/lib/routes';
 import { SidebarLabel } from './sidebar-label';
 import { SidebarTooltip } from './sidebar-tooltip';
 import { UserAvatar } from './user-avatar';
@@ -31,6 +31,7 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 						<button
 							type="button"
 							aria-label={`Account: ${name}`}
+							data-tour="account"
 							className="flex h-12 w-full items-center gap-3 overflow-hidden rounded-xl px-1.5 text-left transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-sidebar-accent"
 						>
 							<UserAvatar name={name} />
@@ -68,6 +69,12 @@ export function AccountMenu({ collapsed }: { collapsed: boolean }) {
 						<Link href={routes.settings}>
 							<Settings2 />
 							Settings
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild className="h-9 gap-2.5 rounded-lg">
+						<Link href={tourRoute}>
+							<Compass />
+							Take the tour
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem

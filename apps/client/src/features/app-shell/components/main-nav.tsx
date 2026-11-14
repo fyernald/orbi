@@ -18,7 +18,7 @@ export function MainNav({ links, collapsed }: MainNavProps) {
 
 	return (
 		<div className="flex flex-col gap-0.5">
-			{links.map(({ href, label, icon: Icon, soon }) => (
+			{links.map(({ href, label, icon: Icon, soon, tour }) => (
 				<SidebarLink
 					key={href}
 					href={href}
@@ -27,6 +27,7 @@ export function MainNav({ links, collapsed }: MainNavProps) {
 					active={isActive(href, pathname)}
 					collapsed={collapsed}
 					soon={soon}
+					tour={tour}
 				/>
 			))}
 		</div>

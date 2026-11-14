@@ -18,6 +18,7 @@ const saved = (changes: Partial<Profile>): Profile => ({
 	reminderTime: null,
 	defaultModelId: null,
 	onboardedAt: '2026-11-01T10:00:00.000Z',
+	tourSeenAt: null,
 	...changes,
 });
 

@@ -56,3 +56,7 @@ export function topicStudyRoute(
 
 // today's study list on Home
 export const todayListRoute = `${routes.app}#today`;
+
+// Home with the tour of the app started (US-46), from Settings or the account menu
+export const TOUR_PARAM = 'tour';
+export const tourRoute = `${routes.app}?${TOUR_PARAM}=1`;
