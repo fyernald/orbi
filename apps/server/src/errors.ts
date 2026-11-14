@@ -55,6 +55,13 @@ export class TooManyRequestsError extends AppError {
 	}
 }
 
+// an AI usage limit is reached; its own code, so the client can show the usage
+export class UsageLimitError extends AppError {
+	constructor(message: string) {
+		super(429, 'usage_limit', message);
+	}
+}
+
 // a part of the app that depends on something not set up on this server, like an AI key
 export class ServiceUnavailableError extends AppError {
 	constructor(message: string) {

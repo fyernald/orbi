@@ -99,8 +99,6 @@ export interface TutorRepository {
 		topicId: string
 	): Promise<TopicContext | undefined>;
 	findStudent(userId: string): Promise<StudentContext | undefined>;
-	// the student's IANA time zone from the profile, null before onboarding
-	findTimeZone(userId: string): Promise<string | null>;
 	// the model the student saved as their default, if any
 	findDefaultModelId(userId: string): Promise<string | null>;
 	// The notes a reply can read, in a topic or (for the whole-course chat) a course:
@@ -237,14 +235,6 @@ export function createTutorRepository(db: Db): TutorRepository {
 					)
 				);
 			return found;
-		},
-
-		async findTimeZone(userId) {
-			const [found] = await db
-				.select({ timezone: profile.timezone })
-				.from(profile)
-				.where(eq(profile.userId, userId));
-			return found?.timezone ?? null;
 		},
 
 		async findDefaultModelId(userId) {

@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+	bigint,
 	boolean,
 	check,
 	date,
@@ -426,6 +427,35 @@ export const reviewItem = pgTable(
 		check('review_item_interval_days_min', sql`${t.intervalDays} >= 0`),
 		// SM-2 never lets the ease go below 1.3
 		check('review_item_ease_min', sql`${t.ease} >= 1.3`),
+	]
+);
+
+// The AI credits a student used (T-77): a credit is a token times the model's
+// weight. Each window starts with the first model call after the last one ended,
+// and the server checks the limits before every call (docs/database.md).
+export const aiUsage = pgTable(
+	'ai_usage',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		hourStartedAt: timestamp('hour_started_at', {
+			withTimezone: true,
+		}).notNull(),
+		hourCredits: bigint('hour_credits', { mode: 'number' }).notNull(),
+		weekStartedAt: timestamp('week_started_at', {
+			withTimezone: true,
+		}).notNull(),
+		weekCredits: bigint('week_credits', { mode: 'number' }).notNull(),
+		// every credit the student ever used, for the beta's total budget
+		totalCredits: bigint('total_credits', { mode: 'number' }).notNull(),
+		...timestamps,
+	},
+	(t) => [
+		check(
+			'ai_usage_credits_min',
+			sql`${t.hourCredits} >= 0 and ${t.weekCredits} >= 0 and ${t.totalCredits} >= 0`
+		),
 	]
 );
 

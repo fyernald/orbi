@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfig, loadSentryConfig } from './config';
+import { USAGE_LIMITS_DEFAULT } from './modules/usage/limits';
 
 const base = {
 	DATABASE_URL: 'postgresql://orbi@localhost:5432/orbi',
@@ -41,17 +42,45 @@ describe('loadConfig', () => {
 		expect(config.smtp?.host).toBe('smtp.example.com');
 	});
 
-	it('gives each student a daily AI budget, 1,000,000 tokens unless set', () => {
+	it("uses the beta's AI usage limits unless they are set", () => {
 		const local = { ...base, APP_ENV: 'local' };
 
-		expect(loadConfig(local).aiDailyTokens).toBe(1_000_000);
+		expect(loadConfig(local).usageLimits).toEqual(USAGE_LIMITS_DEFAULT);
 		expect(
-			loadConfig({ ...local, AI_DAILY_TOKENS_PER_STUDENT: '250000' })
-				.aiDailyTokens
-		).toBe(250_000);
-		expect(() =>
-			loadConfig({ ...local, AI_DAILY_TOKENS_PER_STUDENT: '0' })
-		).toThrow(/AI_DAILY_TOKENS_PER_STUDENT/);
+			loadConfig({
+				...local,
+				AI_HOURLY_CREDITS: '1000',
+				AI_WEEKLY_CREDITS: '5000',
+				AI_GRACE_PERCENT: '0',
+				AI_TOTAL_CREDITS: '9000',
+			}).usageLimits
+		).toEqual({
+			hourCredits: 1000,
+			weekCredits: 5000,
+			gracePercent: 0,
+			totalCredits: 9000,
+		});
+		expect(() => loadConfig({ ...local, AI_HOURLY_CREDITS: '0' })).toThrow(
+			/AI_HOURLY_CREDITS/
+		);
+	});
+
+	it('offers only the models in AI_ENABLED_MODELS when it is set', () => {
+		const local = { ...base, APP_ENV: 'local' };
+
+		expect(loadConfig(local).aiEnabledModels).toBeUndefined();
+		expect(
+			loadConfig({ ...local, AI_ENABLED_MODELS: '' }).aiEnabledModels
+		).toBeUndefined();
+		expect(
+			loadConfig({
+				...local,
+				AI_ENABLED_MODELS: 'deepseek-flash, claude-haiku',
+			}).aiEnabledModels
+		).toEqual(['deepseek-flash', 'claude-haiku']);
+		expect(() => loadConfig({ ...local, AI_ENABLED_MODELS: 'gpt-5' })).toThrow(
+			/AI_ENABLED_MODELS/
+		);
 	});
 
 	it('needs beta keys in production unless it is turned off', () => {

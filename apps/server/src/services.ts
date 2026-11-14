@@ -1,4 +1,3 @@
-import type { TokenBudget } from './ai/budget';
 import type { ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import type { AppDeps } from './app';
@@ -17,6 +16,9 @@ import type { ReplyLimiter } from './modules/tutor/reply-limiter';
 import { createExplanationRepository } from './modules/tutor/explanation-repository';
 import { createTutorRepository } from './modules/tutor/repository';
 import { createTutorService } from './modules/tutor/service';
+import type { UsageLimits } from './modules/usage/limits';
+import { createUsageRepository } from './modules/usage/repository';
+import { createUsageService } from './modules/usage/service';
 import type { PdfReader } from './pdf/reader';
 
 export type ServiceDeps = {
@@ -24,7 +26,8 @@ export type ServiceDeps = {
 	pdf: PdfReader;
 	models: ModelRegistry;
 	beta: BetaOptions;
-	budget?: TokenBudget;
+	// by default the beta's limits
+	usageLimits?: UsageLimits;
 	limiter?: ReplyLimiter;
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
@@ -37,11 +40,15 @@ export function createServices({
 	pdf,
 	models,
 	beta,
-	budget,
+	usageLimits,
 	limiter,
 	logError,
 	logUsage,
 }: ServiceDeps): AppDeps['services'] {
+	const usage = createUsageService({
+		repo: createUsageRepository(db),
+		limits: usageLimits,
+	});
 	return {
 		beta: createBetaService({
 			repo: createBetaRepository(db),
@@ -58,10 +65,11 @@ export function createServices({
 			repo: createTutorRepository(db),
 			explanations: createExplanationRepository(db),
 			models,
-			budget,
+			usage,
 			limiter,
 			logError,
 			logUsage,
 		}),
+		usage,
 	};
 }

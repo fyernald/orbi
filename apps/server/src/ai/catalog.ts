@@ -6,6 +6,8 @@ import type { AiModel } from '@orbi/shared';
 export type CatalogModel = AiModel & {
 	// the name the provider's API knows
 	providerModelId: string;
+	// credits per token, about what the model costs next to DeepSeek Flash (T-77)
+	creditWeight: number;
 };
 
 export const MODEL_CATALOG: CatalogModel[] = [
@@ -15,6 +17,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-flash-latest',
 		goodAt: 'Fast, good for most study tasks',
+		creditWeight: 4,
 	},
 	{
 		id: 'gemini-flash-lite',
@@ -22,6 +25,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-flash-lite-latest',
 		goodAt: 'Fastest, good for quick questions',
+		creditWeight: 1,
 	},
 	{
 		id: 'gemini-pro',
@@ -29,6 +33,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-pro-latest',
 		goodAt: 'Slower, better at hard topics',
+		creditWeight: 16,
 	},
 	{
 		id: 'claude-haiku',
@@ -36,6 +41,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-haiku-5-5',
 		goodAt: 'Fast, short and clear answers',
+		creditWeight: 1,
 	},
 	{
 		id: 'claude-sonnet',
@@ -43,6 +49,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-sonnet-5-5',
 		goodAt: 'Clear, careful explanations',
+		creditWeight: 20,
 	},
 	{
 		id: 'claude-opus',
@@ -50,6 +57,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-opus-5-5',
 		goodAt: 'Slowest, best at deep reasoning',
+		creditWeight: 40,
 	},
 	{
 		id: 'deepseek-flash',
@@ -58,6 +66,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		// follows DeepSeek's newest Flash model, like the Gemini aliases
 		providerModelId: 'deepseek-flash',
 		goodAt: 'Low cost, good for most study tasks',
+		creditWeight: 1,
 	},
 	{
 		id: 'deepseek-pro',
@@ -65,9 +74,15 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'deepseek',
 		providerModelId: 'deepseek-v4-pro',
 		goodAt: 'Low cost, better at hard topics',
+		creditWeight: 4,
 	},
 ];
 
 // the first of these with a key is the default, so it stays a cheap model;
 // with none of them, the first available model is used
 export const DEFAULT_MODEL_IDS = ['gemini-flash', 'deepseek-flash'];
+
+// a model that is not in the catalog any more counts like the dearest one
+export const creditWeightOf = (modelId: string): number =>
+	MODEL_CATALOG.find((entry) => entry.id === modelId)?.creditWeight ??
+	Math.max(...MODEL_CATALOG.map((entry) => entry.creditWeight));
