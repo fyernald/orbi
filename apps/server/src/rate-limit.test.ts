@@ -14,6 +14,7 @@ beforeAll(async () => {
 			default: 3,
 			pdfUpload: 1,
 			keyPoints: 1,
+			voiceNote: 1,
 			followUps: 1,
 			sessionAnswer: 1,
 			explainAnswer: 1,
