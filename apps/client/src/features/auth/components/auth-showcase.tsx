@@ -19,6 +19,10 @@ const captions: Record<string, Caption> = {
 		title: 'Turn your notes into practice.',
 		text: 'Add your courses and notes. Orbi explains them and writes questions that check what you know.',
 	},
+	[routes.betaKey]: {
+		title: 'Welcome to the Orbi beta.',
+		text: 'You are one of the first students to study with Orbi. Tell us what works and what does not.',
+	},
 };
 
 const passwordCaption: Caption = {

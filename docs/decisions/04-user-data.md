@@ -39,14 +39,15 @@ The **Basis** column is the reason the law allows it:
 
 #### Account and login
 
-| Data                                                     | Stored in                      | Why Orbi needs it                                                                       | Kept for                                      | Basis    |
-| -------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------- | --------------------------------------------- | -------- |
-| Name                                                     | `user.name`                    | Greets the student and goes into emails                                                 | Until the account is deleted                  | Service  |
-| Email and whether it is confirmed                        | `user.email`, `email_verified` | Login, confirming the account, password reset                                           | Until the account is deleted                  | Service  |
-| Password, hashed                                         | `account.password`             | Login. Orbi never stores or sees the password itself                                    | Until it is changed or the account is deleted | Service  |
-| Session: token, expiry, IP address, browser (user agent) | `session`                      | Keeps the student logged in. IP and browser show the student's devices and odd sign-ins | Until logout, or 7 days without use           | Security |
-| Email confirmation and password reset links              | `verification`                 | One-time links in emails                                                                | 1 hour                                        | Service  |
-| Accepted policy version and time (planned, US-38)        | `user` or `profile`            | Proves what the student agreed to, and asks again when the policy changes               | Until the account is deleted                  | Service  |
+| Data                                                     | Stored in                      | Why Orbi needs it                                                                       | Kept for                                                                         | Basis    |
+| -------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------- |
+| Name                                                     | `user.name`                    | Greets the student and goes into emails                                                 | Until the account is deleted                                                     | Service  |
+| Email and whether it is confirmed                        | `user.email`, `email_verified` | Login, confirming the account, password reset                                           | Until the account is deleted                                                     | Service  |
+| Password, hashed                                         | `account.password`             | Login. Orbi never stores or sees the password itself                                    | Until it is changed or the account is deleted                                    | Service  |
+| Session: token, expiry, IP address, browser (user agent) | `session`                      | Keeps the student logged in. IP and browser show the student's devices and odd sign-ins | Until logout, or 7 days without use                                              | Security |
+| Email confirmation and password reset links              | `verification`                 | One-time links in emails                                                                | 1 hour                                                                           | Service  |
+| Beta key used, and when beta access ends (US-50)         | `beta_key`, `beta_access`      | Lets only invited students use the app during the closed beta                           | Until the account is deleted; the used key stays without the link to the student | Service  |
+| Accepted policy version and time (planned, US-38)        | `user` or `profile`            | Proves what the student agreed to, and asks again when the policy changes               | Until the account is deleted                                                     | Service  |
 
 #### Profile (onboarding, US-38)
 

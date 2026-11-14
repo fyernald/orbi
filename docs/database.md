@@ -20,6 +20,8 @@ erDiagram
     user ||--o{ session : "logs in with"
     user ||--o{ account : "logs in with"
     user ||--o| ai_usage : "uses AI"
+    user ||--o| beta_access : "may use the beta until"
+    user ||--o{ beta_key : "used"
 
     user {
         text id PK
@@ -134,6 +136,16 @@ erDiagram
         bigint week_credits
         bigint total_credits
     }
+    beta_key {
+        uuid id PK
+        text key_hash UK
+        text used_by FK
+        timestamptz used_at
+    }
+    beta_access {
+        text user_id PK,FK
+        timestamptz ends_at
+    }
     answer_explanation {
         uuid id PK
         text user_id FK
@@ -160,6 +172,8 @@ Every table also has `created_at` and `updated_at`.
 | `answer`                                     | Every answer the student gives to a question: the choice, whether it was right, and where (`chat` for the practice questions in the tutor chat, `session` for study sessions, US-06). It has `answered_at` instead of `created_at` and `updated_at`, since an answer never changes.                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `review_item`                                | When a question comes back for review (US-09). One row per question, with the SM-2 values: `repetitions` (right answers in a row), `interval_days`, `ease`, and `due_at`. The scheduler adds the row the first time the student answers the question and updates it after every answer, so a question with no row has not been scheduled yet. Answers in the chat and in study sessions both count. A right answer before the question is due keeps its schedule (see `packages/core/src/review-scheduler.ts`), so `updated_at` is when the schedule last changed.                                                                                                                  |
 | `ai_usage`                                   | The AI credits a student used (T-77): a credit is a token times the model's weight. One row per student, with the hour and the week that are running (when each started and the credits since) and every credit ever used, for the beta's total budget. One statement adds credits, so two replies that end at once both count, and a window that has ended starts again then. See [decision 0003](decisions/03-tutor-chat.md).                                                                                                                                                                                                                                                     |
+| `beta_key`                                   | The one-time keys of the closed beta (US-50). Only a SHA-256 of each key is saved, never the key. Using a key sets `used_by` and `used_at` in one update that only matches an unused key, so two students who send the same key at once cannot both get it. A used key stays, so we can see who used which one.                                                                                                                                                                                                                                                                                                                                                                     |
+| `beta_access`                                | Until when a student may use the app during the beta. A key adds 30 days (`BETA_ACCESS_DAYS`) to what is left, or from now when access has ended. Every API route with the student's data checks it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `answer_explanation`                         | Why a wrong choice is wrong, written by the AI from the topic's notes when the student asks after a wrong answer in a study session (US-07). One row per question and choice, with the model that wrote it, so asking again reads it back instead of calling the AI.                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Rules the database enforces
@@ -173,6 +187,7 @@ Every table also has `created_at` and `updated_at`.
 - **A review item is well formed.** There is at most one per question (the primary key is `(user_id, question_id)`), `repetitions` and `interval_days` are never negative, and `ease` never goes below 1.3, the SM-2 minimum.
 - **One profile per user.** `profile.user_id` is the primary key.
 - **AI credits are never negative.** A check on `ai_usage` keeps every count at 0 or more. Deleting a user deletes their row, so their credits leave the beta's total.
+- **A beta key is used once.** `key_hash` is unique. Deleting a user deletes their `beta_access` and sets `used_by` of their key to null, but `used_at` stays, so the key cannot be used again.
 - **No empty notes.** `note.content` must contain at least one character that is not a space or a line break. The server should still check this first and show a clear message (US-03).
 
 ## Why it differs from the drafts in #3

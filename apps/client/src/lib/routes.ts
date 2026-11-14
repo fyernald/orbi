@@ -6,6 +6,8 @@ export const routes = {
 	signup: '/signup',
 	forgotPassword: '/forgot-password',
 	resetPassword: '/reset-password',
+	// where a student enters their key during the closed beta (US-50)
+	betaKey: '/beta',
 	// the questions a new user answers before the app opens
 	welcome: '/welcome',
 	app: '/app',

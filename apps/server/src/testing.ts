@@ -7,6 +7,7 @@ import type { Mailer } from './mail/mailer';
 import type { BreachedPasswordCheck } from './modules/auth/breached-password';
 import { createMemoryMailer } from './mail/testing';
 import type { RateLimits } from './rate-limit';
+import type { BetaOptions } from './modules/beta/service';
 import type { ReplyLimiter } from './modules/tutor/reply-limiter';
 import type { UsageLimits } from './modules/usage/limits';
 import { createPdfReader, type PdfReader } from './pdf/reader';
@@ -20,6 +21,7 @@ const NO_LIMITS: RateLimits = {
 	followUps: 1_000_000,
 	sessionAnswer: 1_000_000,
 	explainAnswer: 1_000_000,
+	betaKey: 1_000_000,
 };
 
 type TestAppOptions = {
@@ -39,6 +41,8 @@ type TestAppOptions = {
 	isPasswordBreached?: BreachedPasswordCheck;
 	// by default high enough that no test reaches them
 	limits?: RateLimits;
+	// by default no beta key is needed
+	beta?: Partial<BetaOptions>;
 };
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -57,6 +61,7 @@ export async function createTestApp(
 		pdf = createPdfReader(),
 		isPasswordBreached = async () => false,
 		limits = NO_LIMITS,
+		beta,
 	}: TestAppOptions = {}
 ) {
 	const db = givenDb ?? (await createTestDb());
@@ -72,6 +77,13 @@ export async function createTestApp(
 		db,
 		pdf,
 		models,
+		beta: {
+			keysRequired: false,
+			adminEmails: [],
+			accessDays: 30,
+			requireVerifiedEmail: requireEmailVerification,
+			...beta,
+		},
 		limiter,
 		usageLimits,
 		logError: () => {},

@@ -459,6 +459,32 @@ export const aiUsage = pgTable(
 	]
 );
 
+// A one-time key for the closed beta (US-50). Only a SHA-256 of the key is kept,
+// never the key itself. A used key stays, so we can see who used which one; when
+// the student deletes their account it keeps used_at and loses the link.
+export const betaKey = pgTable(
+	'beta_key',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		keyHash: text('key_hash').notNull().unique(),
+		usedBy: text('used_by').references(() => user.id, {
+			onDelete: 'set null',
+		}),
+		usedAt: timestamp('used_at', { withTimezone: true }),
+		...timestamps,
+	},
+	(t) => [index('beta_key_used_by_idx').on(t.usedBy)]
+);
+
+// Until when a student may use the app during the beta; a new key adds more days
+export const betaAccess = pgTable('beta_access', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+	...timestamps,
+});
+
 export const profileRelations = relations(profile, ({ one }) => ({
 	user: one(user, { fields: [profile.userId], references: [user.id] }),
 }));

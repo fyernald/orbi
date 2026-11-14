@@ -10,10 +10,12 @@ import { sandboxOrigin } from '@/lib/sandbox';
 const CSP_HEADER = 'Content-Security-Policy-Report-Only';
 
 const needsSession = (pathname: string) =>
-	pathname === '/welcome' || pathname.startsWith('/app');
+	pathname === routes.welcome ||
+	pathname === routes.betaKey ||
+	pathname.startsWith(routes.app);
 
 export function proxy(request: NextRequest) {
-	// A quick first check before any page under /app or /welcome runs: no session
+	// A quick first check before any page under /app, /welcome or /beta runs: no session
 	// cookie, straight to login. It only looks at the cookie, so the layouts and the
 	// API still check the session itself.
 	if (needsSession(request.nextUrl.pathname) && !getSessionCookie(request)) {

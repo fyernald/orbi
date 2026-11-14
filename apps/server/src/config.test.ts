@@ -83,6 +83,37 @@ describe('loadConfig', () => {
 		);
 	});
 
+	it('needs beta keys in production unless it is turned off', () => {
+		const production = {
+			...base,
+			APP_ENV: 'production',
+			SMTP_HOST: 'smtp.example.com',
+			SMTP_FROM: 'Orbi <no-reply@orbi.study>',
+		};
+
+		expect(loadConfig(production).beta).toEqual({
+			keysRequired: true,
+			adminEmails: [],
+			accessDays: 30,
+		});
+		expect(loadConfig({ ...base, APP_ENV: 'local' }).beta.keysRequired).toBe(
+			false
+		);
+		expect(
+			loadConfig({
+				...production,
+				BETA_KEYS_REQUIRED: 'false',
+				ADMIN_EMAILS: 'dev@orbi.study, ops@orbi.study',
+			}).beta
+		).toMatchObject({
+			keysRequired: false,
+			adminEmails: ['dev@orbi.study', 'ops@orbi.study'],
+		});
+		expect(() =>
+			loadConfig({ ...production, ADMIN_EMAILS: 'not an email' })
+		).toThrow(/ADMIN_EMAILS/);
+	});
+
 	it('turns Sentry on only in production with a DSN', () => {
 		const production = {
 			...base,

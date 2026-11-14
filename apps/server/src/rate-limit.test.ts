@@ -16,6 +16,7 @@ beforeAll(async () => {
 			followUps: 1,
 			sessionAnswer: 1,
 			explainAnswer: 1,
+			betaKey: 1,
 		},
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');

@@ -212,6 +212,9 @@ All variables are listed with comments in [.env.example](.env.example). The main
 - `AI_HOURLY_CREDITS`, `AI_WEEKLY_CREDITS`: how much AI each student may use per hour and per week, in credits (a token times the model's weight; defaults `300000` and `1500000`). Each window starts with the student's first AI message
 - `AI_GRACE_PERCENT`: the extra allowance over each limit, so a student can finish a thought (default `10`)
 - `AI_TOTAL_CREDITS`: the AI budget of every student together (default `80000000`, about $20). When it is used up, the AI stops for everyone
+- `BETA_KEYS_REQUIRED`: whether a student needs a beta key to use the app (default `true` in production, `false` with `APP_ENV=local`). See "Make beta keys" in [docs/deployment.md](docs/deployment.md)
+- `ADMIN_EMAILS`: developers who get in without a key, separated by commas. In production their email must be confirmed
+- `BETA_ACCESS_DAYS`: how many days one key gives (default `30`)
 
 ## Deployment
 

@@ -138,6 +138,16 @@ Each service keeps at most 3 log files of 10 MB (set in `deploy/compose.yml`), s
 
 **Stop deploys for a while:** set the `DEPLOY_ENABLED` variable to `false`.
 
+**Make beta keys (US-50):** during the closed beta nobody can use the app without a key. Each key works once and gives 30 days (`BETA_ACCESS_DAYS`). Developers in `ADMIN_EMAILS` get in without one.
+
+```bash
+ssh orbi@<vps-ip>
+cd orbi
+docker compose exec server node dist/create-beta-keys.js 20
+```
+
+The keys are printed **once** and only their hashes are saved, so they cannot be shown again. Copy them straight into the team's password manager, never into the repo, a chat or a file on the server. Give each student one key in a private message, and note who got which. On your own computer, `pnpm --filter server keys:create 2` makes keys for the local database; set `BETA_KEYS_REQUIRED=true` to try the key page.
+
 ## Mini-app sandbox
 
 A mini-app (US-42) is HTML, CSS and JavaScript the AI writes. It runs only on the sandbox page (`apps/sandbox`), on its own address `sandbox.orbi.study`, in an iframe with `sandbox="allow-scripts"` and nothing more. So its code:

@@ -2,6 +2,8 @@ import type { ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import type { AppDeps } from './app';
 import type { Db } from './db';
+import { createBetaRepository } from './modules/beta/repository';
+import { createBetaService, type BetaOptions } from './modules/beta/service';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
@@ -23,6 +25,7 @@ export type ServiceDeps = {
 	db: Db;
 	pdf: PdfReader;
 	models: ModelRegistry;
+	beta: BetaOptions;
 	// by default the beta's limits
 	usageLimits?: UsageLimits;
 	limiter?: ReplyLimiter;
@@ -36,6 +39,7 @@ export function createServices({
 	db,
 	pdf,
 	models,
+	beta,
 	usageLimits,
 	limiter,
 	logError,
@@ -46,6 +50,10 @@ export function createServices({
 		limits: usageLimits,
 	});
 	return {
+		beta: createBetaService({
+			repo: createBetaRepository(db),
+			options: beta,
+		}),
 		courses: createCourseService({ repo: createCourseRepository(db) }),
 		notes: createNoteService({ repo: createNoteRepository(db), pdf }),
 		profiles: createProfileService({

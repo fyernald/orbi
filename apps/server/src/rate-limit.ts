@@ -3,13 +3,14 @@ import rateLimit from '@fastify/rate-limit';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { TooManyRequestsError } from './errors';
 
-// requests per minute
+// requests per minute, but beta keys per 15 minutes
 export type RateLimits = {
 	default: number;
 	pdfUpload: number;
 	followUps: number;
 	sessionAnswer: number;
 	explainAnswer: number;
+	betaKey: number;
 };
 
 export const RATE_LIMITS: RateLimits = {
@@ -19,6 +20,7 @@ export const RATE_LIMITS: RateLimits = {
 	sessionAnswer: 60,
 	// each new one is a model call
 	explainAnswer: 20,
+	betaKey: 5,
 };
 
 // a route's own limit, instead of the default

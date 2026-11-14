@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { MODEL_CATALOG } from './ai/catalog';
 import type { SmtpOptions } from './mail/mailer';
+import { BETA_ACCESS_DAYS_DEFAULT } from './modules/beta/service';
 import { USAGE_LIMITS_DEFAULT, type UsageLimits } from './modules/usage/limits';
 
 // the share of API requests traced when SENTRY_TRACES_SAMPLE_RATE is not set
@@ -72,6 +73,26 @@ const envSchema = z
 			.default(USAGE_LIMITS_DEFAULT.gracePercent),
 		// every student together; when it is used up, the AI stops for everyone
 		AI_TOTAL_CREDITS: credits(USAGE_LIMITS_DEFAULT.totalCredits),
+		// the closed beta (US-50): without a key nobody can use the app. Off by default
+		// on local runs, so a new account works without one
+		BETA_KEYS_REQUIRED: z.stringbool().optional(),
+		// developers who get in without a key, separated by commas
+		ADMIN_EMAILS: z
+			.string()
+			.default('')
+			.transform((value) =>
+				value
+					.split(',')
+					.map((email) => email.trim())
+					.filter(Boolean)
+			)
+			.pipe(z.array(z.email('ADMIN_EMAILS has an email that is not valid.'))),
+		// how many days one beta key gives
+		BETA_ACCESS_DAYS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.default(BETA_ACCESS_DAYS_DEFAULT),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -111,6 +132,7 @@ export type Config = {
 	// undefined offers every model whose provider has a key
 	aiEnabledModels?: string[];
 	usageLimits: UsageLimits;
+	beta: { keysRequired: boolean; adminEmails: string[]; accessDays: number };
 	sentry: SentryConfig | null;
 };
 
@@ -174,6 +196,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			weekCredits: vars.AI_WEEKLY_CREDITS,
 			gracePercent: vars.AI_GRACE_PERCENT,
 			totalCredits: vars.AI_TOTAL_CREDITS,
+		},
+		beta: {
+			keysRequired: vars.BETA_KEYS_REQUIRED ?? vars.APP_ENV === 'production',
+			adminEmails: vars.ADMIN_EMAILS,
+			accessDays: vars.BETA_ACCESS_DAYS,
 		},
 		sentry: sentryConfig(vars),
 	};
