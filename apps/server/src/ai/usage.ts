@@ -3,7 +3,8 @@ import type { LanguageModelUsage } from 'ai';
 
 // what a model call is for: a tutor action, the follow-up questions, or explaining
 // a wrong answer in a study session
-export type UsageAction = TutorAction | 'followUps' | 'explainAnswer';
+export type UsageAction =
+	TutorAction | 'followUps' | 'explainAnswer' | 'keyPoints';
 
 // One log line per model call. Only names and counts, never the student's text (T-39).
 export type UsageLine = {

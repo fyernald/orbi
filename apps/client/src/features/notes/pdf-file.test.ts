@@ -20,13 +20,13 @@ describe('pdfFileError', () => {
 });
 
 describe('pdfSavedMessage', () => {
-	it('says when a long PDF became several notes', () => {
-		expect(pdfSavedMessage('a.pdf', 1)).toBe('Saved a.pdf as a note.');
-		expect(pdfSavedMessage('a.pdf', 3)).toBe(
-			'Saved a.pdf as 3 notes, split by pages.'
+	it('says how many notes Orbi wrote, or that there were notes already', () => {
+		expect(pdfSavedMessage('a.pdf', 1)).toBe(
+			'Orbi wrote the key points of a.pdf as a note.'
 		);
-		expect(pdfSavedMessage('a.pdf', 3, true)).toBe(
-			'a.pdf is already in your notes.'
+		expect(pdfSavedMessage('a.pdf', 2)).toBe(
+			'Orbi wrote the key points of a.pdf in 2 notes.'
 		);
+		expect(pdfSavedMessage('a.pdf', 1, true)).toBe('a.pdf already has notes.');
 	});
 });

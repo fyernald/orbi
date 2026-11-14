@@ -80,6 +80,9 @@ const topicColumns = {
 	planDoneOn: topic.planDoneOn,
 };
 
+// the notes a student sees on a topic, not the hidden text of their PDFs
+const visibleNoteOf = and(eq(note.topicId, topic.id), eq(note.kind, 'note'));
+
 const topicWithNoteCount = { ...topicColumns, noteCount: count(note.id) };
 
 const ownCourse = (userId: string, courseId: string) =>
@@ -99,7 +102,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 				.select(courseSummary)
 				.from(course)
 				.leftJoin(topic, eq(topic.courseId, course.id))
-				.leftJoin(note, eq(note.topicId, topic.id))
+				.leftJoin(note, visibleNoteOf)
 				.where(eq(course.userId, userId))
 				.groupBy(course.id)
 				.orderBy(asc(course.createdAt), asc(course.id)),
@@ -109,7 +112,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 				.select(courseSummary)
 				.from(course)
 				.leftJoin(topic, eq(topic.courseId, course.id))
-				.leftJoin(note, eq(note.topicId, topic.id))
+				.leftJoin(note, visibleNoteOf)
 				.where(ownCourse(userId, courseId))
 				.groupBy(course.id);
 			return found;
@@ -145,7 +148,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 			db
 				.select(topicWithNoteCount)
 				.from(topic)
-				.leftJoin(note, eq(note.topicId, topic.id))
+				.leftJoin(note, visibleNoteOf)
 				.where(and(eq(topic.userId, userId), eq(topic.courseId, courseId)))
 				.groupBy(topic.id)
 				.orderBy(asc(topic.position), asc(topic.createdAt)),
@@ -194,7 +197,7 @@ export function createCourseRepository(db: Db): CourseRepository {
 			const [found] = await db
 				.select(topicWithNoteCount)
 				.from(topic)
-				.leftJoin(note, eq(note.topicId, topic.id))
+				.leftJoin(note, visibleNoteOf)
 				.where(ownTopic(userId, courseId, topicId))
 				.groupBy(topic.id);
 			return found;

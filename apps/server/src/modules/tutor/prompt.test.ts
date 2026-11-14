@@ -6,6 +6,7 @@ const note = (id: string, content: string): NoteForTutor => ({
 	id,
 	title: `Note ${id}`,
 	fileName: null,
+	sourceKey: id,
 	content,
 	createdAt: new Date('2026-10-30T10:00:00Z'),
 });

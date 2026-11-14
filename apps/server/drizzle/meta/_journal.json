@@ -162,6 +162,13 @@
       "when": 1794655037053,
       "tag": "0022_beta-keys",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794661522802,
+      "tag": "0023_note-kind",
+      "breakpoints": true
     }
   ]
 }

@@ -1689,7 +1689,10 @@ describe('attached PDFs', () => {
 				headers: { cookie, 'content-type': 'application/pdf' },
 				payload: Buffer.from(createTestPdf(['Solve 2x + 4 = 10'])),
 			})
-		).json().notes as { id: string }[];
+		)
+			.json()
+			// the PDF's hidden text is what a message attaches
+			.textIds.map((id: string) => ({ id })) as { id: string }[];
 
 	it('saves them with the message and tells the model, also later', async () => {
 		const context = await createTopic(ada, NOTES);

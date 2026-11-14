@@ -1,4 +1,5 @@
 import { z, type ZodType } from 'zod';
+import { readJsonLines } from './ndjson';
 
 // a failed API call, with the { error: { code, message } } the server sent
 export class ApiError extends Error {
@@ -92,6 +93,29 @@ function upload<T>(
 	});
 }
 
+type StreamInput<T> = {
+	body: unknown;
+	signal: AbortSignal;
+	onEvent: (event: T) => void;
+};
+
+// A POST whose answer is one JSON event per line, for a long job that reports
+// its progress. An error before it starts comes back like any other request's.
+async function stream<T>(
+	path: string,
+	schema: ZodType<T>,
+	{ body, signal, onEvent }: StreamInput<T>
+): Promise<void> {
+	const response = await fetch(`/api${path}`, {
+		...withJson('POST', body),
+		signal,
+	});
+	if (!response.ok || !response.body) {
+		throw toApiError(response.status, await response.json().catch(() => null));
+	}
+	await readJsonLines(response.body, (value) => onEvent(schema.parse(value)));
+}
+
 const withJson = (method: string, body: unknown): RequestInit =>
 	body === undefined
 		? { method }
@@ -111,6 +135,7 @@ export const api = {
 	// the server answers 204 with no body
 	delete: (path: string) => request(path, z.null(), { method: 'DELETE' }),
 	upload,
+	stream,
 };
 
 // the server writes its messages for users; anything else (offline, a crash) gets a general one

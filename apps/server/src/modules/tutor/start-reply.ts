@@ -253,7 +253,8 @@ export function createReplyStarter({
 			topicId: topic?.id ?? null,
 			action: input.action,
 			modelId: resolved.entry.id,
-			notesUsed: notes.notes.length,
+			// a PDF's text read in a few parts counts as one, like the total
+			notesUsed: new Set(notes.notes.map(({ sourceKey }) => sourceKey)).size,
 			notesTotal: notes.total,
 			notesCut: notes.cut,
 			createdAt: continuing

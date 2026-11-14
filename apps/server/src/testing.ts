@@ -18,6 +18,7 @@ export const TEST_ORIGIN = 'http://localhost:3000';
 const NO_LIMITS: RateLimits = {
 	default: 1_000_000,
 	pdfUpload: 1_000_000,
+	keyPoints: 1_000_000,
 	followUps: 1_000_000,
 	sessionAnswer: 1_000_000,
 	explainAnswer: 1_000_000,

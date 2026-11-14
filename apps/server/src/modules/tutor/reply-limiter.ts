@@ -1,3 +1,6 @@
+import { MAX_PARALLEL_REPLIES } from '@orbi/shared';
+import { TooManyRequestsError } from '../../errors';
+
 // How many replies each student has running at once. Kept in memory, which is
 // enough while the API runs as one process; a second process would need it in the database.
 export interface ReplyLimiter {
@@ -32,4 +35,21 @@ export function createReplyLimiter(max: number): ReplyLimiter {
 export function releaseOnAbort(release: () => void, signal: AbortSignal) {
 	if (signal.aborted) return release();
 	signal.addEventListener('abort', release, { once: true });
+}
+
+export type TakePlace = (userId: string) => () => void;
+
+// Every model call takes one of the student's places, so replies, follow-up
+// questions and PDF key points cannot run past the limit together; the caller
+// frees it when done
+export function createPlaceTaker(limiter: ReplyLimiter): TakePlace {
+	return (userId) => {
+		const release = limiter.acquire(userId);
+		if (!release) {
+			throw new TooManyRequestsError(
+				`You can have ${MAX_PARALLEL_REPLIES} replies running at once. Wait for one to finish.`
+			);
+		}
+		return release;
+	};
 }

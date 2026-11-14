@@ -18,7 +18,7 @@ export function MessageAttachments({
 			{attachments.map(({ fileName, noteIds }) => (
 				<li
 					key={noteIds[0]}
-					title={`${fileName}, saved to the topic's notes`}
+					title={`${fileName}, read by Orbi`}
 					className="flex h-7 max-w-60 min-w-0 items-center gap-1.5 rounded-full border border-border bg-card pr-3 pl-1.5 text-xs"
 				>
 					<span

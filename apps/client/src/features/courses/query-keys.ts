@@ -6,6 +6,9 @@ export const topicsKey = (courseId: string) =>
 	[...courseKey(courseId), 'topics'] as const;
 export const notesKey = (courseId: string, topicId: string) =>
 	[...topicsKey(courseId), topicId, 'notes'] as const;
+// the PDFs Orbi has read on a topic that have no notes yet
+export const pdfsKey = (courseId: string, topicId: string) =>
+	[...topicsKey(courseId), topicId, 'pdfs'] as const;
 // every topic of every course, for the message box on Home
 export const allTopicsKey = [...coursesKey, 'all-topics'] as const;
 // the mastery score of every topic, apart from the topics, since answers change it

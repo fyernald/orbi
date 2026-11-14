@@ -2,7 +2,6 @@
 
 import {
 	note,
-	pdfUploadResult,
 	type CreateNoteInput,
 	type Note,
 	type Topic,
@@ -21,9 +20,9 @@ import {
 	notesKey,
 	topicsKey,
 } from '@/features/courses/query-keys';
-import { api, type UploadProgress } from '@/lib/api';
+import { api } from '@/lib/api';
 
-const notesPath = (courseId: string, topicId: string) =>
+export const notesPath = (courseId: string, topicId: string) =>
 	`/courses/${courseId}/topics/${topicId}/notes`;
 
 export function useNotes(courseId: string, topicId: string) {
@@ -65,7 +64,7 @@ function useNotesChanged(courseId: string, topicId: string) {
 // too. A request still on its way was sent before the insert, so it is
 // cancelled first: otherwise the reload would reuse it and the new notes would
 // be missing from the list
-async function notesAdded(
+export async function notesAdded(
 	queryClient: QueryClient,
 	courseId: string,
 	topicId: string,
@@ -87,31 +86,6 @@ export function useCreateNote(courseId: string, topicId: string) {
 			api.post(notesPath(courseId, topicId), note, input),
 		onSuccess: (created) =>
 			notesAdded(queryClient, courseId, topicId, [created]),
-	});
-}
-
-export type PdfUpload = UploadProgress & {
-	courseId: string;
-	topicId: string;
-	file: File;
-};
-
-// the server reads the text and saves it as one note, or a few for a long PDF;
-// the same file again gives back its saved notes. The course and topic come
-// with each upload, since the composer can switch topics while a file is still
-// going up
-export function useUploadPdf() {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ courseId, topicId, file, ...progress }: PdfUpload) =>
-			api.upload(
-				`${notesPath(courseId, topicId)}/pdf?fileName=${encodeURIComponent(file.name)}`,
-				pdfUploadResult,
-				{ file, contentType: 'application/pdf', ...progress }
-			),
-		onSuccess: async ({ notes, reused }, { courseId, topicId }) => {
-			if (!reused) await notesAdded(queryClient, courseId, topicId, notes);
-		},
 	});
 }
 

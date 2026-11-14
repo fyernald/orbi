@@ -81,6 +81,8 @@ describe('notes', () => {
 			title: 'Mitosis',
 			// kept as pasted
 			content: 'Prophase\n\n  Metaphase',
+			// written by the student, not from a PDF
+			sourceName: null,
 			createdAt: expect.any(String),
 			updatedAt: expect.any(String),
 		});
@@ -187,7 +189,7 @@ const pageOf = (length: number) =>
 		.padEnd(length, '.');
 
 describe('uploading a PDF', () => {
-	it('saves its text as a note named after the file', async () => {
+	it('saves its text out of the notes list, as a PDF without notes yet', async () => {
 		const { notesUrl } = await createTopic(ada);
 		const pdf = createTestPdf(['Mitosis\nProphase (early)', '', 'Metaphase']);
 
@@ -195,20 +197,32 @@ describe('uploading a PDF', () => {
 
 		expect(response.statusCode).toBe(201);
 		expect(response.json()).toEqual({
-			notes: [
-				expect.objectContaining({
-					title: 'Lecture 3',
-					content: 'Mitosis\nProphase (early)\n\nMetaphase',
-				}),
-			],
+			fileHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+			textIds: [expect.any(String)],
+			notes: [],
 			reused: false,
 		});
-		expect((await send(ada, 'GET', notesUrl)).json()).toEqual(
-			response.json().notes
-		);
+		expect((await send(ada, 'GET', notesUrl)).json()).toEqual([]);
+		expect((await send(ada, 'GET', `${notesUrl}/pdfs`)).json()).toEqual([
+			{
+				fileHash: response.json().fileHash,
+				name: 'Lecture 3.pdf',
+				savedAt: expect.any(String),
+			},
+		]);
 	});
 
-	it('gives back the saved notes when the same PDF comes again', async () => {
+	it('lists the PDF next to notes the student wrote', async () => {
+		const { notesUrl } = await createTopic(ada);
+		await send(ada, 'POST', notesUrl, { content: 'My own note' });
+
+		await uploadPdf(ada, notesUrl, createTestPdf(['Mitosis']));
+
+		expect((await send(ada, 'GET', `${notesUrl}/pdfs`)).json()).toHaveLength(1);
+		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
+	});
+
+	it('gives back the saved text when the same PDF comes again', async () => {
 		const { notesUrl } = await createTopic(ada);
 		const pdf = createTestPdf(['Mitosis']);
 		const first = (await uploadPdf(ada, notesUrl, pdf)).json();
@@ -216,8 +230,8 @@ describe('uploading a PDF', () => {
 		const again = await uploadPdf(ada, notesUrl, pdf);
 
 		expect(again.statusCode).toBe(200);
-		expect(again.json()).toEqual({ notes: first.notes, reused: true });
-		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
+		expect(again.json()).toEqual({ ...first, reused: true });
+		expect((await send(ada, 'GET', `${notesUrl}/pdfs`)).json()).toHaveLength(1);
 	});
 
 	it('saves the same PDF once when it is sent twice at the same time', async () => {
@@ -233,11 +247,10 @@ describe('uploading a PDF', () => {
 		});
 
 		expect([first.statusCode, second.statusCode].sort()).toEqual([200, 201]);
-		expect(second.json().notes).toEqual(first.json().notes);
-		expect((await send(ada, 'GET', notesUrl)).json()).toHaveLength(1);
+		expect(second.json().textIds).toEqual(first.json().textIds);
 	});
 
-	it('splits a long PDF into notes by pages, listed in page order', async () => {
+	it('splits the text of a long PDF into parts by pages', async () => {
 		const { notesUrl } = await createTopic(ada);
 		const third = Math.floor(PDF_NOTE_MAX_LENGTH / 2.5);
 		const pdf = createTestPdf([pageOf(third), pageOf(third), pageOf(third)]);
@@ -245,10 +258,20 @@ describe('uploading a PDF', () => {
 		const response = await uploadPdf(ada, notesUrl, pdf);
 
 		expect(response.statusCode).toBe(201);
-		const titles = (await send(ada, 'GET', notesUrl))
-			.json()
-			.map((n: { title: string }) => n.title);
-		expect(titles).toEqual(['Lecture 3 · pages 1–2', 'Lecture 3 · page 3']);
+		expect(response.json().textIds).toHaveLength(2);
+	});
+
+	it("removes a PDF without notes, and only the student's own", async () => {
+		const { notesUrl } = await createTopic(ada);
+		const { fileHash } = (
+			await uploadPdf(ada, notesUrl, createTestPdf(['Mitosis']))
+		).json();
+		const pdfUrl = `${notesUrl}/pdfs/${fileHash}`;
+
+		expect((await send(grace, 'DELETE', pdfUrl)).statusCode).toBe(404);
+		expect((await send(ada, 'DELETE', pdfUrl)).statusCode).toBe(204);
+		expect((await send(ada, 'GET', `${notesUrl}/pdfs`)).json()).toEqual([]);
+		expect((await send(ada, 'DELETE', pdfUrl)).statusCode).toBe(404);
 	});
 
 	it('refuses a PDF without text, like a scan', async () => {

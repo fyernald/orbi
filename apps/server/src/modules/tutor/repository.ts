@@ -45,6 +45,9 @@ export type StudentContext = {
 
 export type NotesScope = { topicId: string } | { courseId: string };
 
+// a note is its own source; every hidden text part of a PDF shares the file's
+const sourceKeyOf = sql<string>`case when ${note.kind} = 'pdf_text' then 'pdf:' || ${note.sourceHash} else ${note.id}::text end`;
+
 export type NoteForTutor = {
 	id: string;
 	title: string;
@@ -52,6 +55,8 @@ export type NoteForTutor = {
 	topicName?: string;
 	// the PDF the note was taken from, if any
 	fileName: string | null;
+	// the same for every hidden text part of one PDF, so a file counts once
+	sourceKey: string;
 	content: string;
 	createdAt: Date;
 };
@@ -103,7 +108,8 @@ export interface TutorRepository {
 	findDefaultModelId(userId: string): Promise<string | null>;
 	// The notes a reply can read, in a topic or (for the whole-course chat) a course:
 	// the attached ones, then the newest others, until about maxLength characters.
-	// total counts every note there, read or not.
+	// The hidden text of a PDF is read like a note. total counts every note there,
+	// read or not, with a PDF's text as one.
 	listNotesForReply(
 		userId: string,
 		scope: NotesScope,
@@ -265,6 +271,12 @@ export function createTutorRepository(db: Db): TutorRepository {
 		// is never read whole. Attached notes are kept as titles even when they do not
 		// fit, so the tutor can say which ones it could not read.
 		async listNotesForReply(userId, scope, { maxLength, attachedIds }) {
+			const inScope = and(
+				eq(note.userId, userId),
+				'topicId' in scope
+					? eq(note.topicId, scope.topicId)
+					: eq(topic.courseId, scope.courseId)
+			);
 			const attached =
 				attachedIds.length > 0 ? inArray(note.id, attachedIds) : sql`false`;
 			const attachedOrder =
@@ -280,6 +292,7 @@ export function createTutorRepository(db: Db): TutorRepository {
 					title: note.title,
 					topicName: topic.name,
 					fileName: note.sourceName,
+					sourceKey: sourceKeyOf.as('source_key'),
 					content: note.content,
 					createdAt: note.createdAt,
 					attached: sql<boolean>`${attached}`.as('attached'),
@@ -288,21 +301,13 @@ export function createTutorRepository(db: Db): TutorRepository {
 						order by ${attachedOrder}, ${note.createdAt} desc, ${note.id} desc
 						rows between unbounded preceding and 1 preceding
 					), 0)`.as('length_before'),
-					total: sql<number>`count(*) over ()`.as('total'),
 				})
 				.from(note)
 				.innerJoin(
 					topic,
 					and(eq(topic.userId, note.userId), eq(topic.id, note.topicId))
 				)
-				.where(
-					and(
-						eq(note.userId, userId),
-						'topicId' in scope
-							? eq(note.topicId, scope.topicId)
-							: eq(topic.courseId, scope.courseId)
-					)
-				)
+				.where(inScope)
 				.as('ranked');
 			const rows = await db
 				.select({
@@ -310,17 +315,25 @@ export function createTutorRepository(db: Db): TutorRepository {
 					title: ranked.title,
 					topicName: ranked.topicName,
 					fileName: ranked.fileName,
+					sourceKey: ranked.sourceKey,
 					content: sql<string>`left(${ranked.content}, greatest(${maxLength} - ${ranked.lengthBefore}, 0)::int)`,
 					createdAt: ranked.createdAt,
-					total: ranked.total,
 				})
 				.from(ranked)
 				.where(sql`${ranked.attached} or ${ranked.lengthBefore} < ${maxLength}`)
 				.orderBy(desc(ranked.createdAt), desc(ranked.id));
-			const total = Number(rows[0]?.total ?? 0);
+			const [counted] = await db
+				.select({ total: sql<number>`count(distinct ${sourceKeyOf})` })
+				.from(note)
+				.innerJoin(
+					topic,
+					and(eq(topic.userId, note.userId), eq(topic.id, note.topicId))
+				)
+				.where(inScope);
+			const total = Number(counted?.total ?? 0);
 			return {
 				// the topic's name only helps in the whole-course chat
-				notes: rows.map(({ total: _, topicName, ...item }) =>
+				notes: rows.map(({ topicName, ...item }) =>
 					'topicId' in scope ? item : { ...item, topicName }
 				),
 				total,
