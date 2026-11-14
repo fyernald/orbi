@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DAILY_TOKENS_DEFAULT } from './ai/budget';
 import type { SmtpOptions } from './mail/mailer';
+import { BETA_ACCESS_DAYS_DEFAULT } from './modules/beta/service';
 
 // the share of API requests traced when SENTRY_TRACES_SAMPLE_RATE is not set
 export const TRACES_SAMPLE_RATE_DEFAULT = 0.2;
@@ -51,6 +52,26 @@ const envSchema = z
 			.int()
 			.positive()
 			.default(DAILY_TOKENS_DEFAULT),
+		// the closed beta (US-50): without a key nobody can use the app. Off by default
+		// on local runs, so a new account works without one
+		BETA_KEYS_REQUIRED: z.stringbool().optional(),
+		// developers who get in without a key, separated by commas
+		ADMIN_EMAILS: z
+			.string()
+			.default('')
+			.transform((value) =>
+				value
+					.split(',')
+					.map((email) => email.trim())
+					.filter(Boolean)
+			)
+			.pipe(z.array(z.email('ADMIN_EMAILS has an email that is not valid.'))),
+		// how many days one beta key gives
+		BETA_ACCESS_DAYS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.default(BETA_ACCESS_DAYS_DEFAULT),
 	})
 	// local runs print emails to the console, so only production needs a mail server
 	.superRefine((vars, ctx) => {
@@ -88,6 +109,7 @@ export type Config = {
 	smtp: SmtpOptions | null;
 	aiKeys: { google?: string; anthropic?: string; deepseek?: string };
 	aiDailyTokens: number;
+	beta: { keysRequired: boolean; adminEmails: string[]; accessDays: number };
 	sentry: SentryConfig | null;
 };
 
@@ -146,6 +168,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			deepseek: vars.DEEPSEEK_API_KEY || undefined,
 		},
 		aiDailyTokens: vars.AI_DAILY_TOKENS_PER_STUDENT,
+		beta: {
+			keysRequired: vars.BETA_KEYS_REQUIRED ?? vars.APP_ENV === 'production',
+			adminEmails: vars.ADMIN_EMAILS,
+			accessDays: vars.BETA_ACCESS_DAYS,
+		},
 		sentry: sentryConfig(vars),
 	};
 }

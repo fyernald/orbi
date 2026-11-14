@@ -9,7 +9,9 @@ import { registerErrorHandler } from './error-handler';
 import type { ReportError } from './error-reporter';
 import { loggerOptions } from './log';
 import { createAuthRoutes } from './modules/auth/routes';
-import { createRequireUser } from './modules/auth/session';
+import { createRequireLogin, createRequireUser } from './modules/auth/session';
+import { createBetaRoutes } from './modules/beta/routes';
+import type { BetaService } from './modules/beta/service';
 import { createCourseRoutes } from './modules/courses/routes';
 import { createCspReportRoutes } from './modules/csp-report/routes';
 import type { CourseService } from './modules/courses/service';
@@ -26,6 +28,7 @@ import { RATE_LIMITS, registerRateLimit, type RateLimits } from './rate-limit';
 export type AppDeps = {
 	auth: Auth;
 	services: {
+		beta: BetaService;
 		courses: CourseService;
 		notes: NoteService;
 		profiles: ProfileService;
@@ -61,7 +64,12 @@ export function buildApp({
 	registerErrorHandler(app, reportError);
 	registerRateLimit(app, limits.default);
 
-	const requireUser = createRequireUser(auth);
+	const requireLogin = createRequireLogin(auth);
+	// every route with the student's data needs beta access too (US-50)
+	const requireUser = createRequireUser(
+		requireLogin,
+		services.beta.requireAccess
+	);
 
 	// every route is live under /api, so the reverse proxy can send /api/* to this server
 	app.register(
@@ -73,6 +81,9 @@ export function buildApp({
 			}));
 			api.register(createAuthRoutes({ auth }));
 			api.register(createCspReportRoutes());
+			api.register(
+				createBetaRoutes({ beta: services.beta, requireLogin, limits })
+			);
 			api.register(
 				createCourseRoutes({ courses: services.courses, requireUser })
 			);

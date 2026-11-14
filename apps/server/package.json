@@ -11,7 +11,8 @@
 		"typecheck": "tsc --noEmit",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"keys:create": "tsx --env-file-if-exists=../../.env src/scripts/create-beta-keys.ts"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.94",

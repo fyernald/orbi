@@ -3,6 +3,8 @@ import type { ModelRegistry } from './ai/models';
 import type { LogUsage } from './ai/usage';
 import type { AppDeps } from './app';
 import type { Db } from './db';
+import { createBetaRepository } from './modules/beta/repository';
+import { createBetaService, type BetaOptions } from './modules/beta/service';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createNoteRepository } from './modules/notes/repository';
@@ -21,6 +23,7 @@ export type ServiceDeps = {
 	db: Db;
 	pdf: PdfReader;
 	models: ModelRegistry;
+	beta: BetaOptions;
 	budget?: TokenBudget;
 	limiter?: ReplyLimiter;
 	logError?: (error: unknown) => void;
@@ -33,12 +36,17 @@ export function createServices({
 	db,
 	pdf,
 	models,
+	beta,
 	budget,
 	limiter,
 	logError,
 	logUsage,
 }: ServiceDeps): AppDeps['services'] {
 	return {
+		beta: createBetaService({
+			repo: createBetaRepository(db),
+			options: beta,
+		}),
 		courses: createCourseService({ repo: createCourseRepository(db) }),
 		notes: createNoteService({ repo: createNoteRepository(db), pdf }),
 		profiles: createProfileService({

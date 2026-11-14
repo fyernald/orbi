@@ -29,6 +29,14 @@ export class ForbiddenError extends AppError {
 	}
 }
 
+// a logged-in student without beta access (US-50); its own code, so the client
+// sends them to the key page
+export class BetaAccessError extends AppError {
+	constructor() {
+		super(403, 'beta_access_required', 'Enter a beta key to use Orbi.');
+	}
+}
+
 export class NotFoundError extends AppError {
 	constructor(message = 'Not found.') {
 		super(404, 'not_found', message);

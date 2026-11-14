@@ -39,6 +39,10 @@ await migrate(db, {
 const services = createServices({
 	db,
 	pdf: createWorkerPdfReader(),
+	beta: {
+		...config.beta,
+		requireVerifiedEmail: config.env === 'production',
+	},
 	models: createModelRegistry({
 		providers: createProviderFactories(config.aiKeys),
 	}),
