@@ -80,14 +80,14 @@ export function diagramSourceProblem(
 	return undefined;
 }
 
-const visualTitle = z
+export const visualTitle = z
 	.string()
 	.trim()
 	.min(1)
 	.max(VISUAL_TITLE_MAX_LENGTH)
 	.describe('A short title, like "Binary search tree after inserting 7".');
 
-const visualDescription = z
+export const visualDescription = z
 	.string()
 	.trim()
 	.min(1)

@@ -15,7 +15,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { questionSetsKey } from '@/features/questions/set-hooks';
 import { api } from '@/lib/api';
-import { allTopicsKey, courseKey, coursesKey, topicsKey } from './query-keys';
+import {
+	allTopicsKey,
+	courseKey,
+	courseMasteryKey,
+	coursesKey,
+	topicsKey,
+} from './query-keys';
 
 export function useCourses() {
 	return useQuery({
@@ -95,6 +101,10 @@ function useTopicsChanged(courseId: string) {
 		});
 		void queryClient.invalidateQueries({ queryKey: allTopicsKey });
 		void queryClient.invalidateQueries({ queryKey: questionSetsKey(courseId) });
+		// the course score counts every topic
+		void queryClient.invalidateQueries({
+			queryKey: courseMasteryKey(courseId),
+		});
 	};
 }
 

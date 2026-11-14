@@ -21,6 +21,10 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 # The share of page loads traced for performance, from 0 to 1; empty is 0.2.
 ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=
 ENV NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
+# Where mini-apps run (see "Mini-app sandbox" in docs/deployment.md). It is put into
+# the build; empty turns mini-apps off.
+ARG NEXT_PUBLIC_SANDBOX_URL=
+ENV NEXT_PUBLIC_SANDBOX_URL=$NEXT_PUBLIC_SANDBOX_URL
 RUN pnpm --filter client build
 
 FROM node:22-alpine

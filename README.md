@@ -163,7 +163,7 @@ A task is done when:
    docker compose up -d
    ```
 
-5. Start the frontend and backend together:
+5. Start the frontend, the backend and the mini-app sandbox together:
 
    ```bash
    pnpm dev
@@ -173,6 +173,7 @@ A task is done when:
 
    - Frontend: `http://localhost:3000`
    - Backend API: `http://localhost:3001/api` (health check: `/api/health`)
+   - Mini-app sandbox: `http://localhost:3200` (the page AI-written mini-apps run in, see [docs/deployment.md](docs/deployment.md#mini-app-sandbox))
    - Mailpit (emails): `http://localhost:8025` (only used when `APP_ENV` is not `local`)
 
 6. Run the tests:

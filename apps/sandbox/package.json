@@ -1,0 +1,23 @@
+{
+	"name": "sandbox",
+	"version": "0.0.0",
+	"private": true,
+	"license": "UNLICENSED",
+	"type": "module",
+	"scripts": {
+		"dev": "tsup --watch",
+		"build": "tsup",
+		"start": "node dist/server.js",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"chart.js": "4.6.1",
+		"d3": "7.9.0",
+		"p5": "1.11.13"
+	},
+	"devDependencies": {
+		"@orbi/shared": "workspace:*",
+		"acorn": "8.19.0",
+		"tsup": "^9.0.0"
+	}
+}

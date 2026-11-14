@@ -3,7 +3,8 @@
 import type { CreateDiagramInput, DiagramKind } from '@orbi/shared';
 import { Workflow } from 'lucide-react';
 import { useState } from 'react';
-import { diagramDownloads } from '../../../visuals/diagram-downloads';
+import { streamedTitle } from '../../../visuals/streamed-title';
+import { svgDownloads } from '../../../visuals/svg-downloads';
 import { useMermaidSvg } from '../../../visuals/use-mermaid-svg';
 import type { ToolViewProps } from '../tool-views';
 import { DiagramSvg } from './diagram-svg';
@@ -28,12 +29,6 @@ const kindLabels: Record<DiagramKind, string> = {
 	timeline: 'Timeline',
 	graph: 'Graph',
 };
-
-// the title, as soon as it has streamed in
-function streamedTitle(input: unknown): string | undefined {
-	const title = (input as { title?: unknown } | undefined)?.title;
-	return typeof title === 'string' && title.trim() ? title : undefined;
-}
 
 // the createDiagram tool: a skeleton while Orbi writes it, then the drawn diagram
 export function DiagramView({ part, onRetry }: ToolViewProps<'createDiagram'>) {
@@ -90,7 +85,7 @@ function Diagram({
 							label="Copy Mermaid source"
 						/>
 						<DownloadAction
-							options={diagramDownloads(drawing.svg, input.title)}
+							options={svgDownloads(() => drawing.svg, input.title)}
 						/>
 						<FullScreenAction onOpen={() => setFullScreen(true)} />
 					</>

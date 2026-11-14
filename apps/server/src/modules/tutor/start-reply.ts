@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
 	tutorMessageMetadata,
+	VISUAL_TOOL_NAMES,
 	type SendChatMessageInput,
 	type TutorMessageMetadata,
 } from '@orbi/shared';
@@ -217,7 +218,7 @@ export function createReplyStarter({
 			),
 			tools,
 			// practice questions belong to a topic, so the whole-course chat cannot make them
-			activeTools: topic ? undefined : ['askStudent', 'createDiagram'],
+			activeTools: topic ? undefined : ['askStudent', ...VISUAL_TOOL_NAMES],
 			// a forced tool stays forced until it worked once, so a bad input gets a retry
 			prepareStep: forcedTool
 				? ({ steps }) => {

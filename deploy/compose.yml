@@ -1,6 +1,7 @@
 # Production services on the VPS. GitHub Actions copies this file to the server on every deploy.
 # Secrets come from the .env file next to it on the VPS (see deploy/.env.example).
-# nginx on the VPS sends orbi.study traffic to the client and server ports below (see deploy/nginx.conf).
+# nginx on the VPS sends orbi.study traffic to the client and server ports below, and
+# sandbox.orbi.study traffic to the sandbox port (see deploy/nginx.conf).
 
 name: orbi
 
@@ -35,6 +36,28 @@ services:
         condition: service_healthy
     healthcheck:
       test: wget -q --spider http://127.0.0.1:3000/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The page mini-apps run in (US-42), on its own address, so the code Orbi writes for
+  # them can never reach the app's pages, login cookie or API. It serves a few files
+  # and keeps no state (see "Mini-app sandbox" in docs/deployment.md).
+  sandbox:
+    image: ghcr.io/fyernald/orbi-sandbox:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    init: true
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128m }
+    environment:
+      # the only page that may embed the sandbox
+      APP_ORIGIN: https://orbi.study
+    ports:
+      - "127.0.0.1:3102:3200"
+    healthcheck:
+      test: wget -q --spider http://127.0.0.1:3200/health || exit 1
       interval: 10s
       timeout: 5s
       retries: 5

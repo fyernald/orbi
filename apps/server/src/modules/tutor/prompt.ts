@@ -1,5 +1,7 @@
 import {
+	CHART_LABELS_MAX,
 	DIAGRAM_COLOUR_CLASSES,
+	PIE_SLICES_MAX,
 	QUESTIONS_PER_SET_MAX,
 	QUESTIONS_PER_SET_MIN,
 	VISUALS_PER_REPLY_MAX,
@@ -150,9 +152,12 @@ export type InstructionsInput = {
 };
 
 // short, so they add few tokens to every reply (T-72)
-const diagramRules = [
+const visualRules = [
 	'- When the student asks to draw, show, map or visualize something, or when a structure, process or relation is much easier to see than to read, call createDiagram. Most replies need no diagram.',
 	`- Keep a diagram small (about 15 nodes at most) with short labels, and prefer top-down layouts, the chat is narrow. Write Mermaid only: no code fences, styles, colours or config. To set groups of flowchart or state nodes apart, give them the classes c1 to c${DIAGRAM_COLOUR_CLASSES} (A[Label]:::c2), the app colours them. Then explain in a few sentences what it shows, without repeating the Mermaid source. At most ${VISUALS_PER_REPLY_MAX} visuals in one reply.`,
+	`- When numbers, a trend, a comparison, a share or a formula are much easier to see than to read, call createChart: bar to compare, line or area for change, pie for parts of one whole (at most ${PIE_SLICES_MAX} slices), scatter for two measures, histogram for how values spread, function to plot formulas. Keep the data small (about ${CHART_LABELS_MAX} values), name both axes, and write formulas with * and ^ (2*x^2, exp(-x^2/2)). Then explain what it shows in a few sentences, without repeating the numbers.`,
+	'- When the student wants to play with an idea, or seeing how a result changes with a quantity explains it best (a z-score, a projectile, compound interest, a wave, a law of physics), call createInteractive: a few controls, values and curves written as formulas of the control names (normcdf, normpdf and erf are there for statistics). Curves use x; shade under a curve with shadeFrom or shadeTo, and give yMin and yMax when the curves move. Then say in a sentence or two what to try.',
+	'- Only when createInteractive cannot do it (a simulation or animation, an algorithm step by step like a sort, a small game), call createMiniApp with html, css and js. It runs in a sandbox with no network, so load nothing yourself; ask for chart.js, d3 or p5 in libraries. Keep it small and fit any width (no fixed widths over 320px). Colour it with CSS variables: text in --orbi-foreground or --orbi-muted-foreground, fills in --orbi-muted, lines in --orbi-border, accents in --orbi-primary and --orbi-chart-1 to --orbi-chart-6. A canvas cannot read CSS variables: in JavaScript use orbi.colors (foreground, mutedForeground, muted, border, primary) and orbi.charts[0] to orbi.charts[5]. Put a Chart.js canvas alone in a div with a fixed height (position: relative; height: 240px). Label every control. Then say in a sentence or two what to try.',
 ];
 
 // the system instructions for one reply
@@ -193,7 +198,7 @@ export function buildInstructions({
 			'- Keep replies short and clear: short paragraphs, lists when they help, **bold** for key terms. Write maths in LaTeX between double dollar signs, also inside a sentence (for example $$2^n$$), never single ones.',
 			'- Help the student think. When they ask you to check their understanding, ask them to explain it first.',
 			...questions,
-			...diagramRules,
+			...visualRules,
 			'- If the request could mean very different things and the answer changes what you make, call askStudent once instead of guessing.',
 			'- If they ask for something unrelated to studying, answer briefly and steer back to the course.',
 		].join('\n'),

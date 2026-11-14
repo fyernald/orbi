@@ -6,6 +6,7 @@ const kindNames: Record<VisualKind, string> = {
 	diagram: 'diagram',
 	chart: 'chart',
 	interactive: 'interactive tool',
+	miniApp: 'mini-app',
 };
 
 // In place of a visual that could not be made or drawn. The rest of the reply
@@ -13,10 +14,13 @@ const kindNames: Record<VisualKind, string> = {
 export function VisualError({
 	kind,
 	title,
+	message,
 	onRetry,
 }: {
 	kind: VisualKind;
 	title?: string;
+	// in place of the usual line, when Orbi knows what went wrong
+	message?: string;
 	onRetry?: () => void;
 }) {
 	const name = kindNames[kind];
@@ -30,7 +34,8 @@ export function VisualError({
 				<div className="flex flex-col gap-0.5">
 					<p className="text-sm font-semibold">{title ?? `Orbi's ${name}`}</p>
 					<p className="text-sm text-muted-foreground">
-						Orbi could not draw this {name}. The rest of the reply is fine.
+						{message ?? `Orbi could not draw this ${name}.`} The rest of the
+						reply is fine.
 					</p>
 				</div>
 				{onRetry && (
