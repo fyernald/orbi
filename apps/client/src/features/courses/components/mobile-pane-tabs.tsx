@@ -11,12 +11,18 @@ const panes: { value: WorkspacePane; label: string }[] = [
 type MobilePaneTabsProps = {
 	value: WorkspacePane;
 	onChange: (pane: WorkspacePane) => void;
+	// the middle pane reads Notes while a topic's notes show there
+	notesOpen: boolean;
 };
 
 // Wide screens show all panes side by side, so this is for phones and tablets. The
 // panes are not tab panels on wide screens, so these are plain buttons that say which
 // pane shows (aria-pressed) instead of the tabs pattern.
-export function MobilePaneTabs({ value, onChange }: MobilePaneTabsProps) {
+export function MobilePaneTabs({
+	value,
+	onChange,
+	notesOpen,
+}: MobilePaneTabsProps) {
 	return (
 		<div
 			role="group"
@@ -36,7 +42,7 @@ export function MobilePaneTabs({ value, onChange }: MobilePaneTabsProps) {
 							: 'border-transparent text-muted-foreground hover:text-foreground'
 					)}
 				>
-					{pane.label}
+					{pane.value === 'tutor' && notesOpen ? 'Notes' : pane.label}
 				</button>
 			))}
 		</div>

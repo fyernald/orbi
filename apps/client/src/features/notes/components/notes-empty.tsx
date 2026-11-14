@@ -9,8 +9,8 @@ export function NotesEmpty() {
 			<div className="flex flex-col gap-1">
 				<p className="text-sm font-medium">No notes yet</p>
 				<p className="max-w-xs text-sm text-muted-foreground">
-					Paste your lecture notes or a summary above. Orbi makes practice
-					questions from them.
+					Paste your lecture notes or a summary, or upload a PDF. Orbi makes
+					practice questions from them.
 				</p>
 			</div>
 		</div>

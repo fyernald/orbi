@@ -145,7 +145,12 @@ export function TutorPane({
 				}
 				title={
 					<>
-						<h2 id="tutor-pane-title" className="truncate font-semibold">
+						{/* takes the focus back when the notes close */}
+						<h2
+							id="tutor-pane-title"
+							tabIndex={-1}
+							className="truncate font-semibold outline-none"
+						>
 							{selected ? selected.name : 'Whole course'}
 						</h2>
 						<span className="text-xs font-normal text-muted-foreground">

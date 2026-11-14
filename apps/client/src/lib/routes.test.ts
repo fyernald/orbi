@@ -20,6 +20,12 @@ describe('courseRoute', () => {
 		);
 	});
 
+	it("shows a topic's notes in place of the chat", () => {
+		expect(courseRoute('c1', { topic: 't1', notes: 't2' })).toBe(
+			'/app/courses/c1?topic=t1&notes=t2'
+		);
+	});
+
 	it('leaves out what is not given', () => {
 		expect(courseRoute('c1', { ask: '', think: false })).toBe(
 			'/app/courses/c1'

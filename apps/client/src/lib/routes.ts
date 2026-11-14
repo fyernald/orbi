@@ -22,13 +22,15 @@ export const routes = {
 } as const;
 
 // tool and ask open the course's study space with that tutor action or question
-// ready; topic opens that topic's chat, model and think set the message box
+// ready; topic opens that topic's chat, model and think set the message box;
+// notes shows a topic's notes in place of the chat
 export function courseRoute(
 	courseId: string,
 	start: {
 		tool?: string;
 		ask?: string;
 		topic?: string;
+		notes?: string;
 		model?: string;
 		think?: boolean;
 	} = {}
@@ -37,6 +39,7 @@ export function courseRoute(
 	if (start.tool) query.set('tool', start.tool);
 	if (start.ask) query.set('ask', start.ask);
 	if (start.topic) query.set('topic', start.topic);
+	if (start.notes) query.set('notes', start.notes);
 	if (start.model) query.set('model', start.model);
 	if (start.think) query.set('think', '1');
 	const search = query.toString();
