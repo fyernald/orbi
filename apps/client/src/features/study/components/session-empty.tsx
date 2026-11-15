@@ -1,6 +1,7 @@
 import { Check, CircleHelp, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { MascotMood } from '@/features/mascot/components/mascot-mood';
 import { courseRoute, routes, todayListRoute } from '@/lib/routes';
 
 type SessionEmptyProps = {
@@ -39,6 +40,7 @@ export function SessionEmpty({
 
 	return (
 		<div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-14 text-center">
+			<MascotMood reaction="sleepy" />
 			<span className="flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
 				<Icon className="size-6" />
 			</span>

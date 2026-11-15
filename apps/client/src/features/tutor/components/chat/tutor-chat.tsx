@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { OrbiMark } from '@/components/brand/orbi-mark';
 import { Button } from '@/components/ui/button';
+import { useMascotReaction } from '@/features/mascot/use-mascot-reaction';
 import { useUsageBlock } from '@/features/usage/hooks';
 import {
 	canFollowUp,
@@ -141,6 +142,8 @@ export function TutorChat({
 	}, [hasMessages, onHasMessages]);
 
 	const busy = chat.status === 'submitted' || chat.status === 'streaming';
+	// the cat thinks while Orbi writes (US-48)
+	useMascotReaction('think', busy);
 	// an AI usage limit is used up, so follow-up questions cannot be asked either
 	const usageBlock = useUsageBlock();
 	useEffect(() => {

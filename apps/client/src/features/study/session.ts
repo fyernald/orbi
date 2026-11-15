@@ -41,11 +41,18 @@ export function summarize(answers: StudyRun['answers']): SessionSummary {
 	};
 }
 
+// 70% or more right is a session worth cheering for
+const GOOD_SCORE = 0.7;
+
+export const isGoodScore = ({ total, correct }: SessionSummary) =>
+	total > 0 && correct / total >= GOOD_SCORE;
+
 // a short line for the end of the session, by how it went
-export function summaryHeadline({ total, correct }: SessionSummary): string {
+export function summaryHeadline(summary: SessionSummary): string {
+	const { total, correct } = summary;
 	if (total === 0) return 'Session done';
 	if (correct === total) return 'All correct. Well done!';
-	if (correct / total >= 0.7) return 'Nice work';
+	if (isGoodScore(summary)) return 'Nice work';
 	return 'Keep going, you are learning';
 }
 
