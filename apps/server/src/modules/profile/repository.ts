@@ -28,6 +28,7 @@ const profileColumns = {
 	defaultModelId: profile.defaultModelId,
 	onboardedAt: profile.onboardedAt,
 	tourSeenAt: profile.tourSeenAt,
+	mascotEnabled: profile.mascotEnabled,
 };
 
 type ProfileRow = Pick<

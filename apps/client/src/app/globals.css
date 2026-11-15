@@ -47,6 +47,12 @@
 	--color-switch-sky: var(--switch-sky);
 	--color-switch-sun: var(--switch-sun);
 	--color-switch-moon: var(--switch-moon);
+	--color-mascot-sky: var(--mascot-sky);
+	--color-mascot-star: var(--mascot-star);
+	--color-mascot-fur: var(--mascot-fur);
+	--color-mascot-stripe: var(--mascot-stripe);
+	--color-mascot-blush: var(--mascot-blush);
+	--color-mascot-line: var(--mascot-line);
 	--color-tone-blue: var(--tone-blue);
 	--color-tone-blue-foreground: var(--tone-blue-foreground);
 	--color-tone-teal: var(--tone-teal);
@@ -128,6 +134,13 @@
 	--switch-sun: #f59e0b;
 	--switch-moon: #a5b4fc;
 	--switch-star: #ffffff;
+	/* the stand-in cat (US-48): a tabby on a patch of night sky, the same in both themes */
+	--mascot-sky: #312e81;
+	--mascot-star: #e0e7ff;
+	--mascot-fur: #f4a95e;
+	--mascot-stripe: #c46f2c;
+	--mascot-blush: #f9a8c0;
+	--mascot-line: #3b2414;
 	--border: #e8e1e4;
 	--divider: #f2edef;
 	--input: var(--border);
