@@ -337,16 +337,30 @@ describe('attachments', () => {
 });
 
 describe('timeoutAsError', () => {
+	const timedOut = { stoppedByStudent: false, slowToStart: false };
+
 	it('turns a reply cut by the timeout into an error', () => {
-		expect(timeoutAsError({ type: 'abort' }, false)).toMatchObject({
+		expect(timeoutAsError({ type: 'abort' }, timedOut)).toMatchObject({
 			type: 'error',
 			errorText: expect.stringContaining('stopped answering'),
 		});
 	});
 
+	it('says when the model was too slow to start answering', () => {
+		expect(
+			timeoutAsError({ type: 'abort' }, { ...timedOut, slowToStart: true })
+		).toEqual({
+			type: 'error',
+			errorText:
+				'This model is slow to answer right now. Try again, or pick another model.',
+		});
+	});
+
 	it('keeps a stop by the student, and every other chunk', () => {
-		expect(timeoutAsError({ type: 'abort' }, true)).toEqual({ type: 'abort' });
-		expect(timeoutAsError({ type: 'text-delta' }, false)).toEqual({
+		expect(
+			timeoutAsError({ type: 'abort' }, { ...timedOut, stoppedByStudent: true })
+		).toEqual({ type: 'abort' });
+		expect(timeoutAsError({ type: 'text-delta' }, timedOut)).toEqual({
 			type: 'text-delta',
 		});
 	});
