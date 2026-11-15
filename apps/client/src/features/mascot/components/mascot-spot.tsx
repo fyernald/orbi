@@ -11,6 +11,7 @@ import {
 } from '../hooks';
 import type { MascotSaved } from '../types';
 import { useCurrentTip } from '../use-current-tip';
+import { useFirstVisitWave } from '../use-first-visit-wave';
 import { HelpDialog } from './help-dialog';
 import { MascotMenu } from './mascot-menu';
 import { TipBubble } from './tip-bubble';
@@ -35,6 +36,7 @@ export function MascotSpot({ saved }: MascotSpotProps) {
 	);
 	const cat = useRef<HTMLButtonElement>(null);
 	const tip = enabled ? current.tip : null;
+	useFirstVisitWave(enabled);
 
 	return (
 		<div className="relative">

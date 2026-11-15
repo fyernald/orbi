@@ -17,6 +17,7 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { askOrbiRoute, tourRoute } from '@/lib/routes';
+import { useMascotPose } from '../use-mascot-reaction';
 import { MascotArt } from './mascot-art';
 
 type MascotMenuProps = {
@@ -40,6 +41,7 @@ export function MascotMenu({
 }: MascotMenuProps) {
 	// A link leaves for another page, where the focus belongs (the message box,
 	// the tour), so the closing menu does not pull it back to the cat
+	const pose = useMascotPose();
 	const leaving = useRef(false);
 	const leave = () => {
 		leaving.current = true;
@@ -56,7 +58,7 @@ export function MascotMenu({
 							aria-label="Orbi cat: quick actions"
 							className="grid size-9 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:hover:-translate-y-0.5 data-[state=open]:ring-3 data-[state=open]:ring-ring/30"
 						>
-							<MascotArt pose="idle" />
+							<MascotArt pose={pose} />
 						</button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>

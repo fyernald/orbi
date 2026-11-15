@@ -9,6 +9,7 @@ import {
 	skipQuestion,
 	startRun,
 	summarize,
+	isGoodScore,
 	summaryHeadline,
 } from './session';
 
@@ -92,5 +93,16 @@ describe('choiceForKey', () => {
 		expect(choiceForKey('e', 4)).toBeNull();
 		expect(choiceForKey('Enter', 4)).toBeNull();
 		expect(choiceForKey(' ', 4)).toBeNull();
+	});
+});
+
+describe('isGoodScore', () => {
+	it('cheers for 70% or more right', () => {
+		expect(isGoodScore({ total: 10, correct: 7 })).toBe(true);
+		expect(isGoodScore({ total: 10, correct: 6 })).toBe(false);
+	});
+
+	it('does not cheer when nothing was answered', () => {
+		expect(isGoodScore({ total: 0, correct: 0 })).toBe(false);
 	});
 });

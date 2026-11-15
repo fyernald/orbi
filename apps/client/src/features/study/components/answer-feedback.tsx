@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import type { Ref } from 'react';
 import { KeyHint } from '@/components/key-hint';
 import { Button } from '@/components/ui/button';
+import { MascotMoment } from '@/features/mascot/components/mascot-mood';
 import { choiceLetter } from '@/features/questions/choices';
 import { cn } from '@/lib/utils';
 import { WrongAnswerExplanation } from './wrong-answer-explanation';
@@ -24,6 +25,7 @@ export function AnswerFeedback({
 }: AnswerFeedbackProps) {
 	return (
 		<>
+			{answer.correct && <MascotMoment reaction="cheer" />}
 			<p
 				className={cn(
 					'rounded-xl px-4 py-3 text-sm',
