@@ -1,6 +1,7 @@
 import {
 	onboardingAnswers,
 	type Profile,
+	type TipId,
 	type UpdateProfileInput,
 } from '@orbi/shared';
 import { MODEL_NOT_IN_LIST, type ModelRegistry } from '../../ai/models';
@@ -13,6 +14,8 @@ export interface ProfileService {
 	finishOnboarding(userId: string): Promise<Profile>;
 	// finished or skipped: the tour does not start by itself again
 	finishTour(userId: string): Promise<Profile>;
+	// a closed tip of the cat (US-48) does not come back, on any device
+	dismissTip(userId: string, tipId: TipId): Promise<Profile>;
 }
 
 // a new user has no profile row yet; they get one with every question open
@@ -34,6 +37,7 @@ const emptyProfile: Profile = {
 	onboardedAt: null,
 	tourSeenAt: null,
 	mascotEnabled: true,
+	dismissedTips: [],
 };
 
 export function createProfileService({
@@ -67,5 +71,7 @@ export function createProfileService({
 		},
 
 		finishTour: (userId) => repo.markTourSeen(userId),
+
+		dismissTip: (userId, tipId) => repo.dismissTip(userId, tipId),
 	};
 }

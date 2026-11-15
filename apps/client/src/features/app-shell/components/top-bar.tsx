@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { OrbiLogo } from '@/components/brand/orbi-logo';
 import { Button } from '@/components/ui/button';
 import { MascotSpot } from '@/features/mascot/components/mascot-spot';
+import type { MascotSaved } from '@/features/mascot/types';
 import { routes } from '@/lib/routes';
 import { PageTitle } from './page-title';
 import { PalettePicker } from './palette-picker';
@@ -11,10 +12,10 @@ import { ThemeSwitch } from './theme-switch';
 
 type TopBarProps = {
 	onOpenMenu: () => void;
-	mascotEnabled: boolean;
+	mascot: MascotSaved;
 };
 
-export function TopBar({ onOpenMenu, mascotEnabled }: TopBarProps) {
+export function TopBar({ onOpenMenu, mascot }: TopBarProps) {
 	return (
 		<header className="flex h-14 shrink-0 items-center gap-3 border-b border-divider px-4 md:px-7">
 			<Button
@@ -37,7 +38,7 @@ export function TopBar({ onOpenMenu, mascotEnabled }: TopBarProps) {
 				<ThemeSwitch />
 				{/* StreakLink (US-14) goes here once the API sends the real streak */}
 				<ReviewButton />
-				<MascotSpot saved={mascotEnabled} />
+				<MascotSpot saved={mascot} />
 			</div>
 		</header>
 	);

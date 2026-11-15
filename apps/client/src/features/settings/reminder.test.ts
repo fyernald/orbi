@@ -20,6 +20,7 @@ const saved = (changes: Partial<Profile>): Profile => ({
 	onboardedAt: '2026-11-01T10:00:00.000Z',
 	tourSeenAt: null,
 	mascotEnabled: true,
+	dismissedTips: [],
 	...changes,
 });
 

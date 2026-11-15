@@ -1,0 +1,1 @@
+ALTER TABLE "profile" ADD COLUMN "dismissed_tips" text[] DEFAULT '{}'::text[] NOT NULL;
