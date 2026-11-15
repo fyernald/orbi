@@ -20,6 +20,8 @@ import { askOrbiRoute, tourRoute } from '@/lib/routes';
 import { MascotArt } from './mascot-art';
 
 type MascotMenuProps = {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	// the cat itself, where the focus goes back after Help
 	triggerRef: Ref<HTMLButtonElement>;
 	onHelp: () => void;
@@ -29,7 +31,13 @@ type MascotMenuProps = {
 const itemClass = 'h-9 gap-2.5 rounded-lg';
 
 // the cat in the top bar; a click opens its quick actions
-export function MascotMenu({ triggerRef, onHelp, onHide }: MascotMenuProps) {
+export function MascotMenu({
+	open,
+	onOpenChange,
+	triggerRef,
+	onHelp,
+	onHide,
+}: MascotMenuProps) {
 	// A link leaves for another page, where the focus belongs (the message box,
 	// the tour), so the closing menu does not pull it back to the cat
 	const leaving = useRef(false);
@@ -38,7 +46,7 @@ export function MascotMenu({ triggerRef, onHelp, onHide }: MascotMenuProps) {
 	};
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu open={open} onOpenChange={onOpenChange}>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<DropdownMenuTrigger asChild>
@@ -52,7 +60,10 @@ export function MascotMenu({ triggerRef, onHelp, onHide }: MascotMenuProps) {
 						</button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>
-				<TooltipContent sideOffset={8}>Quick actions</TooltipContent>
+				{/* on the left, so it never covers a tip under the cat */}
+				<TooltipContent side="left" sideOffset={8}>
+					Quick actions
+				</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent
 				align="end"

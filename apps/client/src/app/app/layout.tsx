@@ -26,7 +26,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 				<AppArrival>
 					<AppShell
 						defaultCollapsed={sidebarCollapsed}
-						mascotEnabled={profile.mascotEnabled}
+						mascot={{
+							mascotEnabled: profile.mascotEnabled,
+							dismissedTips: profile.dismissedTips,
+						}}
 					>
 						{children}
 					</AppShell>

@@ -1,4 +1,4 @@
-import type { Profile, UpdateProfileInput } from '@orbi/shared';
+import type { Profile, TipId, UpdateProfileInput } from '@orbi/shared';
 import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db';
 import { profile } from '../../db/schema';
@@ -9,6 +9,8 @@ export interface ProfileRepository {
 	saveProfile(userId: string, input: UpdateProfileInput): Promise<Profile>;
 	markOnboarded(userId: string): Promise<Profile>;
 	markTourSeen(userId: string): Promise<Profile>;
+	// saved once; closing the same tip again changes nothing
+	dismissTip(userId: string, tipId: TipId): Promise<Profile>;
 }
 
 const profileColumns = {
@@ -29,6 +31,7 @@ const profileColumns = {
 	onboardedAt: profile.onboardedAt,
 	tourSeenAt: profile.tourSeenAt,
 	mascotEnabled: profile.mascotEnabled,
+	dismissedTips: profile.dismissedTips,
 };
 
 type ProfileRow = Pick<
@@ -88,6 +91,20 @@ export function createProfileRepository(db: Db): ProfileRepository {
 				.onConflictDoUpdate({
 					target: profile.userId,
 					set: { tourSeenAt: sql`coalesce(${profile.tourSeenAt}, now())` },
+				})
+				.returning(profileColumns);
+			return toProfile(saved!);
+		},
+
+		async dismissTip(userId, tipId) {
+			const [saved] = await db
+				.insert(profile)
+				.values({ userId, dismissedTips: [tipId] })
+				.onConflictDoUpdate({
+					target: profile.userId,
+					set: {
+						dismissedTips: sql`case when ${tipId} = any(${profile.dismissedTips}) then ${profile.dismissedTips} else array_append(${profile.dismissedTips}, ${tipId}) end`,
+					},
 				})
 				.returning(profileColumns);
 			return toProfile(saved!);
