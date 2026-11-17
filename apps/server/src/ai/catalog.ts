@@ -10,6 +10,9 @@ export type CatalogModel = AiModel & {
 	creditWeight: number;
 };
 
+// Of the providers Orbi uses, only Gemini takes audio in its API; Claude takes
+// images and PDFs, DeepSeek text, images and files (checked in November 2026)
+
 export const MODEL_CATALOG: CatalogModel[] = [
 	{
 		id: 'gemini-flash',
@@ -17,6 +20,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-flash-latest',
 		goodAt: 'Fast, good for most study tasks',
+		audio: true,
 		creditWeight: 4,
 	},
 	{
@@ -25,6 +29,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-flash-lite-latest',
 		goodAt: 'Fastest, good for quick questions',
+		audio: true,
 		creditWeight: 1,
 	},
 	{
@@ -33,6 +38,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'google',
 		providerModelId: 'gemini-pro-latest',
 		goodAt: 'Slower, better at hard topics',
+		audio: true,
 		creditWeight: 16,
 	},
 	{
@@ -41,6 +47,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-haiku-5-5',
 		goodAt: 'Fast, short and clear answers',
+		audio: false,
 		creditWeight: 1,
 	},
 	{
@@ -49,6 +56,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-sonnet-5-5',
 		goodAt: 'Clear, careful explanations',
+		audio: false,
 		creditWeight: 20,
 	},
 	{
@@ -57,6 +65,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'anthropic',
 		providerModelId: 'claude-opus-5-5',
 		goodAt: 'Slowest, best at deep reasoning',
+		audio: false,
 		creditWeight: 40,
 	},
 	{
@@ -66,6 +75,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		// follows DeepSeek's newest Flash model, like the Gemini aliases
 		providerModelId: 'deepseek-flash',
 		goodAt: 'Low cost, good for most study tasks',
+		audio: false,
 		creditWeight: 1,
 	},
 	{
@@ -74,6 +84,7 @@ export const MODEL_CATALOG: CatalogModel[] = [
 		provider: 'deepseek',
 		providerModelId: 'deepseek-v4-pro',
 		goodAt: 'Low cost, better at hard topics',
+		audio: false,
 		creditWeight: 4,
 	},
 ];

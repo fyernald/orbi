@@ -8,6 +8,7 @@ export type RateLimits = {
 	default: number;
 	pdfUpload: number;
 	keyPoints: number;
+	voiceNote: number;
 	followUps: number;
 	sessionAnswer: number;
 	explainAnswer: number;
@@ -19,6 +20,8 @@ export const RATE_LIMITS: RateLimits = {
 	pdfUpload: 10,
 	// each one is a run of model calls over a whole PDF
 	keyPoints: 10,
+	// each one sends a recording to a model
+	voiceNote: 10,
 	followUps: 20,
 	sessionAnswer: 60,
 	// each new one is a model call
