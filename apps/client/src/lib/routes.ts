@@ -63,3 +63,7 @@ export const todayListRoute = `${routes.app}#today`;
 // Home with the tour of the app started (US-46), from Settings or the account menu
 export const TOUR_PARAM = 'tour';
 export const tourRoute = `${routes.app}?${TOUR_PARAM}=1`;
+
+// Home with the message box ready to type in, from the cat's menu (US-48)
+export const COMPOSE_PARAM = 'compose';
+export const askOrbiRoute = `${routes.app}?${COMPOSE_PARAM}=1`;

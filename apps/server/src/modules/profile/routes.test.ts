@@ -67,6 +67,7 @@ describe('profile', () => {
 			defaultModelId: null,
 			onboardedAt: null,
 			tourSeenAt: null,
+			mascotEnabled: true,
 		});
 	});
 
@@ -202,6 +203,23 @@ describe('profile', () => {
 			preferredName: null,
 			tourSeenAt: expect.any(String),
 		});
+	});
+
+	it('turns the mascot off and on again', async () => {
+		const frances = await signUpTestUser(app, 'frances@test.dev');
+
+		const off = await send(frances, 'PATCH', '/api/profile', {
+			mascotEnabled: false,
+		});
+		const saved = await send(frances, 'GET', '/api/profile');
+		const on = await send(frances, 'PATCH', '/api/profile', {
+			mascotEnabled: true,
+		});
+
+		expect(off.statusCode).toBe(200);
+		expect(off.json().mascotEnabled).toBe(false);
+		expect(saved.json().mascotEnabled).toBe(false);
+		expect(on.json().mascotEnabled).toBe(true);
 	});
 
 	it('never shows one user the profile of another', async () => {

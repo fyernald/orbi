@@ -132,11 +132,17 @@ export const defaultModelSettings = z.object({
 	defaultModelId: z.string().min(1, 'Choose a model.').nullable(),
 });
 
-// onboarding saves the answers of one question at a time, settings the reminder
-// and the default model
+// the cat in the top bar (US-48), on until the student turns it off
+export const mascotSettings = z.object({
+	mascotEnabled: z.boolean(),
+});
+
+// onboarding saves the answers of one question at a time, settings the reminder,
+// the default model and the mascot
 export const updateProfileInput = onboardingAnswers
 	.extend(reminderSettings.shape)
 	.extend(defaultModelSettings.shape)
+	.extend(mascotSettings.shape)
 	.partial();
 
 // what the API sends back; a question not answered yet is null or an empty list
@@ -161,6 +167,7 @@ export const profile = z.object({
 	onboardedAt: z.iso.datetime().nullable(),
 	// null until the student finishes or skips the tour of the app (US-46)
 	tourSeenAt: z.iso.datetime().nullable(),
+	mascotEnabled: z.boolean(),
 });
 
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
@@ -172,5 +179,6 @@ export type Locale = (typeof LOCALES)[number];
 export type OnboardingAnswers = z.infer<typeof onboardingAnswers>;
 export type ReminderSettings = z.infer<typeof reminderSettings>;
 export type DefaultModelSettings = z.infer<typeof defaultModelSettings>;
+export type MascotSettings = z.infer<typeof mascotSettings>;
 export type UpdateProfileInput = z.infer<typeof updateProfileInput>;
 export type Profile = z.infer<typeof profile>;

@@ -33,6 +33,7 @@ const emptyProfile: Profile = {
 	defaultModelId: null,
 	onboardedAt: null,
 	tourSeenAt: null,
+	mascotEnabled: true,
 };
 
 export function createProfileService({

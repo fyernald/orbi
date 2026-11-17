@@ -1,0 +1,1 @@
+ALTER TABLE "profile" ADD COLUMN "mascot_enabled" boolean DEFAULT true NOT NULL;

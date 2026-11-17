@@ -10,10 +10,16 @@ import { TopBar } from './top-bar';
 type AppShellProps = {
 	// how the student left the desktop sidebar, read from its cookie on the server
 	defaultCollapsed: boolean;
+	// whether the cat shows in the top bar (US-48), from the profile
+	mascotEnabled: boolean;
 	children: ReactNode;
 };
 
-export function AppShell({ defaultCollapsed, children }: AppShellProps) {
+export function AppShell({
+	defaultCollapsed,
+	mascotEnabled,
+	children,
+}: AppShellProps) {
 	const [collapsed, setCollapsed] = useState(defaultCollapsed);
 	const [menuOpen, setMenuOpen] = useState(false);
 
@@ -28,7 +34,10 @@ export function AppShell({ defaultCollapsed, children }: AppShellProps) {
 				<DesktopSidebar collapsed={collapsed} onToggle={toggleSidebar} />
 				<MobileSidebar open={menuOpen} onOpenChange={setMenuOpen} />
 				<div className="flex min-w-0 flex-1 flex-col bg-card md:m-3 md:rounded-[28px]">
-					<TopBar onOpenMenu={() => setMenuOpen(true)} />
+					<TopBar
+						onOpenMenu={() => setMenuOpen(true)}
+						mascotEnabled={mascotEnabled}
+					/>
 					<main className="flex flex-1 flex-col">{children}</main>
 				</div>
 			</div>

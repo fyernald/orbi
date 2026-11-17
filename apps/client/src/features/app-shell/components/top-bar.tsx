@@ -2,13 +2,19 @@ import { Menu } from 'lucide-react';
 import Link from 'next/link';
 import { OrbiLogo } from '@/components/brand/orbi-logo';
 import { Button } from '@/components/ui/button';
+import { MascotSpot } from '@/features/mascot/components/mascot-spot';
 import { routes } from '@/lib/routes';
 import { PageTitle } from './page-title';
 import { PalettePicker } from './palette-picker';
 import { ReviewButton } from './review-button';
 import { ThemeSwitch } from './theme-switch';
 
-export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
+type TopBarProps = {
+	onOpenMenu: () => void;
+	mascotEnabled: boolean;
+};
+
+export function TopBar({ onOpenMenu, mascotEnabled }: TopBarProps) {
 	return (
 		<header className="flex h-14 shrink-0 items-center gap-3 border-b border-divider px-4 md:px-7">
 			<Button
@@ -26,10 +32,12 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 			</Link>
 			<PageTitle className="hidden text-sm font-medium md:flex" />
 			<div className="ml-auto flex items-center gap-2">
-				<PalettePicker />
+				{/* on a phone it is in the menu, so the top bar fits */}
+				<PalettePicker className="hidden sm:flex" />
 				<ThemeSwitch />
 				{/* StreakLink (US-14) goes here once the API sends the real streak */}
 				<ReviewButton />
+				<MascotSpot saved={mascotEnabled} />
 			</div>
 		</header>
 	);

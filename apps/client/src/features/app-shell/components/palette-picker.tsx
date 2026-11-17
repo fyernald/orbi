@@ -14,14 +14,17 @@ const swatchColor: Record<Palette, string> = {
 
 // The ring around the picked swatch comes from the page's data-palette in CSS, so it
 // is right from the first paint; aria-pressed follows once the page has loaded
-export function PalettePicker() {
+export function PalettePicker({ className }: { className?: string }) {
 	const current = usePalette();
 
 	return (
 		<div
 			role="group"
 			aria-label="Colour theme"
-			className="flex h-8 items-center gap-1.5 rounded-full px-2 shadow-[inset_0_0_0_1px_var(--border)]"
+			className={cn(
+				'flex h-8 items-center gap-1.5 rounded-full px-2 shadow-[inset_0_0_0_1px_var(--border)]',
+				className
+			)}
 		>
 			{PALETTES.map((palette) => (
 				<button
