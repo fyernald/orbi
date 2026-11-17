@@ -1,17 +1,25 @@
 import { APICallError, RetryError } from 'ai';
 
-// The model stopped sending for longer than chunkMs, usually because the AI
-// service is overloaded. That ends the stream with an abort, like the student's
-// Stop button, so an abort the student did not ask for becomes an error.
+export type ReplyStop = {
+	// the student pressed Stop or closed the tab
+	stoppedByStudent: boolean;
+	// the model did not start answering in time (see first-output-timeout.ts)
+	slowToStart: boolean;
+};
+
+// A timeout ends the stream with an abort, like the student's Stop button, so an
+// abort the student did not ask for becomes an error. Both kinds usually mean the
+// AI service is overloaded.
 export function timeoutAsError<Chunk extends { type: string }>(
 	chunk: Chunk,
-	stoppedByStudent: boolean
+	{ stoppedByStudent, slowToStart }: ReplyStop
 ): Chunk | { type: 'error'; errorText: string } {
 	if (chunk.type !== 'abort' || stoppedByStudent) return chunk;
 	return {
 		type: 'error',
-		errorText:
-			'The AI service stopped answering partway. Try again, or pick another model.',
+		errorText: slowToStart
+			? 'This model is slow to answer right now. Try again, or pick another model.'
+			: 'The AI service stopped answering partway. Try again, or pick another model.',
 	};
 }
 

@@ -39,6 +39,7 @@ import {
 	NOTES_CONTEXT_MAX_LENGTH,
 	selectNotes,
 } from './prompt';
+import { createFirstOutputTimeout } from './first-output-timeout';
 import { replyErrorMessage, timeoutAsError } from './reply-errors';
 import type {
 	ChatRecord,
@@ -57,10 +58,12 @@ const MAX_STEPS = 4;
 
 const TIMEOUT = {
 	totalMs: 180_000,
-	// the first token can be slow with long notes
-	firstChunkMs: 60_000,
 	chunkMs: 45_000,
 };
+
+// the first token can be slow with long notes; counted by first-output-timeout.ts,
+// since the AI SDK's firstChunkMs misses a provider that is slow to respond at all
+const FIRST_OUTPUT_TIMEOUT_MS = 60_000;
 
 // Some models send a reply in a few large pieces; this lets it appear word by word,
 // with a short pause that only adds up when the model is faster than the reader
@@ -73,11 +76,14 @@ export function createReplyStarter({
 	now,
 	logError,
 	trackStep,
+	firstOutputMs = FIRST_OUTPUT_TIMEOUT_MS,
 }: {
 	repo: TutorRepository;
 	now: () => Date;
 	logError: (error: unknown) => void;
 	trackStep: TrackStep;
+	// shorter in tests
+	firstOutputMs?: number;
 }) {
 	return async function startReply({
 		userId,
@@ -200,20 +206,24 @@ export function createReplyStarter({
 		}
 
 		const forcedTool = continuing ? undefined : rule.tool;
+		const instructions = buildInstructions({
+			course,
+			topic,
+			student: await repo.findStudent(userId),
+			notes,
+			action: input.action,
+			today: startedAt,
+		});
+		const modelMessages = await convertToModelMessages(
+			withAttachmentNames(recentMessages(withoutEarlierThinking(validated))),
+			{ tools }
+		);
+		// started right before the model is asked
+		const firstOutput = createFirstOutputTimeout(firstOutputMs, abortSignal);
 		const result = streamText({
 			model: resolved.model,
-			instructions: buildInstructions({
-				course,
-				topic,
-				student: await repo.findStudent(userId),
-				notes,
-				action: input.action,
-				today: startedAt,
-			}),
-			messages: await convertToModelMessages(
-				withAttachmentNames(recentMessages(withoutEarlierThinking(validated))),
-				{ tools }
-			),
+			instructions,
+			messages: modelMessages,
 			tools,
 			// practice questions belong to a topic, so the whole-course chat cannot make them
 			activeTools: topic ? undefined : ['askStudent', ...VISUAL_TOOL_NAMES],
@@ -237,7 +247,7 @@ export function createReplyStarter({
 				chunking: 'word',
 				delayInMs: SMOOTH_DELAY_MS,
 			}),
-			abortSignal,
+			abortSignal: firstOutput.signal,
 			timeout: TIMEOUT,
 			maxRetries: 1,
 			onStepEnd: trackStep({
@@ -271,7 +281,7 @@ export function createReplyStarter({
 		});
 
 		const stream = toUIMessageStream<typeof tools, TutorUIMessage>({
-			stream: result.stream,
+			stream: result.stream.pipeThrough(firstOutput.watch()),
 			tools,
 			originalMessages: validated,
 			generateMessageId: () => responseId,
@@ -309,12 +319,17 @@ export function createReplyStarter({
 				}
 			},
 		});
-		// the timeout also ends the stream with an abort, which the chat would show as
+		// the timeouts also end the stream with an abort, which the chat would show as
 		// "You stopped this reply"; it becomes an error with Try again instead
 		return stream.pipeThrough(
 			new TransformStream({
 				transform(chunk, controller) {
-					controller.enqueue(timeoutAsError(chunk, abortSignal.aborted));
+					controller.enqueue(
+						timeoutAsError(chunk, {
+							stoppedByStudent: abortSignal.aborted,
+							slowToStart: firstOutput.timedOut(),
+						})
+					);
 				},
 				flush: () => release(),
 			})
