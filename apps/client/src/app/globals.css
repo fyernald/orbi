@@ -1034,3 +1034,85 @@
 		animation: none;
 	}
 }
+
+/* the Orbi cat's poses (US-48): only with motion allowed; with reduced motion
+   the cat still changes pose, it just does not move */
+@layer components {
+	.mascot-wave {
+		transform-box: fill-box;
+		transform-origin: 50% 100%;
+		animation: mascot-wave 0.6s ease-in-out 3;
+	}
+
+	.mascot-hop {
+		animation: mascot-hop 0.8s ease-in-out 3;
+	}
+
+	.mascot-sparkles > path,
+	.mascot-dots > circle {
+		animation: twinkle 1.2s ease-in-out infinite;
+	}
+
+	.mascot-sparkles > path:nth-child(2),
+	.mascot-dots > circle:nth-child(2) {
+		animation-delay: 0.2s;
+	}
+
+	.mascot-sparkles > path:nth-child(3),
+	.mascot-dots > circle:nth-child(3) {
+		animation-delay: 0.4s;
+	}
+
+	.mascot-zs > text {
+		animation: mascot-drift 2.4s ease-in-out infinite;
+	}
+
+	.mascot-zs > text:nth-child(2) {
+		animation-delay: 1.2s;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mascot-wave,
+		.mascot-hop,
+		.mascot-sparkles > path,
+		.mascot-dots > circle,
+		.mascot-zs > text {
+			animation: none;
+		}
+	}
+}
+
+@keyframes mascot-wave {
+	0%,
+	100% {
+		rotate: 0deg;
+	}
+	50% {
+		rotate: 18deg;
+	}
+}
+
+@keyframes mascot-hop {
+	0%,
+	100% {
+		translate: 0 0;
+	}
+	40% {
+		translate: 0 -2px;
+	}
+}
+
+@keyframes mascot-drift {
+	0% {
+		opacity: 0;
+		translate: 0 1px;
+	}
+	30%,
+	70% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		translate: 1px -2px;
+	}
+}

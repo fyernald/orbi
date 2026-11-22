@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { courseRoute, topicStudyRoute } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { answeredLine, type TodayState } from '../today';
+import { MascotMood } from '@/features/mascot/components/mascot-mood';
 
 type TodayDoneProps = {
 	plan: TodayPlan;
@@ -47,6 +48,8 @@ export function TodayDone({ plan, state }: TodayDoneProps) {
 
 	return (
 		<div className="flex flex-col gap-1">
+			{/* nothing due: a quiet day for the cat too */}
+			{!done && <MascotMood reaction="sleepy" />}
 			<div
 				className={cn(
 					'flex items-center gap-3 rounded-2xl p-4',

@@ -1,11 +1,13 @@
 import { BookOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { MascotMood } from '@/features/mascot/components/mascot-mood';
 import { routes } from '@/lib/routes';
 
 export function CoursesEmpty() {
 	return (
 		<div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border px-6 py-16 text-center">
+			<MascotMood reaction="sleepy" />
 			<span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
 				<BookOpen className="size-5" />
 			</span>
