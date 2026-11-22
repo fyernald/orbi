@@ -125,6 +125,7 @@ export function createTutorService({
 	logError = (error) => console.error(error),
 	logUsage = () => {},
 	now = () => new Date(),
+	firstOutputMs,
 }: {
 	repo: TutorRepository;
 	explanations: ExplanationRepository;
@@ -135,6 +136,8 @@ export function createTutorService({
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
 	now?: () => Date;
+	// how long a reply may wait for the model to start answering; shorter in tests
+	firstOutputMs?: number;
 }): TutorService {
 	const resolveModel = createModelResolver(models);
 	const takePlace = createPlaceTaker(limiter);
@@ -146,7 +149,13 @@ export function createTutorService({
 	}
 
 	const trackStep = createStepTracker({ logUsage, usage, logError });
-	const startReply = createReplyStarter({ repo, now, logError, trackStep });
+	const startReply = createReplyStarter({
+		repo,
+		now,
+		logError,
+		trackStep,
+		firstOutputMs,
+	});
 	const explainAnswer = createAnswerExplainer({
 		explanations,
 		repo,

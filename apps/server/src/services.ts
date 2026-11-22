@@ -38,6 +38,8 @@ export type ServiceDeps = {
 	// by default the beta's limits
 	usageLimits?: UsageLimits;
 	limiter?: ReplyLimiter;
+	// how long a tutor reply may wait for the model to start answering
+	firstOutputMs?: number;
 	logError?: (error: unknown) => void;
 	logUsage?: LogUsage;
 };
@@ -51,6 +53,7 @@ export function createServices({
 	beta,
 	usageLimits,
 	limiter = createReplyLimiter(MAX_PARALLEL_REPLIES),
+	firstOutputMs,
 	logError = (error) => console.error(error),
 	logUsage = () => {},
 }: ServiceDeps): AppDeps['services'] {
@@ -98,6 +101,7 @@ export function createServices({
 			models,
 			usage,
 			limiter,
+			firstOutputMs,
 			logError,
 			logUsage,
 		}),

@@ -22,9 +22,20 @@ export type ScriptedStep =
 	// reasoning is the model's thinking, sent before the text
 	| { text: string; reasoning?: string; delayMs?: number }
 	| { tool: string; input: unknown }
-	| { error: unknown };
+	| { error: unknown }
+	// the provider never answers, not even with its response headers, until the
+	// call is aborted (Gemini Flash can wait a minute or more before it sends any)
+	| { hang: true };
 
-function streamFor(step: ScriptedStep, call: number) {
+// rejects like fetch does when the call is aborted
+const hangUntilAborted = (signal: AbortSignal | undefined) =>
+	new Promise<never>((_, reject) => {
+		const fail = () => reject(signal?.reason);
+		if (signal?.aborted) return fail();
+		signal?.addEventListener('abort', fail, { once: true });
+	});
+
+function streamFor(step: Exclude<ScriptedStep, { hang: true }>, call: number) {
 	if ('error' in step) throw step.error;
 	const chunks: LanguageModelV4StreamPart[] =
 		'text' in step
@@ -72,7 +83,7 @@ function streamFor(step: ScriptedStep, call: number) {
 }
 
 // the same step for a call that waits for the whole answer, like generateText
-function resultFor(step: ScriptedStep, call: number) {
+function resultFor(step: Exclude<ScriptedStep, { hang: true }>, call: number) {
 	if ('error' in step) throw step.error;
 	const content: LanguageModelV4Content[] =
 		'text' in step
@@ -110,8 +121,16 @@ export function createScriptedModels() {
 		return step;
 	};
 	const model = new MockLanguageModelV4({
-		doStream: async (options) => streamFor(nextStep(options), calls.length),
-		doGenerate: async (options) => resultFor(nextStep(options), calls.length),
+		doStream: async (options) => {
+			const step = nextStep(options);
+			if ('hang' in step) return hangUntilAborted(options.abortSignal);
+			return streamFor(step, calls.length);
+		},
+		doGenerate: async (options) => {
+			const step = nextStep(options);
+			if ('hang' in step) return hangUntilAborted(options.abortSignal);
+			return resultFor(step, calls.length);
+		},
 	});
 
 	return {
