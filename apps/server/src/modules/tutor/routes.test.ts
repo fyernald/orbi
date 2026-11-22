@@ -20,6 +20,8 @@ beforeAll(async () => {
 		requireEmailVerification: false,
 		models: ai.registry,
 		logUsage: (line) => usage.push(line),
+		// the scripted model answers at once; one that hangs gives up quickly
+		firstOutputMs: 500,
 	});
 	ada = await signUpTestUser(app, 'ada@test.dev');
 	grace = await signUpTestUser(app, 'grace@test.dev');
@@ -534,6 +536,36 @@ describe('tutor chat', () => {
 		expect(
 			thread.messages.map((message: { role: string }) => message.role)
 		).toEqual(['user']);
+	});
+
+	it('ends a reply with a clear error when the model is slow to start, and keeps the question', async () => {
+		const context = await createTopic(ada, NOTES);
+		const chatId = randomUUID();
+		// like Gemini Flash holding back even its response headers
+		ai.script({ hang: true });
+
+		const response = await ask(ada, chatId, context, {
+			message: userMessage('Explain telophase'),
+		});
+
+		const chunks = chunksOf(response.body);
+		expect(chunks.find((chunk) => chunk.type === 'error')?.errorText).toBe(
+			'This model is slow to answer right now. Try again, or pick another model.'
+		);
+		expect(chunks.some((chunk) => chunk.type === 'abort')).toBe(false);
+		const thread = (await send(ada, 'GET', `/api/chats/${chatId}`)).json();
+		expect(
+			thread.messages.map((message: { role: string }) => message.role)
+		).toEqual(['user']);
+
+		// Try again gets an answer
+		ai.script({ text: 'Telophase ends mitosis.' });
+		const retried = await ask(ada, chatId, context, {
+			trigger: 'regenerate-message',
+		});
+		expect(
+			chunksOf(retried.body).find((chunk) => chunk.type === 'text-delta')
+		).toBeDefined();
 	});
 
 	it('refuses an empty message', async () => {

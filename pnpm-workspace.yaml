@@ -17,3 +17,6 @@ overrides:
   # GHSA-67mh-4wv8-2f99: esbuild 0.18 through drizzle-kit's @esbuild-kit loader,
   # which only calls transform() and transformSync().
   esbuild@<0.25.0: ^0.25.0
+  # GHSA-238p-pmpm-9mq7: through rehype-katex and @streamdown/math. One copy for all,
+  # so the stylesheet the client imports matches the classes the renderer writes.
+  katex@<0.18.2: ^0.18.2

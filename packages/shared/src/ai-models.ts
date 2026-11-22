@@ -8,6 +8,8 @@ export const aiModel = z.object({
 	label: z.string(),
 	provider: z.enum(AI_PROVIDERS),
 	goodAt: z.string(),
+	// it can listen to a recording, for voice notes (US-47)
+	audio: z.boolean(),
 });
 
 // only models whose provider has an API key on the server are listed

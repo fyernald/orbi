@@ -19,6 +19,7 @@ const NO_LIMITS: RateLimits = {
 	default: 1_000_000,
 	pdfUpload: 1_000_000,
 	keyPoints: 1_000_000,
+	voiceNote: 1_000_000,
 	followUps: 1_000_000,
 	sessionAnswer: 1_000_000,
 	explainAnswer: 1_000_000,
@@ -30,6 +31,8 @@ type TestAppOptions = {
 	// a registry with mock models; by default no AI provider is set up
 	models?: ModelRegistry;
 	limiter?: ReplyLimiter;
+	// how long a tutor reply may wait for the model to start answering
+	firstOutputMs?: number;
 	// by default the beta's AI usage limits
 	usageLimits?: UsageLimits;
 	// gets the token counts of every model call
@@ -56,6 +59,7 @@ export async function createTestApp(
 		requireEmailVerification = true,
 		models = createModelRegistry({ providers: {} }),
 		limiter,
+		firstOutputMs,
 		usageLimits,
 		logUsage,
 		db: givenDb,
@@ -86,6 +90,7 @@ export async function createTestApp(
 			...beta,
 		},
 		limiter,
+		firstOutputMs,
 		usageLimits,
 		logError: () => {},
 		logUsage,

@@ -17,6 +17,8 @@ import { createCspReportRoutes } from './modules/csp-report/routes';
 import type { CourseService } from './modules/courses/service';
 import { createKeyPointRoutes } from './modules/notes/key-points/routes';
 import type { PrepareKeyPoints } from './modules/notes/key-points/writer';
+import { createVoiceNoteRoutes } from './modules/notes/voice/routes';
+import type { WriteVoiceNote } from './modules/notes/voice/writer';
 import { createNoteRoutes } from './modules/notes/routes';
 import type { NoteService } from './modules/notes/service';
 import { createProfileRoutes } from './modules/profile/routes';
@@ -36,6 +38,7 @@ export type AppDeps = {
 		courses: CourseService;
 		notes: NoteService;
 		keyPoints: PrepareKeyPoints;
+		voiceNotes: WriteVoiceNote;
 		profiles: ProfileService;
 		questions: QuestionService;
 		tutor: TutorService;
@@ -99,6 +102,13 @@ export function buildApp({
 			api.register(
 				createKeyPointRoutes({
 					prepareKeyPoints: services.keyPoints,
+					requireUser,
+					limits,
+				})
+			);
+			api.register(
+				createVoiceNoteRoutes({
+					writeVoiceNote: services.voiceNotes,
 					requireUser,
 					limits,
 				})
