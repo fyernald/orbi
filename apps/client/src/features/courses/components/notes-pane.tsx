@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NoteForm } from '@/features/notes/components/note-form';
 import { NotesList } from '@/features/notes/components/notes-list';
 import { PdfUpload } from '@/features/notes/components/pdf-upload';
+import { VoiceNote } from '@/features/notes/voice/components/voice-note';
 import { useReturnFocus } from '@/hooks/use-return-focus';
 import { noteCountLabel } from '../note-count';
 import { PaneHeader } from './pane-header';
@@ -113,6 +114,7 @@ export function NotesPane({
 							</div>
 							<NoteForm courseId={courseId} topicId={topic.id} />
 							<PdfUpload courseId={courseId} topicId={topic.id} />
+							<VoiceNote courseId={courseId} topicId={topic.id} />
 						</section>
 						<section
 							aria-labelledby="saved-notes-title"

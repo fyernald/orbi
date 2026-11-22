@@ -36,10 +36,12 @@ const nextConfig: NextConfig = {
 					{ key: 'X-Frame-Options', value: 'DENY' },
 					{ key: 'X-Content-Type-Options', value: 'nosniff' },
 					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-					// Orbi uses none of these, so no script on the page can ask for them
+					// Only Orbi's own pages may ask for the microphone, for voice notes
+					// (US-47), and nothing may ask for the camera or the location; the
+					// mini-app sandbox and other frames get none of them
 					{
 						key: 'Permissions-Policy',
-						value: 'camera=(), microphone=(), geolocation=()',
+						value: 'camera=(), microphone=(self), geolocation=()',
 					},
 				],
 			},

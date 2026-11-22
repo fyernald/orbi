@@ -11,3 +11,6 @@ overrides:
   # GHSA-333x-w4r6-6crp and others: through fastify (4.x) and ajv (3.x)
   fast-uri@>=3.0.0 <3.1.9: ^3.1.9
   fast-uri@>=4.0.0 <4.2.3: ^4.2.3
+  # GHSA-238p-pmpm-9mq7: through rehype-katex and @streamdown/math. One copy for all,
+  # so the stylesheet the client imports matches the classes the renderer writes.
+  katex@<0.18.2: ^0.18.2

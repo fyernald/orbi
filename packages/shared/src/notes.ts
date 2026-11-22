@@ -44,6 +44,36 @@ export const pdfUploadQuery = z.object({
 	fileName: z.string().trim().min(1, 'The file needs a name.').max(255),
 });
 
+// A voice note (US-47): the recording is the request body, read once by the
+// student's model and never kept. At most 5 minutes; the browser records at
+// about 48 kbps, so the size limit leaves room for browsers that record at more.
+export const VOICE_NOTE_MAX_SECONDS = 5 * 60;
+export const VOICE_NOTE_MAX_SIZE = 4 * 1024 * 1024;
+// what the browsers record (Chrome and Firefox WebM or Ogg, Safari MP4) and the
+// formats Gemini takes
+export const VOICE_NOTE_MEDIA_TYPES = [
+	'audio/webm',
+	'audio/ogg',
+	'audio/mp4',
+	'audio/mpeg',
+	'audio/wav',
+] as const;
+
+export const voiceNoteQuery = z.object({
+	modelId: z.string().min(1, 'Choose a model.').max(100),
+	// 1: Orbi tidies the text (fixes mistakes, adds headings and lists)
+	tidy: z.enum(['0', '1']).transform((value) => value === '1'),
+	// how long the student recorded, as the browser counted it
+	seconds: z.coerce
+		.number()
+		.int()
+		.min(1, 'The recording is empty. Record again.')
+		.max(
+			VOICE_NOTE_MAX_SECONDS,
+			`Recordings can be at most ${VOICE_NOTE_MAX_SECONDS / 60} minutes.`
+		),
+});
+
 export const noteParams = topicParams.extend({
 	noteId: z.uuid('Note not found.'),
 });
@@ -109,6 +139,8 @@ export type CreateNoteInput = z.infer<typeof createNoteInput>;
 export type UpdateNoteInput = z.infer<typeof updateNoteInput>;
 export type PdfUploadQuery = z.infer<typeof pdfUploadQuery>;
 export type PdfUploadResult = z.infer<typeof pdfUploadResult>;
+export type VoiceNoteMediaType = (typeof VOICE_NOTE_MEDIA_TYPES)[number];
+export type VoiceNoteQuery = z.input<typeof voiceNoteQuery>;
 export type SavedPdf = z.infer<typeof savedPdf>;
 export type KeyPointsInput = z.infer<typeof keyPointsInput>;
 export type KeyPointsEvent = z.infer<typeof keyPointsEvent>;

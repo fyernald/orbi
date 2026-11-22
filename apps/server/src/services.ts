@@ -9,6 +9,7 @@ import { createBetaService, type BetaOptions } from './modules/beta/service';
 import { createCourseRepository } from './modules/courses/repository';
 import { createCourseService } from './modules/courses/service';
 import { createKeyPointWriter } from './modules/notes/key-points/writer';
+import { createVoiceNoteWriter } from './modules/notes/voice/writer';
 import { createNoteRepository } from './modules/notes/repository';
 import { createNoteService } from './modules/notes/service';
 import { createProfileRepository } from './modules/profile/repository';
@@ -58,6 +59,9 @@ export function createServices({
 		limits: usageLimits,
 	});
 	const noteRepo = createNoteRepository(db);
+	const resolveModel = createModelResolver(models);
+	const takePlace = createPlaceTaker(limiter);
+	const trackStep = createStepTracker({ logUsage, usage, logError });
 	return {
 		beta: createBetaService({
 			repo: createBetaRepository(db),
@@ -68,10 +72,19 @@ export function createServices({
 		// shares the tutor's places, so key points and replies count together
 		keyPoints: createKeyPointWriter({
 			repo: noteRepo,
-			resolveModel: createModelResolver(models),
+			resolveModel,
 			usage,
-			takePlace: createPlaceTaker(limiter),
-			trackStep: createStepTracker({ logUsage, usage, logError }),
+			takePlace,
+			trackStep,
+			logError,
+		}),
+		// shares the tutor's places too
+		voiceNotes: createVoiceNoteWriter({
+			repo: noteRepo,
+			resolveModel,
+			usage,
+			takePlace,
+			trackStep,
 			logError,
 		}),
 		profiles: createProfileService({
