@@ -183,6 +183,13 @@
       "when": 1794723418064,
       "tag": "0025_mascot-setting",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794724835737,
+      "tag": "0026_tips-dismissed",
+      "breakpoints": true
     }
   ]
 }

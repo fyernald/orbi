@@ -12,6 +12,7 @@ export * from './formula';
 export * from './interactive';
 export * from './interactive-limits';
 export * from './interactive-scope';
+export * from './mascot';
 export * from './mini-app';
 export * from './mini-app-protocol';
 export * from './notes';

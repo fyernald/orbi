@@ -8,9 +8,15 @@ import { OrbitRing } from '@/components/orbit-ring';
 import { SlideIn } from '@/components/slide-in';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { MascotMoment } from '@/features/mascot/components/mascot-mood';
 import { courseRoute, todayListRoute } from '@/lib/routes';
 import type { MapItem } from '../question-map';
-import { summarize, summaryHeadline, type StudyRun } from '../session';
+import {
+	isGoodScore,
+	summarize,
+	summaryHeadline,
+	type StudyRun,
+} from '../session';
 import { MissedQuestions } from './missed-questions';
 import { QuestionMap } from './question-map';
 import { SessionHeader } from './session-header';
@@ -51,6 +57,7 @@ export function SessionSummary({
 
 	return (
 		<>
+			{isGoodScore(summary) && <MascotMoment reaction="cheer" />}
 			<SessionHeader
 				courseId={courseId}
 				courseName={courseName}

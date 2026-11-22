@@ -17,9 +17,12 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { askOrbiRoute, tourRoute } from '@/lib/routes';
+import { useMascotPose } from '../use-mascot-reaction';
 import { MascotArt } from './mascot-art';
 
 type MascotMenuProps = {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	// the cat itself, where the focus goes back after Help
 	triggerRef: Ref<HTMLButtonElement>;
 	onHelp: () => void;
@@ -29,16 +32,23 @@ type MascotMenuProps = {
 const itemClass = 'h-9 gap-2.5 rounded-lg';
 
 // the cat in the top bar; a click opens its quick actions
-export function MascotMenu({ triggerRef, onHelp, onHide }: MascotMenuProps) {
+export function MascotMenu({
+	open,
+	onOpenChange,
+	triggerRef,
+	onHelp,
+	onHide,
+}: MascotMenuProps) {
 	// A link leaves for another page, where the focus belongs (the message box,
 	// the tour), so the closing menu does not pull it back to the cat
+	const pose = useMascotPose();
 	const leaving = useRef(false);
 	const leave = () => {
 		leaving.current = true;
 	};
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu open={open} onOpenChange={onOpenChange}>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<DropdownMenuTrigger asChild>
@@ -48,11 +58,14 @@ export function MascotMenu({ triggerRef, onHelp, onHide }: MascotMenuProps) {
 							aria-label="Orbi cat: quick actions"
 							className="grid size-9 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:hover:-translate-y-0.5 data-[state=open]:ring-3 data-[state=open]:ring-ring/30"
 						>
-							<MascotArt pose="idle" />
+							<MascotArt pose={pose} />
 						</button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>
-				<TooltipContent sideOffset={8}>Quick actions</TooltipContent>
+				{/* on the left, so it never covers a tip under the cat */}
+				<TooltipContent side="left" sideOffset={8}>
+					Quick actions
+				</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent
 				align="end"

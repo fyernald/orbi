@@ -168,6 +168,9 @@ export const profile = z.object({
 	// null until the student finishes or skips the tour of the app (US-46)
 	tourSeenAt: z.iso.datetime().nullable(),
 	mascotEnabled: z.boolean(),
+	// the cat's tips the student closed; plain text, so a tip that was taken out
+	// later still reads
+	dismissedTips: z.array(z.string()),
 });
 
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];

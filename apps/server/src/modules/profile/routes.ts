@@ -1,4 +1,4 @@
-import { profile, updateProfileInput } from '@orbi/shared';
+import { dismissTipInput, profile, updateProfileInput } from '@orbi/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import type { RequireUser } from '../auth/session';
 import type { ProfileService } from './service';
@@ -36,6 +36,13 @@ export function createProfileRoutes({
 			'/profile/tour',
 			{ schema: { response: { 200: profile } } },
 			async (request) => profiles.finishTour(await requireUser(request))
+		);
+
+		api.post(
+			'/profile/tips',
+			{ schema: { body: dismissTipInput, response: { 200: profile } } },
+			async (request) =>
+				profiles.dismissTip(await requireUser(request), request.body.tipId)
 		);
 	};
 }
