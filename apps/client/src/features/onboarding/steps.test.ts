@@ -24,6 +24,8 @@ const empty: Profile = {
 	defaultModelId: null,
 	onboardedAt: null,
 	tourSeenAt: null,
+	mascotEnabled: true,
+	dismissedTips: [],
 };
 
 const stepOf = (id: string) =>

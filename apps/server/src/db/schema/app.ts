@@ -99,6 +99,13 @@ export const profile = pgTable('profile', {
 	// set once the student finishes or skips the tour of the app (US-46), so it
 	// does not start again, on any device
 	tourSeenAt: timestamp('tour_seen_at', { withTimezone: true }),
+	// the cat in the top bar (US-48); the student can turn it off in the settings
+	mascotEnabled: boolean('mascot_enabled').notNull().default(true),
+	// the cat's tips the student closed; a closed tip never comes back
+	dismissedTips: text('dismissed_tips')
+		.array()
+		.notNull()
+		.default(sql`'{}'::text[]`),
 	...timestamps,
 });
 

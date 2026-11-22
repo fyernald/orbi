@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseRoute } from './routes';
+import { askOrbiRoute, courseRoute } from './routes';
 
 describe('courseRoute', () => {
 	it('opens the course on its own', () => {
@@ -30,5 +30,11 @@ describe('courseRoute', () => {
 		expect(courseRoute('c1', { ask: '', think: false })).toBe(
 			'/app/courses/c1'
 		);
+	});
+});
+
+describe('askOrbiRoute', () => {
+	it('opens Home with the message box ready', () => {
+		expect(askOrbiRoute).toBe('/app?compose=1');
 	});
 });

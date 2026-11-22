@@ -67,6 +67,8 @@ describe('profile', () => {
 			defaultModelId: null,
 			onboardedAt: null,
 			tourSeenAt: null,
+			mascotEnabled: true,
+			dismissedTips: [],
 		});
 	});
 
@@ -202,6 +204,54 @@ describe('profile', () => {
 			preferredName: null,
 			tourSeenAt: expect.any(String),
 		});
+	});
+
+	it('turns the mascot off and on again', async () => {
+		const frances = await signUpTestUser(app, 'frances@test.dev');
+
+		const off = await send(frances, 'PATCH', '/api/profile', {
+			mascotEnabled: false,
+		});
+		const saved = await send(frances, 'GET', '/api/profile');
+		const on = await send(frances, 'PATCH', '/api/profile', {
+			mascotEnabled: true,
+		});
+
+		expect(off.statusCode).toBe(200);
+		expect(off.json().mascotEnabled).toBe(false);
+		expect(saved.json().mascotEnabled).toBe(false);
+		expect(on.json().mascotEnabled).toBe(true);
+	});
+
+	it('remembers a closed tip once, also for a user without answers yet', async () => {
+		const edsger = await signUpTestUser(app, 'edsger@test.dev');
+
+		const first = await send(edsger, 'POST', '/api/profile/tips', {
+			tipId: 'first-course',
+		});
+		await send(edsger, 'POST', '/api/profile/tips', { tipId: 'first-course' });
+		const second = await send(edsger, 'POST', '/api/profile/tips', {
+			tipId: 'first-notes',
+		});
+		const saved = await send(edsger, 'GET', '/api/profile');
+
+		expect(first.statusCode).toBe(200);
+		expect(first.json().dismissedTips).toEqual(['first-course']);
+		expect(second.json().dismissedTips).toEqual([
+			'first-course',
+			'first-notes',
+		]);
+		expect(saved.json().dismissedTips).toEqual(['first-course', 'first-notes']);
+	});
+
+	it('refuses a tip it does not know', async () => {
+		const tony = await signUpTestUser(app, 'tony@test.dev');
+
+		const response = await send(tony, 'POST', '/api/profile/tips', {
+			tipId: 'free-pizza',
+		});
+
+		expect(response.statusCode).toBe(400);
 	});
 
 	it('never shows one user the profile of another', async () => {

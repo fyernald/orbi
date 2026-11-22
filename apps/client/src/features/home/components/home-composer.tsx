@@ -7,6 +7,7 @@ import { useAllTopics } from '@/features/courses/hooks';
 import { NoteComposer } from '@/features/tutor/components/note-composer';
 import { apiErrorMessage } from '@/lib/api';
 import { courseRoute } from '@/lib/routes';
+import { useComposeRequest } from '../use-compose-request';
 import { ComposerPlaceholder } from './composer-placeholder';
 import { NoTopicsYet } from './no-topics-yet';
 
@@ -16,6 +17,7 @@ import { NoTopicsYet } from './no-topics-yet';
 export function HomeComposer() {
 	const topics = useAllTopics();
 	const router = useRouter();
+	const preset = useComposeRequest();
 
 	if (topics.isPending) return <ComposerPlaceholder />;
 	if (topics.isError) {
@@ -50,6 +52,7 @@ export function HomeComposer() {
 				name,
 			}))}
 			onSend={send}
+			preset={preset}
 		/>
 	);
 }

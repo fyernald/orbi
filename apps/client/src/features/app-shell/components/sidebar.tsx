@@ -6,6 +6,7 @@ import { AddNotesButton } from './add-notes-button';
 import { CoursesSection } from './courses-section';
 import { MainNav } from './main-nav';
 import { MiniAppsSection } from './mini-apps-section';
+import { PalettePicker } from './palette-picker';
 import { SidebarHeader } from './sidebar-header';
 import { SidebarUsage } from './sidebar-usage';
 
@@ -45,6 +46,19 @@ export function Sidebar({ collapsed, onToggle, variant }: SidebarProps) {
 				<MiniAppsSection apps={miniApps} collapsed={collapsed} />
 				<CoursesSection courses={courses.data} collapsed={collapsed} />
 			</div>
+			{/* on a phone the top bar has no room for the colour theme */}
+			{variant === 'drawer' && (
+				<div className="flex shrink-0 items-center justify-between px-1.5 pb-3 sm:hidden">
+					{/* the group itself is named "Colour theme" for screen readers */}
+					<span
+						aria-hidden="true"
+						className="text-[13px] text-muted-foreground"
+					>
+						Colour theme
+					</span>
+					<PalettePicker />
+				</div>
+			)}
 			<SidebarUsage collapsed={collapsed} />
 			<AccountMenu collapsed={collapsed} />
 		</nav>

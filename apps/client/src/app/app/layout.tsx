@@ -16,14 +16,23 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 	const session = await getServerSession();
 	if (!session) redirect(routes.login);
 	if (!(await getServerBetaAccess()).hasAccess) redirect(routes.betaKey);
-	if (!isOnboarded(await getServerProfile())) redirect(routes.welcome);
+	const profile = await getServerProfile();
+	if (!isOnboarded(profile)) redirect(routes.welcome);
 	const sidebarCollapsed = await getSidebarCollapsed();
 
 	return (
 		<SessionBoundary session={session}>
 			<RequireSession>
 				<AppArrival>
-					<AppShell defaultCollapsed={sidebarCollapsed}>{children}</AppShell>
+					<AppShell
+						defaultCollapsed={sidebarCollapsed}
+						mascot={{
+							mascotEnabled: profile.mascotEnabled,
+							dismissedTips: profile.dismissedTips,
+						}}
+					>
+						{children}
+					</AppShell>
 				</AppArrival>
 			</RequireSession>
 		</SessionBoundary>

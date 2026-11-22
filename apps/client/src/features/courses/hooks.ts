@@ -70,10 +70,15 @@ export function useAllTopics() {
 	});
 }
 
-export function useTopics(courseId: string) {
+// enabled: false waits, for a place that only sometimes has a course
+export function useTopics(
+	courseId: string,
+	{ enabled = true }: { enabled?: boolean } = {}
+) {
 	return useQuery({
 		queryKey: topicsKey(courseId),
 		queryFn: () => api.get(`/courses/${courseId}/topics`, z.array(topic)),
+		enabled,
 	});
 }
 

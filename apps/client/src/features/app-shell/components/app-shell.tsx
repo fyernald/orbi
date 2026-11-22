@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import type { MascotSaved } from '@/features/mascot/types';
 import { saveSidebarCollapsed } from '../sidebar-state';
 import { DesktopSidebar } from './desktop-sidebar';
 import { MobileSidebar } from './mobile-sidebar';
@@ -10,10 +11,16 @@ import { TopBar } from './top-bar';
 type AppShellProps = {
 	// how the student left the desktop sidebar, read from its cookie on the server
 	defaultCollapsed: boolean;
+	// the cat in the top bar (US-48) and its closed tips, from the profile
+	mascot: MascotSaved;
 	children: ReactNode;
 };
 
-export function AppShell({ defaultCollapsed, children }: AppShellProps) {
+export function AppShell({
+	defaultCollapsed,
+	mascot,
+	children,
+}: AppShellProps) {
 	const [collapsed, setCollapsed] = useState(defaultCollapsed);
 	const [menuOpen, setMenuOpen] = useState(false);
 
@@ -28,7 +35,7 @@ export function AppShell({ defaultCollapsed, children }: AppShellProps) {
 				<DesktopSidebar collapsed={collapsed} onToggle={toggleSidebar} />
 				<MobileSidebar open={menuOpen} onOpenChange={setMenuOpen} />
 				<div className="flex min-w-0 flex-1 flex-col bg-card md:m-3 md:rounded-[28px]">
-					<TopBar onOpenMenu={() => setMenuOpen(true)} />
+					<TopBar onOpenMenu={() => setMenuOpen(true)} mascot={mascot} />
 					<main className="flex flex-1 flex-col">{children}</main>
 				</div>
 			</div>
